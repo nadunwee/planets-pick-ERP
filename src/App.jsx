@@ -19,7 +19,7 @@ function App() {
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
-          count is 1000000000000000
+          count is 1000
         </button>
         <p>
           Edit <code>src/App.jsx</code> and save to test HMR
