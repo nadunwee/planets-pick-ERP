@@ -51,7 +51,7 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile Toggle */}
-      <div className="lg:hidden p-4 flex justify-between items-center border-b">
+      <div className="lg:hidden p-4 flex justify-between items-center border-b w-100">
         <h1 className="font-bold text-lg">Planet's Pick</h1>
         <button onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? <X /> : <Menu />}
@@ -61,7 +61,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-green-700 text-white w-64 h-full fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50",
+          "bg-green-700 text-white w-64 h-screen fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >

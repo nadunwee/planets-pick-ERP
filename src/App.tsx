@@ -7,7 +7,6 @@ export default function App() {
     <div className="min-h-screen bg-gray-100 lg:flex">
       <Sidebar />
       <div className="flex-1">
-        <Navbar />
         <Dashboard />
       </div>
     </div>
