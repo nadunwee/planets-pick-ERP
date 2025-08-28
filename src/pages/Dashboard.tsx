@@ -7,13 +7,13 @@ import { RecentActivity } from "@/components/RecentActivity";
 export default function Dashboard() {
   return (
     <>
-      <header className="hidden lg:flex justify-between h-16 items-center bg-green-700 text-white p-4">
-        <h1 className="text-lg font-semibold">
+      <header className="hidden lg:flex justify-between h-16 items-center bg-card border-b border-border shadow-sm px-6">
+        <h1 className="text-lg font-semibold text-foreground">
           Smart Production & Management System
         </h1>
-        <div>
-          <span className="font-semibold">Admin User</span>
-          <p className="text-sm">System Administrator</p>
+        <div className="text-right">
+          <span className="font-semibold text-foreground">Admin User</span>
+          <p className="text-sm text-muted-foreground">System Administrator</p>
         </div>
       </header>
       <div className="p-4 space-y-6">
