@@ -13,7 +13,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const menuItems = [
+export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Wastage" | "Reports" | "Settings";
+
+interface SidebarProps {
+  currentPage: Page;
+  onPageChange: (page: Page) => void;
+}
+
+const menuItems: { name: Page; icon: any }[] = [
   { name: "Dashboard", icon: BarChart2 },
   { name: "Inventory", icon: Package },
   { name: "Production", icon: FactoryIcon },
@@ -45,8 +52,13 @@ function FactoryIcon() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handlePageChange = (page: Page) => {
+    onPageChange(page);
+    setIsOpen(false); // Close mobile menu when navigating
+  };
 
   return (
     <>
@@ -70,17 +82,31 @@ export function Sidebar() {
         </div>
         <nav className="p-4 space-y-2">
           {menuItems.map(({ name, icon: Icon }) => (
-            <a
+            <button
               key={name}
-              href="#"
-              className="flex items-center gap-3 p-2 rounded hover:bg-green-600 transition"
+              onClick={() => handlePageChange(name)}
+              className={cn(
+                "flex items-center gap-3 p-2 rounded transition w-full text-left",
+                currentPage === name 
+                  ? "bg-green-600 text-white" 
+                  : "hover:bg-green-600"
+              )}
             >
               <Icon size={18} />
               {name}
-            </a>
+            </button>
           ))}
         </nav>
       </aside>
+      
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+          aria-label="Close sidebar"
+        />
+      )}
     </>
   );
 }
