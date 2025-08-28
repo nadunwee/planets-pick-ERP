@@ -64,37 +64,46 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   return (
     <>
       {/* Mobile Toggle */}
-      <div className="lg:hidden p-4 flex justify-between items-center border-b w-100">
-        <h1 className="font-bold text-lg">Planet's Pick</h1>
-        <button onClick={() => setIsOpen(!isOpen)}>
-          {isOpen ? <X /> : <Menu />}
+      <div className="lg:hidden p-4 flex justify-between items-center border-b bg-card border-border">
+        <h1 className="font-bold text-lg text-foreground">Planet's Pick</h1>
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="text-foreground hover:text-accent transition-colors"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-green-700 text-white w-64 h-screen fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50",
+          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="p-4 font-bold text-xl border-b border-green-600">
-          Planet's Pick
+        <div className="p-6 font-bold text-xl border-b border-sidebar-border">
+          <span className="text-sidebar-foreground">Planet's</span>
+          <span className="text-accent ml-1">Pick</span>
         </div>
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-1">
           {menuItems.map(({ name, icon: Icon }) => (
             <button
               key={name}
               onClick={() => handlePageChange(name)}
               className={cn(
-                "flex items-center gap-3 p-2 rounded transition w-full text-left",
+                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
                 currentPage === name 
-                  ? "bg-green-600 text-white" 
-                  : "hover:bg-green-600"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" 
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
-              <Icon size={18} />
-              {name}
+              <Icon size={18} className={cn(
+                "transition-colors duration-200",
+                currentPage === name 
+                  ? "text-sidebar-primary-foreground" 
+                  : "text-sidebar-foreground group-hover:text-accent"
+              )} />
+              <span className="font-medium">{name}</span>
             </button>
           ))}
         </nav>

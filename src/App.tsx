@@ -39,9 +39,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 lg:flex">
+    <div className="min-h-screen bg-background lg:flex">
       <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="flex-1">
+      <div className="flex-1 bg-background">
         {renderPage()}
       </div>
     </div>
