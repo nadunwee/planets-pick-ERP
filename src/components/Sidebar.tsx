@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   BarChart2,
   Settings,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ interface SidebarProps {
   onPageChange: (page: Page) => void;
 }
 
-const menuItems: { name: Page; icon: any }[] = [
+const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] = [
   { name: "Dashboard", icon: BarChart2 },
   { name: "Inventory", icon: Package },
   { name: "Production", icon: FactoryIcon },
