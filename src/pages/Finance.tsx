@@ -94,7 +94,7 @@ const transactions: Transaction[] = [
     type: "expense",
     category: "Operations",
     description: "Monthly electricity bill",
-    amount: 45000,
+    amount: 450000,
     account: "Business Checking",
     reference: "UTIL-2024-001",
     status: "completed",
