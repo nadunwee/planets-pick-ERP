@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Wastage" | "Reports" | "Settings";
+export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Wastage" | "Reports" | "Settings"| "Procurement";
 
 interface SidebarProps {
   currentPage: Page;
@@ -26,6 +26,7 @@ const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] 
   { name: "Inventory", icon: Package },
   { name: "Production", icon: FactoryIcon },
   { name: "Employees", icon: Users },
+  { name: "Procurement", icon: Package },
   { name: "Orders & Sales", icon: ShoppingCart },
   { name: "Delivery", icon: Truck },
   { name: "Finance", icon: DollarSign },

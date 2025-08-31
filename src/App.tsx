@@ -6,7 +6,10 @@ import Employees from "@/pages/Employees";
 import OrdersSales from "@/pages/OrdersSales";
 import Delivery from "@/pages/Delivery";
 import Finance from "@/pages/Finance";
+import Procurement from "@/pages/Suppliers"; // 👈 import Suppliers page
+
 import { Sidebar, type Page } from "@/components/Sidebar";
+
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("Dashboard");
@@ -27,6 +30,8 @@ export default function App() {
         return <Delivery />;
       case "Finance":
         return <Finance />;
+      case "Procurement":
+        return <Procurement />;
       case "Wastage":
         return <div className="p-4"><h1 className="text-2xl font-bold">Wastage Management</h1><p className="text-gray-600">Coming soon...</p></div>;
       case "Reports":
