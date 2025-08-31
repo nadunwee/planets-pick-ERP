@@ -105,7 +105,7 @@ const transactions: Transaction[] = [
     type: "expense",
     category: "Payroll",
     description: "Employee salaries - January 2024",
-    amount: 385000,
+    amount: 185000,
     account: "Payroll Account",
     reference: "PAY-2024-001",
     status: "completed",
@@ -152,20 +152,86 @@ const accounts: Account[] = [
 ];
 
 const budgets: Budget[] = [
-  { category: "Raw Materials", allocated: 800000, spent: 650000, remaining: 150000, period: "monthly" },
-  { category: "Payroll", allocated: 400000, spent: 385000, remaining: 15000, period: "monthly" },
-  { category: "Operations", allocated: 200000, spent: 165000, remaining: 35000, period: "monthly" },
-  { category: "Marketing", allocated: 100000, spent: 75000, remaining: 25000, period: "monthly" },
-  { category: "Equipment", allocated: 300000, spent: 125000, remaining: 175000, period: "quarterly" },
+  {
+    category: "Raw Materials",
+    allocated: 800000,
+    spent: 650000,
+    remaining: 150000,
+    period: "monthly",
+  },
+  {
+    category: "Payroll",
+    allocated: 400000,
+    spent: 385000,
+    remaining: 15000,
+    period: "monthly",
+  },
+  {
+    category: "Operations",
+    allocated: 200000,
+    spent: 165000,
+    remaining: 35000,
+    period: "monthly",
+  },
+  {
+    category: "Marketing",
+    allocated: 100000,
+    spent: 75000,
+    remaining: 25000,
+    period: "monthly",
+  },
+  {
+    category: "Equipment",
+    allocated: 300000,
+    spent: 125000,
+    remaining: 175000,
+    period: "quarterly",
+  },
 ];
 
 const financialMetrics: FinancialMetric[] = [
-  { label: "Total Revenue", value: 2450000, change: 18.7, period: "this month", format: "currency" },
-  { label: "Total Expenses", value: 1850000, change: 12.3, period: "this month", format: "currency" },
-  { label: "Net Profit", value: 600000, change: 24.5, period: "this month", format: "currency" },
-  { label: "Profit Margin", value: 24.5, change: 3.2, period: "this month", format: "percentage" },
-  { label: "Cash Flow", value: 325000, change: -5.8, period: "this month", format: "currency" },
-  { label: "ROI", value: 15.8, change: 2.1, period: "this quarter", format: "percentage" },
+  {
+    label: "Total Revenue",
+    value: 2450000,
+    change: 18.7,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Total Expenses",
+    value: 1850000,
+    change: 12.3,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Net Profit",
+    value: 600000,
+    change: 24.5,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Profit Margin",
+    value: 24.5,
+    change: 3.2,
+    period: "this month",
+    format: "percentage",
+  },
+  {
+    label: "Cash Flow",
+    value: 325000,
+    change: -5.8,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "ROI",
+    value: 15.8,
+    change: 2.1,
+    period: "this quarter",
+    format: "percentage",
+  },
 ];
 
 export default function Finance() {
@@ -174,13 +240,26 @@ export default function Finance() {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const types = ["All", "income", "expense"];
-  const categories = ["All", "Sales", "Raw Materials", "Operations", "Payroll", "Marketing", "Equipment"];
+  const categories = [
+    "All",
+    "Sales",
+    "Raw Materials",
+    "Operations",
+    "Payroll",
+    "Marketing",
+    "Equipment",
+  ];
 
   const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === "All" || transaction.type === selectedType;
-    const matchesCategory = selectedCategory === "All" || transaction.category === selectedCategory;
+    const matchesSearch =
+      transaction.description
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType =
+      selectedType === "All" || transaction.type === selectedType;
+    const matchesCategory =
+      selectedCategory === "All" || transaction.category === selectedCategory;
     return matchesSearch && matchesType && matchesCategory;
   });
 
@@ -203,26 +282,32 @@ export default function Finance() {
 
   const totalBalance = accounts.reduce((sum, account) => {
     if (account.currency === "LKR") return sum + account.balance;
-    return sum + (account.balance * 320); // Assuming USD to LKR conversion
+    return sum + account.balance * 320; // Assuming USD to LKR conversion
   }, 0);
 
   const monthlyIncome = transactions
-    .filter(t => t.type === "income" && t.status === "completed")
+    .filter((t) => t.type === "income" && t.status === "completed")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const monthlyExpenses = transactions
-    .filter(t => t.type === "expense" && t.status === "completed")
+    .filter((t) => t.type === "expense" && t.status === "completed")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const pendingPayments = transactions.filter(t => t.status === "pending").length;
+  const pendingPayments = transactions.filter(
+    (t) => t.status === "pending"
+  ).length;
 
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Finance Management</h1>
-          <p className="text-gray-600">Monitor financial performance, manage budgets, and track cash flow</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Finance Management
+          </h1>
+          <p className="text-gray-600">
+            Monitor financial performance, manage budgets, and track cash flow
+          </p>
         </div>
         <div className="flex gap-2">
           <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
@@ -247,10 +332,14 @@ export default function Finance() {
             <Bot size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-green-900">AI Financial Insights</h3>
+            <h3 className="font-semibold text-green-900">
+              AI Financial Insights
+            </h3>
             <p className="text-green-700 text-sm">
-              Cash flow trending positive with 24.5% profit margin increase. Recommend setting aside 20% for Q2 expansion.
-              Expense optimization suggests renegotiating supplier contracts could save 8% on raw materials.
+              Cash flow trending positive with 24.5% profit margin increase.
+              Recommend setting aside 20% for Q2 expansion. Expense optimization
+              suggests renegotiating supplier contracts could save 8% on raw
+              materials.
             </p>
           </div>
           <button className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
@@ -265,7 +354,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Balance</p>
-              <p className="text-2xl font-bold text-blue-600">LKR {totalBalance.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                LKR {totalBalance.toLocaleString()}
+              </p>
               <p className="text-sm text-blue-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +12.5% from last month
@@ -278,7 +369,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Monthly Income</p>
-              <p className="text-2xl font-bold text-green-600">LKR {monthlyIncome.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">
+                LKR {monthlyIncome.toLocaleString()}
+              </p>
               <p className="text-sm text-green-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +18.7% from last month
@@ -291,7 +384,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Monthly Expenses</p>
-              <p className="text-2xl font-bold text-red-600">LKR {monthlyExpenses.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-red-600">
+                LKR {monthlyExpenses.toLocaleString()}
+              </p>
               <p className="text-sm text-red-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +12.3% from last month
@@ -304,7 +399,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Payments</p>
-              <p className="text-2xl font-bold text-yellow-600">{pendingPayments}</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {pendingPayments}
+              </p>
               <p className="text-sm text-gray-600">Requires attention</p>
             </div>
             <Clock className="text-yellow-500" size={24} />
@@ -326,17 +423,25 @@ export default function Finance() {
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {financialMetrics.map((metric, idx) => (
-                  <div key={idx} className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div
+                    key={idx}
+                    className="text-center p-3 bg-gray-50 rounded-lg"
+                  >
                     <p className="text-sm text-gray-600">{metric.label}</p>
                     <p className="text-xl font-bold text-gray-900">
-                      {metric.format === "currency" 
+                      {metric.format === "currency"
                         ? `LKR ${metric.value.toLocaleString()}`
                         : metric.format === "percentage"
                         ? `${metric.value}%`
                         : metric.value.toLocaleString()}
                     </p>
-                    <p className={`text-sm ${metric.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metric.change >= 0 ? '+' : ''}{metric.change}% {metric.period}
+                    <p
+                      className={`text-sm ${
+                        metric.change >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {metric.change >= 0 ? "+" : ""}
+                      {metric.change}% {metric.period}
                     </p>
                   </div>
                 ))}
@@ -352,13 +457,16 @@ export default function Finance() {
                 Recent Transactions
               </h2>
             </div>
-            
+
             {/* Filters */}
             <div className="p-4 border-b bg-gray-50">
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      size={16}
+                    />
                     <input
                       type="text"
                       placeholder="Search transactions..."
@@ -376,7 +484,9 @@ export default function Finance() {
                   >
                     {types.map((type) => (
                       <option key={type} value={type}>
-                        {type === "All" ? "All Types" : type.charAt(0).toUpperCase() + type.slice(1)}
+                        {type === "All"
+                          ? "All Types"
+                          : type.charAt(0).toUpperCase() + type.slice(1)}
                       </option>
                     ))}
                   </select>
@@ -398,17 +508,28 @@ export default function Finance() {
             <div className="p-4">
               <div className="space-y-3">
                 {filteredTransactions.map((transaction) => (
-                  <div key={transaction.id} className="border rounded-lg p-3 hover:bg-gray-50 transition">
+                  <div
+                    key={transaction.id}
+                    className="border rounded-lg p-3 hover:bg-gray-50 transition"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{transaction.description}</h4>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(transaction.status)}`}>
+                          <h4 className="font-medium">
+                            {transaction.description}
+                          </h4>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                              transaction.status
+                            )}`}
+                          >
                             {transaction.status}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          <p>{transaction.category} • {transaction.account}</p>
+                          <p>
+                            {transaction.category} • {transaction.account}
+                          </p>
                           <p className="flex items-center gap-2">
                             <Calendar size={12} />
                             {transaction.date}
@@ -421,8 +542,13 @@ export default function Finance() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-lg font-bold ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === "income" ? "+" : "-"}LKR {transaction.amount.toLocaleString()}
+                        <p
+                          className={`text-lg font-bold ${getTypeColor(
+                            transaction.type
+                          )}`}
+                        >
+                          {transaction.type === "income" ? "+" : "-"}LKR{" "}
+                          {transaction.amount.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -449,13 +575,19 @@ export default function Finance() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium">{account.name}</h4>
-                      <p className="text-xs text-gray-500">{account.bank} • {account.accountNumber}</p>
+                      <p className="text-xs text-gray-500">
+                        {account.bank} • {account.accountNumber}
+                      </p>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      account.type === "checking" ? "bg-blue-100 text-blue-600" :
-                      account.type === "savings" ? "bg-green-100 text-green-600" :
-                      "bg-purple-100 text-purple-600"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        account.type === "checking"
+                          ? "bg-blue-100 text-blue-600"
+                          : account.type === "savings"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-purple-100 text-purple-600"
+                      }`}
+                    >
                       {account.type}
                     </span>
                   </div>
@@ -480,25 +612,42 @@ export default function Finance() {
                 <div key={idx}>
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium text-sm">{budget.category}</h4>
-                    <span className="text-xs text-gray-500 capitalize">{budget.period}</span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {budget.period}
+                    </span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Spent: LKR {budget.spent.toLocaleString()}</span>
-                      <span>Budget: LKR {budget.allocated.toLocaleString()}</span>
+                      <span>
+                        Budget: LKR {budget.allocated.toLocaleString()}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${
-                          (budget.spent / budget.allocated) > 0.9 ? "bg-red-500" :
-                          (budget.spent / budget.allocated) > 0.7 ? "bg-yellow-500" : "bg-green-500"
+                          budget.spent / budget.allocated > 0.9
+                            ? "bg-red-500"
+                            : budget.spent / budget.allocated > 0.7
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
                         }`}
-                        style={{ width: `${Math.min((budget.spent / budget.allocated) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min(
+                            (budget.spent / budget.allocated) * 100,
+                            100
+                          )}%`,
+                        }}
                       />
                     </div>
                     <div className="flex justify-between text-xs text-gray-600">
-                      <span>{Math.round((budget.spent / budget.allocated) * 100)}% used</span>
-                      <span>LKR {budget.remaining.toLocaleString()} remaining</span>
+                      <span>
+                        {Math.round((budget.spent / budget.allocated) * 100)}%
+                        used
+                      </span>
+                      <span>
+                        LKR {budget.remaining.toLocaleString()} remaining
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -540,16 +689,21 @@ export default function Finance() {
             </div>
             <div className="p-4 space-y-3">
               <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Cash Flow Optimization</h4>
+                <h4 className="font-medium text-sm mb-1">
+                  Cash Flow Optimization
+                </h4>
                 <p className="text-xs text-gray-600">
-                  Consider delaying non-critical expenses by 10 days to improve cash flow
+                  Consider delaying non-critical expenses by 10 days to improve
+                  cash flow
                 </p>
                 <button className="mt-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition">
                   View Details
                 </button>
               </div>
               <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Investment Opportunity</h4>
+                <h4 className="font-medium text-sm mb-1">
+                  Investment Opportunity
+                </h4>
                 <p className="text-xs text-gray-600">
                   Surplus cash of LKR 500K could earn 8% in short-term deposits
                 </p>
