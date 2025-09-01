@@ -10,11 +10,12 @@ import {
   AlertTriangle,
   BarChart2,
   Settings,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Wastage" | "Reports" | "Settings";
+export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Warehouse" | "Wastage" | "Reports" | "Settings";
 
 interface SidebarProps {
   currentPage: Page;
@@ -29,6 +30,7 @@ const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] 
   { name: "Orders & Sales", icon: ShoppingCart },
   { name: "Delivery", icon: Truck },
   { name: "Finance", icon: DollarSign },
+  { name: "Warehouse", icon: Warehouse },
   { name: "Wastage", icon: AlertTriangle },
   { name: "Reports", icon: BarChart2 },
   { name: "Settings", icon: Settings },

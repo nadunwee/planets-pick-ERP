@@ -6,6 +6,7 @@ import Employees from "@/pages/Employees";
 import OrdersSales from "@/pages/OrdersSales";
 import Delivery from "@/pages/Delivery";
 import Finance from "@/pages/Finance";
+import Warehouse from "@/pages/Warehouse";
 import { Sidebar, type Page } from "@/components/Sidebar";
 
 export default function App() {
@@ -27,6 +28,8 @@ export default function App() {
         return <Delivery />;
       case "Finance":
         return <Finance />;
+      case "Warehouse":
+        return <Warehouse />;
       case "Wastage":
         return <div className="p-4"><h1 className="text-2xl font-bold">Wastage Management</h1><p className="text-gray-600">Coming soon...</p></div>;
       case "Reports":
