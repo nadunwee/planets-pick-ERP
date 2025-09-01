@@ -9,7 +9,7 @@ import {
   DollarSign,
   AlertTriangle,
   BarChart2,
-  Settings,
+  Settings as SettingsIcon,
   Shield,
   type LucideIcon,
 } from "lucide-react";
@@ -33,7 +33,7 @@ const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] 
   { name: "Administrator", icon: Shield },
   { name: "Wastage", icon: AlertTriangle },
   { name: "Reports", icon: BarChart2 },
-  { name: "Settings", icon: Settings },
+  { name: "Settings", icon: SettingsIcon },
 ];
 
 function FactoryIcon() {

@@ -106,7 +106,7 @@ export default function Settings() {
 
   const tabs = [
     { id: "company", name: "Company Info", icon: Building },
-    { id: "system", name: "System Preferences", icon: Settings },
+    { id: "system", name: "System Preferences", icon: SettingsIcon },
     { id: "security", name: "Security", icon: Shield },
     { id: "backup", name: "Backup & Restore", icon: Database },
     { id: "users", name: "User Management", icon: Users },
