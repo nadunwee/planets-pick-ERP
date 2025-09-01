@@ -6,6 +6,10 @@ import Employees from "@/pages/Employees";
 import OrdersSales from "@/pages/OrdersSales";
 import Delivery from "@/pages/Delivery";
 import Finance from "@/pages/Finance";
+import Administrator from "@/pages/Administrator";
+import Wastage from "@/pages/Wastage";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
 import { Sidebar, type Page } from "@/components/Sidebar";
 
@@ -28,24 +32,28 @@ export default function App() {
         return <Delivery />;
       case "Finance":
         return <Finance />;
+      case "Administrator":
+        return <Administrator />;
       case "Warehouse":
         return <Warehouse />;
       case "Wastage":
-        return <div className="p-4"><h1 className="text-2xl font-bold">Wastage Management</h1><p className="text-gray-600">Coming soon...</p></div>;
+        return <Wastage />;
       case "Reports":
-        return <div className="p-4"><h1 className="text-2xl font-bold">Reports & Analytics</h1><p className="text-gray-600">Coming soon...</p></div>;
+        return <Reports />;
       case "Settings":
-        return <div className="p-4"><h1 className="text-2xl font-bold">System Settings</h1><p className="text-gray-600">Coming soon...</p></div>;
+        return <Settings />;
       default:
         return <Dashboard />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
+    <div className="min-h-screen bg-background">
       <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="flex-1 bg-background">
-        {renderPage()}
+      <div className="lg:ml-64 bg-background min-h-screen">
+        <div className="h-screen overflow-y-auto">
+          {renderPage()}
+        </div>
       </div>
     </div>
   );
