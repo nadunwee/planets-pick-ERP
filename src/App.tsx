@@ -44,10 +44,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
+    <div className="min-h-screen bg-background">
       <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="flex-1 bg-background">
-        {renderPage()}
+      <div className="lg:ml-64 bg-background min-h-screen">
+        <div className="h-screen overflow-y-auto">
+          {renderPage()}
+        </div>
       </div>
     </div>
   );

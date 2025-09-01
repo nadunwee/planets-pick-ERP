@@ -79,7 +79,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg",
+          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:fixed top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
