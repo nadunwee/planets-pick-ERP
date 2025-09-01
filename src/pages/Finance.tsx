@@ -14,6 +14,9 @@ import {
   Bot,
   Clock,
   Target,
+  X,
+  Eye,
+  Printer,
 } from "lucide-react";
 
 interface Transaction {
@@ -52,6 +55,14 @@ interface FinancialMetric {
   change: number;
   period: string;
   format: "currency" | "percentage" | "number";
+}
+
+interface ReportType {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  format: "pdf" | "excel" | "csv";
 }
 
 const transactions: Transaction[] = [
@@ -234,10 +245,59 @@ const financialMetrics: FinancialMetric[] = [
   },
 ];
 
+const reportTypes: ReportType[] = [
+  {
+    id: "profit-loss",
+    name: "Profit & Loss Statement",
+    description: "Detailed income, expenses, and net profit analysis",
+    icon: <BarChart3 size={20} />,
+    format: "pdf",
+  },
+  {
+    id: "cash-flow",
+    name: "Cash Flow Statement",
+    description: "Operating, investing, and financing cash flows",
+    icon: <TrendingUp size={20} />,
+    format: "excel",
+  },
+  {
+    id: "balance-sheet",
+    name: "Balance Sheet",
+    description: "Assets, liabilities, and equity overview",
+    icon: <CreditCard size={20} />,
+    format: "pdf",
+  },
+  {
+    id: "budget-variance",
+    name: "Budget Variance Report",
+    description: "Actual vs. budgeted performance analysis",
+    icon: <Target size={20} />,
+    format: "excel",
+  },
+  {
+    id: "transaction-summary",
+    name: "Transaction Summary",
+    description: "Detailed transaction listing and categorization",
+    icon: <Receipt size={20} />,
+    format: "csv",
+  },
+];
+
 export default function Finance() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showDownloadReports, setShowDownloadReports] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    type: "expense" as "income" | "expense",
+    category: "",
+    description: "",
+    amount: "",
+    account: "",
+    reference: "",
+    date: new Date().toISOString().split("T")[0],
+  });
 
   const types = ["All", "income", "expense"];
   const categories = [
@@ -297,6 +357,29 @@ export default function Finance() {
     (t) => t.status === "pending"
   ).length;
 
+  const handleAddTransaction = () => {
+    // Here you would typically save to your backend
+    console.log("Adding transaction:", newTransaction);
+    setShowAddTransaction(false);
+    setNewTransaction({
+      type: "expense",
+      category: "",
+      description: "",
+      amount: "",
+      account: "",
+      reference: "",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+
+
+  const handleDownloadReport = (report: ReportType) => {
+    // Here you would typically generate and download the specific report
+    console.log(`Downloading ${report.name} in ${report.format} format`);
+    setShowDownloadReports(false);
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -310,7 +393,10 @@ export default function Finance() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
+          <button 
+            onClick={() => setShowAddTransaction(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+          >
             <Plus size={16} />
             Add Transaction
           </button>
@@ -318,12 +404,225 @@ export default function Finance() {
             <Bot size={16} />
             Financial AI
           </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
-            <Download size={16} />
-            Export Report
+
+          <button 
+            onClick={() => setShowDownloadReports(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
+          >
+            <FileText size={16} />
+            Download Reports
           </button>
         </div>
       </div>
+
+      {/* Add Transaction Modal */}
+      {showAddTransaction && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl border border-gray-100">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Transaction</h2>
+              <button
+                onClick={() => setShowAddTransaction(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction Type
+                </label>
+                <select
+                  value={newTransaction.type}
+                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value as "income" | "expense"})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={newTransaction.category}
+                  onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="">Select Category</option>
+                  {categories.slice(1).map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
+                  placeholder="Enter transaction description"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount (LKR)
+                </label>
+                <input
+                  type="number"
+                  value={newTransaction.amount}
+                  onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
+                  placeholder="0.00"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account
+                </label>
+                <select
+                  value={newTransaction.account}
+                  onChange={(e) => setNewTransaction({...newTransaction, account: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="">Select Account</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.name}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newTransaction.reference}
+                  onChange={(e) => setNewTransaction({...newTransaction, reference: e.target.value})}
+                  placeholder="Invoice/PO number"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={newTransaction.date}
+                  onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowAddTransaction(false)}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddTransaction}
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+              >
+                Add Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Download Specific Reports Modal */}
+      {showDownloadReports && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Download Financial Reports</h2>
+              <button
+                onClick={() => setShowDownloadReports(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reportTypes.map((report) => (
+                <div key={report.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 hover:border-blue-200">
+                  <div className="flex items-start gap-4">
+                    <div className="text-blue-600 p-2 bg-blue-50 rounded-lg">
+                      {report.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-2 text-lg">
+                        {report.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        {report.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleDownloadReport(report)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-sm"
+                        >
+                          <Download size={16} />
+                          Download {report.format.toUpperCase()}
+                        </button>
+                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
+                          <Eye size={16} />
+                          Preview
+                        </button>
+                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
+                          <Printer size={16} />
+                          Print
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <h4 className="font-semibold text-gray-900 mb-4 text-lg">Report Options</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Include charts and graphs</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Include detailed notes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Auto-schedule reports</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Financial Assistant */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
@@ -661,13 +960,19 @@ export default function Finance() {
               <h2 className="font-semibold text-lg">Quick Actions</h2>
             </div>
             <div className="p-4 space-y-2">
-              <button className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm">
+              <button 
+                onClick={() => setShowAddTransaction(true)}
+                className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm"
+              >
                 Record Payment
               </button>
               <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
                 Generate Invoice
               </button>
-              <button className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm">
+              <button 
+                onClick={() => setShowDownloadReports(true)}
+                className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm"
+              >
                 Financial Report
               </button>
               <button className="w-full bg-yellow-600 text-white py-2 px-3 rounded hover:bg-yellow-700 transition text-sm">
@@ -707,7 +1012,7 @@ export default function Finance() {
                 <p className="text-xs text-gray-600">
                   Surplus cash of LKR 500K could earn 8% in short-term deposits
                 </p>
-                <button className="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition">
+                <button className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
                   Calculate Returns
                 </button>
               </div>
@@ -716,7 +1021,7 @@ export default function Finance() {
                 <p className="text-xs text-gray-600">
                   Q1 tax liability estimated at LKR 185K - plan accordingly
                 </p>
-                <button className="mt-2 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition">
+                <button className="mt-2 text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition">
                   Plan Taxes
                 </button>
               </div>
