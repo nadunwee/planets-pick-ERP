@@ -1,3 +1,5 @@
+import type { Supplier } from "../types";
+
 const API_URL = "http://localhost:5000/api";
 
 export const fetchSuppliers = async () => {
@@ -5,7 +7,7 @@ export const fetchSuppliers = async () => {
   return res.json();
 };
 
-export const createSupplier = async (supplier: any) => {
+export const createSupplier = async (supplier: Supplier) => {
   const res = await fetch(`${API_URL}/suppliers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,7 +16,7 @@ export const createSupplier = async (supplier: any) => {
   return res.json();
 };
 
-export const updateSupplier = async (id: string, supplier: any) => {
+export const updateSupplier = async (id: string, supplier: Supplier) => {
   const res = await fetch(`${API_URL}/suppliers/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

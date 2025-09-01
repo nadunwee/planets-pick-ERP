@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export interface Supplier {
-  _id?: string; // MongoDB ID
+  _id?: string;
   name: string;
   code: string;
   contactPerson?: string;
@@ -9,17 +9,16 @@ export interface Supplier {
   phone?: string;
   address?: string;
   country?: string;
+  category?: string;
+  status?: "active" | "inactive";
   onTimeDeliveryRate?: number;
   qualityScore?: number;
   responsivenessScore?: number;
   totalSpend?: number;
   ordersCount?: number;
   deleted?: boolean;
-
-  // Optional frontend-only fields
-  category?: string;
-  status?: "active" | "inactive";
 }
+
 
 interface SupplierFormProps {
   initialData?: Supplier;

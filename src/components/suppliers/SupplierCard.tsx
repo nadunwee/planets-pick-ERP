@@ -1,8 +1,9 @@
 import { Edit, Trash } from "lucide-react";
+import type { Supplier } from "../../types";
 
 interface SupplierCardProps {
-  supplier: any;
-  onEdit: (supplier: any) => void;
+  supplier: Supplier;
+  onEdit: (supplier: Supplier) => void;
   onDelete: (id: string) => void;
 }
 
@@ -22,7 +23,7 @@ export default function SupplierCard({ supplier, onEdit, onDelete }: SupplierCar
           <Edit size={14} /> Edit
         </button>
         <button
-          onClick={() => onDelete(supplier._id)}
+          onClick={() => supplier._id && onDelete(supplier._id)}
           className="flex-1 px-3 py-2 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition flex items-center gap-1"
         >
           <Trash size={14} /> Delete
