@@ -9,6 +9,7 @@ import Finance from "@/pages/Finance";
 import Administrator from "@/pages/Administrator";
 import Wastage from "@/pages/Wastage";
 import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 import { Sidebar, type Page } from "@/components/Sidebar";
 
 export default function App() {
@@ -37,7 +38,7 @@ export default function App() {
       case "Reports":
         return <Reports />;
       case "Settings":
-        return <div className="p-4"><h1 className="text-2xl font-bold">System Settings</h1><p className="text-gray-600">Coming soon...</p></div>;
+        return <Settings />;
       default:
         return <Dashboard />;
     }
