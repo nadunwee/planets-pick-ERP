@@ -18,6 +18,7 @@ import {
   Move,
   TrendingUp,
   TrendingDown,
+  X,
 } from "lucide-react";
 
 interface WarehouseItem {
@@ -280,6 +281,37 @@ export default function Warehouse() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [activeTab, setActiveTab] = useState<"inventory" | "movements" | "zones" | "analytics">("inventory");
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showStockMovementModal, setShowStockMovementModal] = useState(false);
+  const [showLowStockAlerts, setShowLowStockAlerts] = useState(false);
+  const [newItem, setNewItem] = useState({
+    name: "",
+    sku: "",
+    category: "Vegetables",
+    quantity: "",
+    minStock: "",
+    maxStock: "",
+    location: "",
+    zone: "Cold Storage A",
+    rack: "",
+    shelf: "",
+    unit: "kg",
+    unitPrice: "",
+    supplier: "",
+    expiryDate: "",
+    temperature: "",
+    humidity: "",
+    notes: ""
+  });
+  const [stockMovement, setStockMovement] = useState({
+    itemId: "",
+    type: "in" as "in" | "out" | "transfer" | "adjustment",
+    quantity: "",
+    fromLocation: "",
+    toLocation: "",
+    reason: "",
+    reference: ""
+  });
 
   const categories = ["All", "Vegetables", "Leafy Greens", "Fruits", "Herbs", "Root Vegetables"];
   const zones = ["All", "Cold Storage A", "Cold Storage B", "Dry Storage A", "Frozen Storage"];
@@ -327,8 +359,75 @@ export default function Warehouse() {
   const totalItems = warehouseItems.length;
   const totalQuantity = warehouseItems.reduce((sum, item) => sum + item.quantity, 0);
   const lowStockItems = warehouseItems.filter(item => item.status === "low-stock").length;
-  // const outOfStockItems = warehouseItems.filter(item => item.status === "out-of-stock").length;
   const totalValue = warehouseItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+
+  // Get low stock alerts
+  const lowStockAlerts = warehouseItems.filter(item => 
+    item.quantity <= item.minStock || item.status === "low-stock"
+  );
+
+  const handleAddItem = () => {
+    const newItemData: WarehouseItem = {
+      id: String(warehouseItems.length + 1),
+      name: newItem.name,
+      sku: newItem.sku,
+      category: newItem.category,
+      quantity: parseInt(newItem.quantity),
+      minStock: parseInt(newItem.minStock),
+      maxStock: parseInt(newItem.maxStock),
+      location: newItem.location,
+      zone: newItem.zone,
+      rack: newItem.rack,
+      shelf: newItem.shelf,
+      unit: newItem.unit,
+      unitPrice: parseFloat(newItem.unitPrice),
+      supplier: newItem.supplier,
+      lastUpdated: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      expiryDate: newItem.expiryDate || undefined,
+      temperature: newItem.temperature || undefined,
+      humidity: newItem.humidity || undefined,
+      status: parseInt(newItem.quantity) <= parseInt(newItem.minStock) ? "low-stock" : "in-stock",
+      condition: "excellent",
+      notes: newItem.notes || undefined
+    };
+
+    // In a real app, you'd add this to state
+    console.log("New item added:", newItemData);
+    alert("Item added successfully! In production, this would update the database.");
+    setShowAddItemModal(false);
+    setNewItem({
+      name: "", sku: "", category: "Vegetables", quantity: "", minStock: "", maxStock: "",
+      location: "", zone: "Cold Storage A", rack: "", shelf: "", unit: "kg", unitPrice: "",
+      supplier: "", expiryDate: "", temperature: "", humidity: "", notes: ""
+    });
+  };
+
+  const handleStockMovement = () => {
+    const selectedItem = warehouseItems.find(item => item.id === stockMovement.itemId);
+    if (!selectedItem) return;
+
+    const movementData: StockMovement = {
+      id: String(stockMovements.length + 1),
+      itemId: stockMovement.itemId,
+      itemName: selectedItem.name,
+      type: stockMovement.type,
+      quantity: parseInt(stockMovement.quantity),
+      fromLocation: stockMovement.fromLocation || undefined,
+      toLocation: stockMovement.toLocation || undefined,
+      reason: stockMovement.reason,
+      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      operator: "Current User", // In real app, get from auth
+      reference: stockMovement.reference || undefined
+    };
+
+    // In a real app, you'd add this to state and update item quantities
+    console.log("Stock movement recorded:", movementData);
+    alert("Stock movement recorded successfully! In production, this would update the database.");
+    setShowStockMovementModal(false);
+    setStockMovement({
+      itemId: "", type: "in", quantity: "", fromLocation: "", toLocation: "", reason: "", reference: ""
+    });
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -339,13 +438,26 @@ export default function Warehouse() {
           <p className="text-gray-600">Track inventory, manage locations, and monitor stock movements</p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
+          <button 
+            onClick={() => setShowAddItemModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+          >
             <Plus size={16} />
             Add Item
           </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
+          <button 
+            onClick={() => setShowStockMovementModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          >
             <Truck size={16} />
             Stock Movement
+          </button>
+          <button 
+            onClick={() => setShowLowStockAlerts(true)}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700 transition"
+          >
+            <AlertTriangle size={16} />
+            Low Stock Alerts
           </button>
         </div>
       </div>
@@ -823,6 +935,514 @@ export default function Warehouse() {
           <Package className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No items found</h3>
           <p className="text-gray-600">No items match your current search criteria.</p>
+        </div>
+      )}
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Add New Warehouse Item</h2>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-700 border-b pb-2">Basic Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                  <input
+                    type="text"
+                    value={newItem.name}
+                    onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter item name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+                  <input
+                    type="text"
+                    value={newItem.sku}
+                    onChange={(e) => setNewItem({...newItem, sku: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter SKU"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <select
+                    value={newItem.category}
+                    onChange={(e) => setNewItem({...newItem, category: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {categories.filter(cat => cat !== "All").map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                  <input
+                    type="number"
+                    value={newItem.quantity}
+                    onChange={(e) => setNewItem({...newItem, quantity: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price (Rs.) *</label>
+                  <input
+                    type="number"
+                    value={newItem.unitPrice}
+                    onChange={(e) => setNewItem({...newItem, unitPrice: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter unit price"
+                  />
+                </div>
+              </div>
+
+              {/* Location & Stock Management */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-700 border-b pb-2">Location & Stock Management</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone *</label>
+                  <select
+                    value={newItem.zone}
+                    onChange={(e) => setNewItem({...newItem, zone: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {zones.filter(zone => zone !== "All").map(zone => (
+                      <option key={zone} value={zone}>{zone}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                  <input
+                    type="text"
+                    value={newItem.location}
+                    onChange={(e) => setNewItem({...newItem, location: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., A-01-01"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rack</label>
+                    <input
+                      type="text"
+                      value={newItem.rack}
+                      onChange={(e) => setNewItem({...newItem, rack: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g., A1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Shelf</label>
+                    <input
+                      type="text"
+                      value={newItem.shelf}
+                      onChange={(e) => setNewItem({...newItem, shelf: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g., 01"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock *</label>
+                    <input
+                      type="number"
+                      value={newItem.minStock}
+                      onChange={(e) => setNewItem({...newItem, minStock: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Minimum stock level"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                    <input
+                      type="number"
+                      value={newItem.maxStock}
+                      onChange={(e) => setNewItem({...newItem, maxStock: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Maximum stock level"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="mt-6 space-y-4">
+              <h3 className="font-semibold text-gray-700 border-b pb-2">Additional Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                  <input
+                    type="text"
+                    value={newItem.supplier}
+                    onChange={(e) => setNewItem({...newItem, supplier: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter supplier name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <select
+                    value={newItem.unit}
+                    onChange={(e) => setNewItem({...newItem, unit: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="l">l</option>
+                    <option value="ml">ml</option>
+                    <option value="pcs">pcs</option>
+                    <option value="boxes">boxes</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={newItem.expiryDate}
+                    onChange={(e) => setNewItem({...newItem, expiryDate: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+                  <input
+                    type="text"
+                    value={newItem.temperature}
+                    onChange={(e) => setNewItem({...newItem, temperature: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., 4°C"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Humidity</label>
+                  <input
+                    type="text"
+                    value={newItem.humidity}
+                    onChange={(e) => setNewItem({...newItem, humidity: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., 85%"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newItem.notes}
+                  onChange={(e) => setNewItem({...newItem, notes: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Additional notes about the item"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddItem}
+                disabled={!newItem.name || !newItem.sku || !newItem.quantity || !newItem.unitPrice || !newItem.location}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stock Movement Modal */}
+      {showStockMovementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Record Stock Movement</h2>
+              <button
+                onClick={() => setShowStockMovementModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Item *</label>
+                <select
+                  value={stockMovement.itemId}
+                  onChange={(e) => setStockMovement({...stockMovement, itemId: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select an item</option>
+                  {warehouseItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.sku}) - Current: {item.quantity} {item.unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Movement Type *</label>
+                <select
+                  value={stockMovement.type}
+                  onChange={(e) => setStockMovement({...stockMovement, type: e.target.value as "in" | "out" | "transfer" | "adjustment"})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="in">Stock In (Receiving)</option>
+                  <option value="out">Stock Out (Issuing)</option>
+                  <option value="transfer">Transfer (Between Locations)</option>
+                  <option value="adjustment">Adjustment (Correction)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                <input
+                  type="number"
+                  value={stockMovement.quantity}
+                  onChange={(e) => setStockMovement({...stockMovement, quantity: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter quantity"
+                />
+              </div>
+
+              {stockMovement.type === "in" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">To Location *</label>
+                  <input
+                    type="text"
+                    value={stockMovement.toLocation}
+                    onChange={(e) => setStockMovement({...stockMovement, toLocation: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., A-01-01"
+                  />
+                </div>
+              )}
+
+              {stockMovement.type === "out" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">From Location *</label>
+                  <input
+                    type="text"
+                    value={stockMovement.fromLocation}
+                    onChange={(e) => setStockMovement({...stockMovement, fromLocation: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., A-01-01"
+                  />
+                </div>
+              )}
+
+              {stockMovement.type === "transfer" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">From Location *</label>
+                    <input
+                      type="text"
+                      value={stockMovement.fromLocation}
+                      onChange={(e) => setStockMovement({...stockMovement, fromLocation: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., A-01-01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">To Location *</label>
+                    <input
+                      type="text"
+                      value={stockMovement.toLocation}
+                      onChange={(e) => setStockMovement({...stockMovement, toLocation: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., A-01-02"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                <input
+                  type="text"
+                  value={stockMovement.reason}
+                  onChange={(e) => setStockMovement({...stockMovement, reason: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Production order, New shipment, etc."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reference</label>
+                <input
+                  type="text"
+                  value={stockMovement.reference}
+                  onChange={(e) => setStockMovement({...stockMovement, reference: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., PO-2024-001, WO-2024-015"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <button
+                onClick={() => setShowStockMovementModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStockMovement}
+                disabled={!stockMovement.itemId || !stockMovement.quantity || !stockMovement.reason}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed"
+              >
+                Record Movement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Low Stock Alerts Modal */}
+      {showLowStockAlerts && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Low Stock Alerts</h2>
+              <button
+                onClick={() => setShowLowStockAlerts(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {lowStockAlerts.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="mx-auto text-green-500 mb-4" size={48} />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Low Stock Alerts</h3>
+                <p className="text-gray-600">All items are above their minimum stock levels.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="text-yellow-600" size={20} />
+                    <p className="text-yellow-800 font-medium">
+                      {lowStockAlerts.length} item{lowStockAlerts.length > 1 ? 's' : ''} require{lowStockAlerts.length > 1 ? '' : 's'} immediate attention
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="text-left p-4 font-medium">Item</th>
+                          <th className="text-left p-4 font-medium">Current Stock</th>
+                          <th className="text-left p-4 font-medium">Min Stock</th>
+                          <th className="text-left p-4 font-medium">Status</th>
+                          <th className="text-left p-4 font-medium">Last Updated</th>
+                          <th className="text-left p-4 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lowStockAlerts.map((item) => (
+                          <tr key={item.id} className="border-b hover:bg-gray-50">
+                            <td className="p-4">
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <p className="text-sm text-gray-600">{item.sku}</p>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className={`font-medium ${
+                                item.quantity === 0 ? 'text-red-600' : 'text-yellow-600'
+                              }`}>
+                                {item.quantity} {item.unit}
+                              </span>
+                            </td>
+                            <td className="p-4 text-sm">{item.minStock} {item.unit}</td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                item.status === "out-of-stock" ? "bg-red-100 text-red-600" :
+                                "bg-yellow-100 text-yellow-600"
+                              }`}>
+                                {item.status === "out-of-stock" ? "Out of Stock" : "Low Stock"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-sm text-gray-600">{item.lastUpdated}</td>
+                            <td className="p-4">
+                              <button
+                                onClick={() => {
+                                  setStockMovement({
+                                    ...stockMovement,
+                                    itemId: item.id,
+                                    type: "in",
+                                    reason: "Restocking due to low stock alert"
+                                  });
+                                  setShowLowStockAlerts(false);
+                                  setShowStockMovementModal(true);
+                                }}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                              >
+                                Restock
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end mt-6 pt-4 border-t">
+              <button
+                onClick={() => setShowLowStockAlerts(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
