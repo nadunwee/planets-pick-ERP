@@ -11,10 +11,24 @@ import Wastage from "@/pages/Wastage";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
+import Login from "@/pages/Login";
 import { Sidebar, type Page } from "@/components/Sidebar";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("Dashboard");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handleLogin = (username: string, password: string) => {
+    // Simple authentication - in real app, this would call an API
+    if (username && password) {
+      setIsAuthenticated(true);
+    }
+  };
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   const renderPage = () => {
     switch (currentPage) {
