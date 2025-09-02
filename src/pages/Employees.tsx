@@ -414,8 +414,13 @@ export default function Employees() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportStartDate, setReportStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     email: "",
@@ -558,6 +563,61 @@ export default function Employees() {
     setDeletingEmployee(null);
   };
 
+  const handleAttendanceUpdate = (employeeId: string, status: "present" | "absent" | "late" | "half-day") => {
+    const existingAttendance = todayAttendance.find(a => a.employeeId === employeeId && a.date === selectedDate);
+    
+    if (existingAttendance) {
+      // Update existing attendance
+      // In a real app, you'd update the state here
+      console.log(`Updating attendance for ${employeeId} to ${status}`);
+    } else {
+      // Create new attendance record
+      // In a real app, you'd add this to state
+      console.log(`Creating new attendance for ${employeeId} with status ${status}`);
+    }
+  };
+
+  const generateAttendanceReport = () => {
+    // This would generate a comprehensive report
+    const reportData = {
+      startDate: reportStartDate,
+      endDate: reportEndDate,
+      totalEmployees: employees.length,
+      attendanceSummary: employees.map(emp => ({
+        name: emp.name,
+        department: emp.department,
+        attendance: todayAttendance.filter(a => a.employeeId === emp.id).length,
+        present: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "present").length,
+        absent: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "absent").length,
+        late: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "late").length
+      }))
+    };
+    
+    // In a real app, this would export to PDF/Excel
+    console.log("Attendance Report:", reportData);
+    alert("Report generated! Check console for details. In production, this would export to PDF/Excel.");
+  };
+
+  const exportToExcel = () => {
+    // This would export employee data to Excel
+    const excelData = employees.map(emp => ({
+      "Employee ID": emp.employeeId,
+      "Name": emp.name,
+      "Email": emp.email,
+      "Phone": emp.phone,
+      "Position": emp.position,
+      "Department": emp.department,
+      "Status": emp.status,
+      "Join Date": emp.joinDate,
+      "Salary": emp.salary,
+      "Performance": emp.performance,
+      "Attendance": emp.attendance
+    }));
+    
+    console.log("Excel Export Data:", excelData);
+    alert("Excel export ready! Check console for details. In production, this would download an Excel file.");
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -566,19 +626,33 @@ export default function Employees() {
           <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
           <p className="text-gray-600">Manage workforce, attendance, and performance</p>
         </div>
-                 <div className="flex gap-2">
-           <button 
-             onClick={() => setShowAddModal(true)}
-             className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
-           >
-             <Plus size={16} />
-             Add Employee
+                          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+            >
+              <Plus size={16} />
+              Add Employee
+            </button>
+            <button 
+              onClick={() => setShowAttendanceModal(true)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"
+            >
+              <Clock size={16} />
+              Manage Attendance
+            </button>
+            <button 
+              onClick={() => setShowReportModal(true)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
+            >
+              <Calendar size={16} />
+              Reports
+            </button>
+           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
+             <Bot size={16} />
+             AI Insights
            </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
-            <Bot size={16} />
-            AI Insights
-          </button>
-        </div>
+         </div>
       </div>
 
       {/* AI HR Assistant */}
@@ -1500,6 +1574,224 @@ export default function Employees() {
                   Update Employee
                 </button>
                              </div>
+             </div>
+           </div>
+         )}
+
+         {/* Attendance Management Modal */}
+         {showAttendanceModal && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+               <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-xl font-bold">Daily Attendance Management</h2>
+                 <button
+                   onClick={() => setShowAttendanceModal(false)}
+                   className="text-gray-500 hover:text-gray-700"
+                 >
+                   <X size={24} />
+                 </button>
+               </div>
+
+               {/* Date Selection */}
+               <div className="mb-6">
+                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                 <input
+                   type="date"
+                   value={selectedDate}
+                   onChange={(e) => setSelectedDate(e.target.value)}
+                   className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                 />
+               </div>
+
+               {/* Attendance Table */}
+               <div className="bg-white rounded-lg shadow border overflow-hidden">
+                 <div className="overflow-x-auto">
+                   <table className="w-full">
+                     <thead className="bg-gray-50 border-b">
+                       <tr>
+                         <th className="text-left p-4 font-medium">Employee</th>
+                         <th className="text-left p-4 font-medium">Department</th>
+                         <th className="text-left p-4 font-medium">Status</th>
+                         <th className="text-left p-4 font-medium">Check In</th>
+                         <th className="text-left p-4 font-medium">Check Out</th>
+                         <th className="text-left p-4 font-medium">Actions</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {employees.map((employee) => {
+                         const attendance = todayAttendance.find(a => a.employeeId === employee.id && a.date === selectedDate);
+                         return (
+                           <tr key={employee.id} className="border-b hover:bg-gray-50">
+                             <td className="p-4">
+                               <div className="flex items-center gap-3">
+                                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                   {employee.name.split(" ").map(n => n[0]).join("")}
+                                 </div>
+                                 <div>
+                                   <p className="font-medium">{employee.name}</p>
+                                   <p className="text-sm text-gray-600">{employee.position}</p>
+                                 </div>
+                               </div>
+                             </td>
+                             <td className="p-4 text-sm">{employee.department}</td>
+                             <td className="p-4">
+                               <select
+                                 value={attendance?.status || "absent"}
+                                 onChange={(e) => handleAttendanceUpdate(
+                                   employee.id, 
+                                   e.target.value as "present" | "absent" | "late" | "half-day"
+                                 )}
+                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                               >
+                                 <option value="present">Present</option>
+                                 <option value="absent">Absent</option>
+                                 <option value="late">Late</option>
+                                 <option value="half-day">Half Day</option>
+                               </select>
+                             </td>
+                             <td className="p-4">
+                               <input
+                                 type="time"
+                                 value={attendance?.checkIn || ""}
+                                 onChange={(e) => {
+                                   // In a real app, this would update check-in time
+                                   console.log(`Check-in time updated for ${employee.id}: ${e.target.value}`);
+                                 }}
+                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                 placeholder="HH:MM"
+                               />
+                             </td>
+                             <td className="p-4">
+                               <input
+                                 type="time"
+                                 value={attendance?.checkOut || ""}
+                                 onChange={(e) => {
+                                   // In a real app, this would update check-out time
+                                   console.log(`Check-out time updated for ${employee.id}: ${e.target.value}`);
+                                 }}
+                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                 placeholder="HH:MM"
+                               />
+                             </td>
+                             <td className="p-4">
+                               <button
+                                 onClick={() => handleAttendanceUpdate(employee.id, "present")}
+                                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                               >
+                                 Mark Present
+                               </button>
+                             </td>
+                           </tr>
+                         );
+                       })}
+                     </tbody>
+                   </table>
+                 </div>
+               </div>
+
+               {/* Action Buttons */}
+               <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                 <button
+                   onClick={() => setShowAttendanceModal(false)}
+                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                 >
+                   Close
+                 </button>
+                 <button
+                   onClick={() => {
+                     alert("Attendance saved! In production, this would update the database.");
+                     setShowAttendanceModal(false);
+                   }}
+                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                 >
+                   Save Attendance
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+         {/* Reports Modal */}
+         {showReportModal && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+               <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-xl font-bold">Generate Reports</h2>
+                 <button
+                   onClick={() => setShowReportModal(false)}
+                   className="text-gray-500 hover:text-gray-700"
+                 >
+                   <X size={24} />
+                 </button>
+               </div>
+
+               <div className="space-y-6">
+                 {/* Employee List Export */}
+                 <div className="border rounded-lg p-4">
+                   <h3 className="font-semibold text-lg mb-3">Employee List Export</h3>
+                   <p className="text-gray-600 mb-4">Export complete employee data to Excel format</p>
+                   <button
+                     onClick={exportToExcel}
+                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                   >
+                     Export to Excel
+                   </button>
+                 </div>
+
+                 {/* Attendance Report */}
+                 <div className="border rounded-lg p-4">
+                   <h3 className="font-semibold text-lg mb-3">Attendance Report</h3>
+                   <p className="text-gray-600 mb-4">Generate detailed attendance report for specific time period</p>
+                   
+                   <div className="grid grid-cols-2 gap-4 mb-4">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                       <input
+                         type="date"
+                         value={reportStartDate}
+                         onChange={(e) => setReportStartDate(e.target.value)}
+                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                       <input
+                         type="date"
+                         value={reportEndDate}
+                         onChange={(e) => setReportEndDate(e.target.value)}
+                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="flex gap-3">
+                     <button
+                       onClick={generateAttendanceReport}
+                       className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                     >
+                       Generate Report
+                     </button>
+                     <button
+                       onClick={() => {
+                         alert("PDF export ready! In production, this would download a PDF file.");
+                       }}
+                       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                     >
+                       Export to PDF
+                     </button>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Action Buttons */}
+               <div className="flex justify-end mt-6 pt-4 border-t">
+                 <button
+                   onClick={() => setShowReportModal(false)}
+                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                 >
+                   Close
+                 </button>
+               </div>
              </div>
            </div>
          )}
