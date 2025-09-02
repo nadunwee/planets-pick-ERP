@@ -2,23 +2,46 @@ import { useState } from "react";
 import { LogIn, User, Lock } from "lucide-react";
 
 interface LoginProps {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (token: string) => void; // pass back token after login
 }
 
 export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
-    
+
     setIsLoading(true);
-    // Simulate login delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    onLogin(username, password);
-    setIsLoading(false);
+    setError(null);
+
+    try {
+      // 🔥 Call your backend
+      const response = await fetch("http://localhost:4000/api/user/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password }), // backend expects email
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      // Save token (optional: localStorage)
+      localStorage.setItem("token", data.token);
+
+      // Notify parent
+      onLogin(data.token);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -31,19 +54,23 @@ export default function Login({ onLogin }: LoginProps) {
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Planet's Pick ERP
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account
-          </p>
+          <p className="mt-2 text-sm text-gray-600">Sign in to your account</p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Username (Email)
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <User
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   id="username"
                   name="username"
@@ -52,17 +79,23 @@ export default function Login({ onLogin }: LoginProps) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  placeholder="Enter your username"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Lock
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   id="password"
                   name="password"
@@ -76,6 +109,8 @@ export default function Login({ onLogin }: LoginProps) {
               </div>
             </div>
           </div>
+
+          {error && <p className="text-red-600 text-sm">{error}</p>}
 
           <div>
             <button
