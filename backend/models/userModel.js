@@ -21,7 +21,19 @@ const userSchema = new Schema(
       type: String,
       require: true,
     },
-    type: {
+    department: {
+      type: String,
+      require: true,
+    },
+    level: {
+      type: String,
+      require: true,
+    },
+    role: {
+      type: String,
+      require: true,
+    },
+    approved: {
       type: String,
       require: true,
     },
