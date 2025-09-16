@@ -4,7 +4,6 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { useState } from "react";
 
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
@@ -19,39 +18,37 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
 import Login from "@/pages/Login";
-// import { Sidebar } from "@/components/Sidebar";
+import { Sidebar } from "@/components/Sidebar";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const handleLogin = (token: string) => {
-    localStorage.setItem("token", token);
-    setIsAuthenticated(true);
-  };
-
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-
-        {/* Protected routes */}
         <Route
-          path="/*"
+          path="/login"
           element={
-            isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />
+            <Login
+              onLogin={(token: string) => {
+                // handle login token here, e.g., save to localStorage or context
+                console.log("Logged in with token:", token);
+              }}
+            />
           }
         />
+
+        {/* Main app layout */}
+        <Route path="/*" element={<MainLayout />} />
       </Routes>
     </Router>
   );
 }
 
-/* ✅ Layout with Sidebar for protected pages */
+/* ✅ Layout with Sidebar */
 function MainLayout() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* <Sidebar /> */}
-      <div className="lg:ml-64 bg-background min-h-screen">
+    <div className="min-h-screen bg-background flex">
+      <Sidebar />
+      <div className="flex-1 bg-background min-h-screen">
         <div className="h-screen overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />

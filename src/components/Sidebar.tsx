@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Menu,
   X,
@@ -14,28 +13,28 @@ import {
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
+import React, { useState } from "react";
+import type { JSX } from "react";
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Administrator" | "Warehouse" | "Wastage" | "Reports" | "Settings";
-
-interface SidebarProps {
-  currentPage: Page;
-  onPageChange: (page: Page) => void;
-}
-
-const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] = [
-  { name: "Dashboard", icon: BarChart2 },
-  { name: "Inventory", icon: Package },
-  { name: "Production", icon: FactoryIcon },
-  { name: "Employees", icon: Users },
-  { name: "Orders & Sales", icon: ShoppingCart },
-  { name: "Delivery", icon: Truck },
-  { name: "Finance", icon: DollarSign },
-  { name: "Administrator", icon: Shield },
-  { name: "Warehouse", icon: Warehouse },
-  { name: "Wastage", icon: AlertTriangle },
-  { name: "Reports", icon: BarChart2 },
-  { name: "Settings", icon: SettingsIcon },
+const menuItems: {
+  name: string;
+  path: string;
+  icon: LucideIcon | (() => JSX.Element);
+}[] = [
+  { name: "Dashboard", path: "/dashboard", icon: BarChart2 },
+  { name: "Inventory", path: "/inventory", icon: Package },
+  { name: "Production", path: "/production", icon: FactoryIcon },
+  { name: "Employees", path: "/employees", icon: Users },
+  { name: "Orders & Sales", path: "/orders-sales", icon: ShoppingCart },
+  { name: "Delivery", path: "/delivery", icon: Truck },
+  { name: "Finance", path: "/finance", icon: DollarSign },
+  { name: "Administrator", path: "/administrator", icon: Shield },
+  { name: "Warehouse", path: "/warehouse", icon: Warehouse },
+  { name: "Wastage", path: "/wastage", icon: AlertTriangle },
+  { name: "Reports", path: "/reports", icon: BarChart2 },
+  { name: "Settings", path: "/settings", icon: SettingsIcon },
 ];
 
 function FactoryIcon() {
@@ -57,20 +56,25 @@ function FactoryIcon() {
   );
 }
 
-export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handlePageChange = (page: Page) => {
-    onPageChange(page);
-    setIsOpen(false); // Close mobile menu when navigating
-  };
+  // Get user type from localStorage
+  const userType = localStorage.getItem("type");
+
+  // Filter menu items based on role
+  const filteredMenuItems = menuItems.filter((item) => {
+    // Hide "Warehouse" if user type is not "admin"
+    if (item.name === "Warehouse" && userType !== "admin") return false;
+    return true;
+  });
 
   return (
     <>
       {/* Mobile Toggle */}
       <div className="lg:hidden p-4 flex justify-between items-center border-b bg-card border-border">
         <h1 className="font-bold text-lg text-foreground">Planet's Pick</h1>
-        <button 
+        <button
           onClick={() => setIsOpen(!isOpen)}
           className="text-foreground hover:text-accent transition-colors"
         >
@@ -90,32 +94,33 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
           <span className="text-accent ml-1">Pick</span>
         </div>
         <nav className="p-4 space-y-1">
-          {menuItems.map(({ name, icon: Icon }) => (
-            <button
+          {filteredMenuItems.map(({ name, path, icon: Icon }) => (
+            <NavLink
               key={name}
-              onClick={() => handlePageChange(name)}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
-                currentPage === name 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
+              to={path}
+              onClick={() => setIsOpen(false)} // close mobile menu
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )
+              }
             >
-              <Icon size={18} className={cn(
-                "transition-colors duration-200",
-                currentPage === name 
-                  ? "text-sidebar-primary-foreground" 
-                  : "text-sidebar-foreground group-hover:text-accent"
-              )} />
+              <Icon
+                size={18}
+                className="transition-colors duration-200 group-hover:text-accent"
+              />
               <span className="font-medium">{name}</span>
-            </button>
+            </NavLink>
           ))}
         </nav>
       </aside>
-      
+
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
           aria-label="Close sidebar"

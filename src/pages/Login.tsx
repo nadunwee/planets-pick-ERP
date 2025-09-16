@@ -35,6 +35,8 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Save token (optional: localStorage)
       localStorage.setItem("token", data.token);
+      localStorage.setItem("type", data.type);
+      localStorage.setItem("name", data.name);
 
       // Notify parent
       onLogin(data.token);

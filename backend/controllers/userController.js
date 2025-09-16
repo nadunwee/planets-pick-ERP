@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 const User = require("../models/userModel.js");
+const { log } = require("console");
 
 const createToken = (_id) => {
   return jwt.sign({ _id }, process.env.SECRET);
@@ -14,7 +15,9 @@ async function loginUser(req, res) {
     // create a token
     const name = user.name;
     const token = createToken(user._id);
-    res.status(200).json({ email, token, name });
+    const type = user.type;
+    console.log(type);
+    res.status(200).json({ email, token, name, type });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
