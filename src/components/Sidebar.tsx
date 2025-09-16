@@ -62,12 +62,34 @@ export function Sidebar() {
   // Get user type from localStorage
   const userType = localStorage.getItem("type");
 
-  // Filter menu items based on role
-  const filteredMenuItems = menuItems.filter((item) => {
-    // Hide "Warehouse" if user type is not "admin"
-    if (item.name === "Warehouse" && userType !== "admin") return false;
-    return true;
-  });
+  const inventoryMan = [
+    "Dashboard",
+    "Production",
+    "Employees",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Warehouse",
+    "Wastage",
+    "Settings",
+  ];
+
+  let filteredMenuItems = menuItems;
+
+  if (userType === "inventoryManager") {
+    filteredMenuItems = menuItems.filter(
+      (item) => !inventoryMan.includes(item.name)
+    );
+  }
+
+  // Logout handler
+  const handleLogout = () => {
+    const confirmLogout = window.confirm("Are you sure you want to logout?");
+    if (confirmLogout) {
+      localStorage.clear();
+      window.location.href = "/login"; // redirect to login page
+    }
+  };
 
   return (
     <>
@@ -85,37 +107,50 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:fixed top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg",
+          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:fixed top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg flex flex-col justify-between",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="p-6 font-bold text-xl border-b border-sidebar-border">
-          <span className="text-sidebar-foreground">Planet's</span>
-          <span className="text-accent ml-1">Pick</span>
+        <div>
+          <div className="p-6 font-bold text-xl border-b border-sidebar-border">
+            <span className="text-sidebar-foreground">Planet's</span>
+            <span className="text-accent ml-1">Pick</span>
+          </div>
+          <nav className="p-4 space-y-1">
+            {filteredMenuItems.map(({ name, path, icon: Icon }) => (
+              <NavLink
+                key={name}
+                to={path}
+                onClick={() => setIsOpen(false)} // close mobile menu
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )
+                }
+              >
+                <Icon
+                  size={18}
+                  className="transition-colors duration-200 group-hover:text-accent"
+                />
+                <span className="font-medium">{name}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
-        <nav className="p-4 space-y-1">
-          {filteredMenuItems.map(({ name, path, icon: Icon }) => (
-            <NavLink
-              key={name}
-              to={path}
-              onClick={() => setIsOpen(false)} // close mobile menu
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )
-              }
-            >
-              <Icon
-                size={18}
-                className="transition-colors duration-200 group-hover:text-accent"
-              />
-              <span className="font-medium">{name}</span>
-            </NavLink>
-          ))}
-        </nav>
+
+        {/* Logout Button */}
+        <div className="p-4 border-t border-sidebar-border">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 p-3 w-full text-left text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <X size={18} />
+            <span className="font-medium">Logout</span>
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Overlay */}

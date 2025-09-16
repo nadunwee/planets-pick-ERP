@@ -47,7 +47,10 @@ export default function App() {
 function MainLayout() {
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar />
+      <aside className="bg-sidebar text-sidebar-foreground w-64 h-screen flex-shrink-0 shadow-lg">
+        <Sidebar />
+      </aside>
+
       <div className="flex-1 bg-background min-h-screen">
         <div className="h-screen overflow-y-auto">
           <Routes>
