@@ -1,4 +1,11 @@
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { useState } from "react";
+
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
 import Production from "@/pages/Production";
@@ -12,61 +19,56 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
 import Login from "@/pages/Login";
-import { Sidebar, type Page } from "@/components/Sidebar";
+// import { Sidebar } from "@/components/Sidebar";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>("Dashboard");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleLogin = (username: string, password: string) => {
-    // Simple authentication - in real app, this would call an API
-    if (username && password) {
-      setIsAuthenticated(true);
-    }
-  };
-
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case "Dashboard":
-        return <Dashboard />;
-      case "Inventory":
-        return <Inventory />;
-      case "Production":
-        return <Production />;
-      case "Employees":
-        return <Employees />;
-      case "Orders & Sales":
-        return <OrdersSales />;
-      case "Delivery":
-        return <Delivery />;
-      case "Finance":
-        return <Finance />;
-      case "Administrator":
-        return <Administrator />;
-      case "Warehouse":
-        return <Warehouse />;
-      case "Wastage":
-        return <Wastage />;
-      case "Reports":
-        return <Reports />;
-      case "Settings":
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
+  const handleLogin = (token: string) => {
+    localStorage.setItem("token", token);
+    setIsAuthenticated(true);
   };
 
   return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+
+        {/* Protected routes */}
+        <Route
+          path="/*"
+          element={
+            isAuthenticated ? <MainLayout /> : <Navigate to="/login" replace />
+          }
+        />
+      </Routes>
+    </Router>
+  );
+}
+
+/* ✅ Layout with Sidebar for protected pages */
+function MainLayout() {
+  return (
     <div className="min-h-screen bg-background">
-      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+      {/* <Sidebar /> */}
       <div className="lg:ml-64 bg-background min-h-screen">
         <div className="h-screen overflow-y-auto">
-          {renderPage()}
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/production" element={<Production />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/orders-sales" element={<OrdersSales />} />
+            <Route path="/delivery" element={<Delivery />} />
+            <Route path="/finance" element={<Finance />} />
+            <Route path="/administrator" element={<Administrator />} />
+            <Route path="/warehouse" element={<Warehouse />} />
+            <Route path="/wastage" element={<Wastage />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
       </div>
     </div>

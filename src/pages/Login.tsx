@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LogIn, User, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface LoginProps {
   onLogin: (token: string) => void; // pass back token after login
@@ -10,6 +11,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +21,6 @@ export default function Login({ onLogin }: LoginProps) {
     setError(null);
 
     try {
-      // 🔥 Call your backend
       const response = await fetch("http://localhost:4000/api/user/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -37,6 +38,7 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Notify parent
       onLogin(data.token);
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.message);
     } finally {
