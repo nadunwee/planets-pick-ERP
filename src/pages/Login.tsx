@@ -33,10 +33,14 @@ export default function Login({ onLogin }: LoginProps) {
         throw new Error(data.error || "Login failed");
       }
 
+      console.log(data);
+
       // Save token (optional: localStorage)
       localStorage.setItem("token", data.token);
       localStorage.setItem("type", data.type);
       localStorage.setItem("name", data.name);
+      localStorage.setItem("department", data.department);
+      localStorage.setItem("level", data.level);
 
       // Notify parent
       onLogin(data.token);
