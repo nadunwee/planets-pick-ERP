@@ -15,11 +15,40 @@ async function loginUser(req, res) {
     // create a token
     const name = user.name;
     const token = createToken(user._id);
-    const type = user.type;
-    console.log(type);
-    res.status(200).json({ email, token, name, type });
+    const department = user.department;
+    const level = user.level;
+    res.status(200).json({ email, token, name, department, level });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+}
+
+// Get all users
+async function getAllUsers(req, res) {
+  try {
+    const items = await User.find();
+    res.status(200).json(items);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+}
+
+async function editUserApproval(req, res) {
+  const { id } = req.params;
+  const { approved } = req.body; // expected: true, false, or "rejected"
+
+  try {
+    const user = await User.findByIdAndUpdate(id, { approved }, { new: true });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error updating user approval:", error);
+    res.status(500).json({ error: "Failed to update user approval" });
   }
 }
 
@@ -57,4 +86,4 @@ async function loginUser(req, res) {
 //   res.status(200).json(user);
 // };
 
-module.exports = { loginUser };
+module.exports = { loginUser, getAllUsers, editUserApproval };

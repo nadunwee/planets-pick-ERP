@@ -13,7 +13,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import type { JSX } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -60,7 +60,8 @@ export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Get user type from localStorage
-  const userType = localStorage.getItem("type");
+  const userDepartment = localStorage.getItem("department");
+  const userlevel = localStorage.getItem("level");
 
   const inventoryMan = [
     "Dashboard",
@@ -74,11 +75,28 @@ export function Sidebar() {
     "Settings",
   ];
 
+  const productionMan = [
+    "Dashboard",
+    "Employees",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Warehouse",
+    "Wastage",
+    "Settings",
+  ];
+
   let filteredMenuItems = menuItems;
 
-  if (userType === "inventoryManager") {
+  if (userDepartment === "Inventory") {
     filteredMenuItems = menuItems.filter(
       (item) => !inventoryMan.includes(item.name)
+    );
+  }
+
+  if (userDepartment === "production") {
+    filteredMenuItems = menuItems.filter(
+      (item) => !productionMan.includes(item.name)
     );
   }
 
