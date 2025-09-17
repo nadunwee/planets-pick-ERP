@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   Search,
@@ -486,6 +486,22 @@ export default function Employees() {
     "Maintenance",
   ];
 
+  // Fetch employees from backend on mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/employees");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch employees");
+        setEmployees(data);
+      } catch (error: any) {
+        console.error(error);
+        alert(error.message);
+      }
+    };
+    fetchEmployees();
+  }, []);
+
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch =
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -660,15 +676,39 @@ export default function Employees() {
     setShowEditModal(true);
   };
 
-  const handleUpdateEmployee = () => {
+  const handleUpdateEmployee = async () => {
     if (!editingEmployee) return;
 
-    const updatedEmployees = employees.map((emp) =>
-      emp.id === editingEmployee.id ? editingEmployee : emp
-    );
-    setEmployees(updatedEmployees);
-    setShowEditModal(false);
-    setEditingEmployee(null);
+    try {
+      // Send the updated employee to the backend
+      const response = await fetch(`/api/employees/${editingEmployee.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editingEmployee),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update employee");
+      }
+
+      const updatedEmployee = await response.json();
+
+      // Update the local state
+      setEmployees((prevEmployees) =>
+        prevEmployees.map((emp) =>
+          emp.id === updatedEmployee._id ? updatedEmployee : emp
+        )
+      );
+
+      setShowEditModal(false);
+      setEditingEmployee(null);
+    } catch (error: any) {
+      console.error("Error updating employee:", error.message);
+      alert("Failed to update employee: " + error.message);
+    }
   };
 
   const handleDeleteEmployee = (employee: Employee) => {
@@ -994,36 +1034,7 @@ export default function Employees() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-gray-500">Performance</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${employee.performance}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium">
-                      {employee.performance}%
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Attendance</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${employee.attendance}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium">
-                      {employee.attendance}%
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4"></div>
 
               <div className="mb-4">
                 <p className="text-xs text-gray-500 mb-1">Skills</p>
