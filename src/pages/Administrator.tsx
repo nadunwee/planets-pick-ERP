@@ -137,10 +137,6 @@ export default function Administrator() {
               <p className="text-3xl font-bold text-blue-700">
                 {allUsers.length}
               </p>
-              {/* <p className="text-xs text-blue-500 flex items-center gap-1 mt-1">
-                <Users size={14} />
-                System users
-              </p> */}
             </div>
             <Users className="text-blue-600" size={28} />
           </div>
@@ -152,10 +148,6 @@ export default function Administrator() {
             <div>
               <p className="text-sm text-green-600 font-medium">Active Users</p>
               <p className="text-3xl font-bold text-green-700">22</p>
-              {/* <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
-                <UserCheck size={14} />
-                Currently active
-              </p> */}
             </div>
             <UserCheck className="text-green-600" size={28} />
           </div>
@@ -333,12 +325,6 @@ export default function Administrator() {
               <h2 className="font-semibold text-lg">Quick Actions</h2>
             </div>
             <div className="p-4 space-y-2 space-x-1">
-              {/* <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
-                Add New User
-              </button>
-              <button className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm">
-                Create Role
-              </button> */}
               <button className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm">
                 Bulk Import
               </button>
@@ -350,34 +336,6 @@ export default function Administrator() {
               </button>
             </div>
           </div>
-
-          {/* System Health */}
-          {/* <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Activity size={20} />
-                System Health
-              </h2>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Active Sessions</span>
-                <span className="text-sm font-medium text-green-600">24</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Failed Logins</span>
-                <span className="text-sm font-medium text-red-600">3</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Security Alerts</span>
-                <span className="text-sm font-medium text-yellow-600">1</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">System Uptime</span>
-                <span className="text-sm font-medium text-blue-600">99.9%</span>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>
