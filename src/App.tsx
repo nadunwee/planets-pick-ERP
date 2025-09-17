@@ -18,7 +18,10 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
 import Login from "@/pages/Login";
+import Procurement from "@/pages/Suppliers"; // 👈 import Suppliers page
+
 import { Sidebar } from "@/components/Sidebar";
+
 
 export default function App() {
   return (
