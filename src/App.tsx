@@ -1,4 +1,10 @@
-import { useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
 import Production from "@/pages/Production";
@@ -6,48 +12,67 @@ import Employees from "@/pages/Employees";
 import OrdersSales from "@/pages/OrdersSales";
 import Delivery from "@/pages/Delivery";
 import Finance from "@/pages/Finance";
+import Administrator from "@/pages/Administrator";
+import Wastage from "@/pages/Wastage";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
+import Warehouse from "@/pages/Warehouse";
+import Login from "@/pages/Login";
 import Procurement from "@/pages/Suppliers"; // 👈 import Suppliers page
 
-import { Sidebar, type Page } from "@/components/Sidebar";
+import { Sidebar } from "@/components/Sidebar";
 
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>("Dashboard");
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case "Dashboard":
-        return <Dashboard />;
-      case "Inventory":
-        return <Inventory />;
-      case "Production":
-        return <Production />;
-      case "Employees":
-        return <Employees />;
-      case "Orders & Sales":
-        return <OrdersSales />;
-      case "Delivery":
-        return <Delivery />;
-      case "Finance":
-        return <Finance />;
-      case "Procurement":
-        return <Procurement />;
-      case "Wastage":
-        return <div className="p-4"><h1 className="text-2xl font-bold">Wastage Management</h1><p className="text-gray-600">Coming soon...</p></div>;
-      case "Reports":
-        return <div className="p-4"><h1 className="text-2xl font-bold">Reports & Analytics</h1><p className="text-gray-600">Coming soon...</p></div>;
-      case "Settings":
-        return <div className="p-4"><h1 className="text-2xl font-bold">System Settings</h1><p className="text-gray-600">Coming soon...</p></div>;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background lg:flex">
-      <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="flex-1 bg-background">
-        {renderPage()}
+    <Router>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <Login
+              onLogin={(token: string) => {
+                // handle login token here, e.g., save to localStorage or context
+                console.log("Logged in with token:", token);
+              }}
+            />
+          }
+        />
+
+        {/* Main app layout */}
+        <Route path="/*" element={<MainLayout />} />
+      </Routes>
+    </Router>
+  );
+}
+
+/* ✅ Layout with Sidebar */
+function MainLayout() {
+  return (
+    <div className="min-h-screen bg-background flex">
+      <aside className="bg-sidebar text-sidebar-foreground w-64 h-screen flex-shrink-0 shadow-lg">
+        <Sidebar />
+      </aside>
+
+      <div className="flex-1 bg-background min-h-screen">
+        <div className="h-screen overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/production" element={<Production />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/orders-sales" element={<OrdersSales />} />
+            <Route path="/delivery" element={<Delivery />} />
+            <Route path="/finance" element={<Finance />} />
+            <Route path="/administrator" element={<Administrator />} />
+            <Route path="/warehouse" element={<Warehouse />} />
+            <Route path="/wastage" element={<Wastage />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </div>
       </div>
     </div>
   );

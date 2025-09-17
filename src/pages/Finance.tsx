@@ -14,6 +14,9 @@ import {
   Bot,
   Clock,
   Target,
+  X,
+  Eye,
+  Printer,
 } from "lucide-react";
 
 interface Transaction {
@@ -52,6 +55,14 @@ interface FinancialMetric {
   change: number;
   period: string;
   format: "currency" | "percentage" | "number";
+}
+
+interface ReportType {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  format: "pdf" | "excel" | "csv";
 }
 
 const transactions: Transaction[] = [
@@ -94,7 +105,7 @@ const transactions: Transaction[] = [
     type: "expense",
     category: "Operations",
     description: "Monthly electricity bill",
-    amount: 45000,
+    amount: 450000,
     account: "Business Checking",
     reference: "UTIL-2024-001",
     status: "completed",
@@ -152,35 +163,163 @@ const accounts: Account[] = [
 ];
 
 const budgets: Budget[] = [
-  { category: "Raw Materials", allocated: 800000, spent: 650000, remaining: 150000, period: "monthly" },
-  { category: "Payroll", allocated: 400000, spent: 385000, remaining: 15000, period: "monthly" },
-  { category: "Operations", allocated: 200000, spent: 165000, remaining: 35000, period: "monthly" },
-  { category: "Marketing", allocated: 100000, spent: 75000, remaining: 25000, period: "monthly" },
-  { category: "Equipment", allocated: 300000, spent: 125000, remaining: 175000, period: "quarterly" },
+  {
+    category: "Raw Materials",
+    allocated: 800000,
+    spent: 650000,
+    remaining: 150000,
+    period: "monthly",
+  },
+  {
+    category: "Payroll",
+    allocated: 400000,
+    spent: 385000,
+    remaining: 15000,
+    period: "monthly",
+  },
+  {
+    category: "Operations",
+    allocated: 200000,
+    spent: 165000,
+    remaining: 35000,
+    period: "monthly",
+  },
+  {
+    category: "Marketing",
+    allocated: 100000,
+    spent: 75000,
+    remaining: 25000,
+    period: "monthly",
+  },
+  {
+    category: "Equipment",
+    allocated: 300000,
+    spent: 125000,
+    remaining: 175000,
+    period: "quarterly",
+  },
 ];
 
 const financialMetrics: FinancialMetric[] = [
-  { label: "Total Revenue", value: 2450000, change: 18.7, period: "this month", format: "currency" },
-  { label: "Total Expenses", value: 1850000, change: 12.3, period: "this month", format: "currency" },
-  { label: "Net Profit", value: 600000, change: 24.5, period: "this month", format: "currency" },
-  { label: "Profit Margin", value: 24.5, change: 3.2, period: "this month", format: "percentage" },
-  { label: "Cash Flow", value: 325000, change: -5.8, period: "this month", format: "currency" },
-  { label: "ROI", value: 15.8, change: 2.1, period: "this quarter", format: "percentage" },
+  {
+    label: "Total Revenue",
+    value: 2450000,
+    change: 18.7,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Total Expenses",
+    value: 1850000,
+    change: 12.3,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Net Profit",
+    value: 600000,
+    change: 24.5,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "Profit Margin",
+    value: 24.5,
+    change: 3.2,
+    period: "this month",
+    format: "percentage",
+  },
+  {
+    label: "Cash Flow",
+    value: 325000,
+    change: -5.8,
+    period: "this month",
+    format: "currency",
+  },
+  {
+    label: "ROI",
+    value: 15.8,
+    change: 2.1,
+    period: "this quarter",
+    format: "percentage",
+  },
+];
+
+const reportTypes: ReportType[] = [
+  {
+    id: "profit-loss",
+    name: "Profit & Loss Statement",
+    description: "Detailed income, expenses, and net profit analysis",
+    icon: <BarChart3 size={20} />,
+    format: "pdf",
+  },
+  {
+    id: "cash-flow",
+    name: "Cash Flow Statement",
+    description: "Operating, investing, and financing cash flows",
+    icon: <TrendingUp size={20} />,
+    format: "excel",
+  },
+  {
+    id: "balance-sheet",
+    name: "Balance Sheet",
+    description: "Assets, liabilities, and equity overview",
+    icon: <CreditCard size={20} />,
+    format: "pdf",
+  },
+  {
+    id: "budget-variance",
+    name: "Budget Variance Report",
+    description: "Actual vs. budgeted performance analysis",
+    icon: <Target size={20} />,
+    format: "excel",
+  },
+  {
+    id: "transaction-summary",
+    name: "Transaction Summary",
+    description: "Detailed transaction listing and categorization",
+    icon: <Receipt size={20} />,
+    format: "csv",
+  },
 ];
 
 export default function Finance() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showDownloadReports, setShowDownloadReports] = useState(false);
+  const [newTransaction, setNewTransaction] = useState({
+    type: "expense" as "income" | "expense",
+    category: "",
+    description: "",
+    amount: "",
+    account: "",
+    reference: "",
+    date: new Date().toISOString().split("T")[0],
+  });
 
   const types = ["All", "income", "expense"];
-  const categories = ["All", "Sales", "Raw Materials", "Operations", "Payroll", "Marketing", "Equipment"];
+  const categories = [
+    "All",
+    "Sales",
+    "Raw Materials",
+    "Operations",
+    "Payroll",
+    "Marketing",
+    "Equipment",
+  ];
 
   const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === "All" || transaction.type === selectedType;
-    const matchesCategory = selectedCategory === "All" || transaction.category === selectedCategory;
+    const matchesSearch =
+      transaction.description
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType =
+      selectedType === "All" || transaction.type === selectedType;
+    const matchesCategory =
+      selectedCategory === "All" || transaction.category === selectedCategory;
     return matchesSearch && matchesType && matchesCategory;
   });
 
@@ -203,29 +342,61 @@ export default function Finance() {
 
   const totalBalance = accounts.reduce((sum, account) => {
     if (account.currency === "LKR") return sum + account.balance;
-    return sum + (account.balance * 320); // Assuming USD to LKR conversion
+    return sum + account.balance * 320; // Assuming USD to LKR conversion
   }, 0);
 
   const monthlyIncome = transactions
-    .filter(t => t.type === "income" && t.status === "completed")
+    .filter((t) => t.type === "income" && t.status === "completed")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const monthlyExpenses = transactions
-    .filter(t => t.type === "expense" && t.status === "completed")
+    .filter((t) => t.type === "expense" && t.status === "completed")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const pendingPayments = transactions.filter(t => t.status === "pending").length;
+  const pendingPayments = transactions.filter(
+    (t) => t.status === "pending"
+  ).length;
+
+  const handleAddTransaction = () => {
+    // Here you would typically save to your backend
+    console.log("Adding transaction:", newTransaction);
+    setShowAddTransaction(false);
+    setNewTransaction({
+      type: "expense",
+      category: "",
+      description: "",
+      amount: "",
+      account: "",
+      reference: "",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+
+
+  const handleDownloadReport = (report: ReportType) => {
+    // Here you would typically generate and download the specific report
+    console.log(`Downloading ${report.name} in ${report.format} format`);
+    setShowDownloadReports(false);
+  };
 
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Finance Management</h1>
-          <p className="text-gray-600">Monitor financial performance, manage budgets, and track cash flow</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Finance Management
+          </h1>
+          <p className="text-gray-600">
+            Monitor financial performance, manage budgets, and track cash flow
+          </p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
+          <button 
+            onClick={() => setShowAddTransaction(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+          >
             <Plus size={16} />
             Add Transaction
           </button>
@@ -233,12 +404,225 @@ export default function Finance() {
             <Bot size={16} />
             Financial AI
           </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
-            <Download size={16} />
-            Export Report
+
+          <button 
+            onClick={() => setShowDownloadReports(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
+          >
+            <FileText size={16} />
+            Download Reports
           </button>
         </div>
       </div>
+
+      {/* Add Transaction Modal */}
+      {showAddTransaction && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl border border-gray-100">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Transaction</h2>
+              <button
+                onClick={() => setShowAddTransaction(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction Type
+                </label>
+                <select
+                  value={newTransaction.type}
+                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value as "income" | "expense"})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={newTransaction.category}
+                  onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="">Select Category</option>
+                  {categories.slice(1).map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
+                  placeholder="Enter transaction description"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Amount (LKR)
+                </label>
+                <input
+                  type="number"
+                  value={newTransaction.amount}
+                  onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
+                  placeholder="0.00"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account
+                </label>
+                <select
+                  value={newTransaction.account}
+                  onChange={(e) => setNewTransaction({...newTransaction, account: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="">Select Account</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.name}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={newTransaction.reference}
+                  onChange={(e) => setNewTransaction({...newTransaction, reference: e.target.value})}
+                  placeholder="Invoice/PO number"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={newTransaction.date}
+                  onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowAddTransaction(false)}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddTransaction}
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+              >
+                Add Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Download Specific Reports Modal */}
+      {showDownloadReports && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Download Financial Reports</h2>
+              <button
+                onClick={() => setShowDownloadReports(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reportTypes.map((report) => (
+                <div key={report.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 hover:border-blue-200">
+                  <div className="flex items-start gap-4">
+                    <div className="text-blue-600 p-2 bg-blue-50 rounded-lg">
+                      {report.icon}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-2 text-lg">
+                        {report.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        {report.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleDownloadReport(report)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-sm"
+                        >
+                          <Download size={16} />
+                          Download {report.format.toUpperCase()}
+                        </button>
+                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
+                          <Eye size={16} />
+                          Preview
+                        </button>
+                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
+                          <Printer size={16} />
+                          Print
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <h4 className="font-semibold text-gray-900 mb-4 text-lg">Report Options</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Include charts and graphs</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Include detailed notes</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <span className="font-medium">Auto-schedule reports</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Financial Assistant */}
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
@@ -247,10 +631,14 @@ export default function Finance() {
             <Bot size={20} />
           </div>
           <div>
-            <h3 className="font-semibold text-green-900">AI Financial Insights</h3>
+            <h3 className="font-semibold text-green-900">
+              AI Financial Insights
+            </h3>
             <p className="text-green-700 text-sm">
-              Cash flow trending positive with 24.5% profit margin increase. Recommend setting aside 20% for Q2 expansion.
-              Expense optimization suggests renegotiating supplier contracts could save 8% on raw materials.
+              Cash flow trending positive with 24.5% profit margin increase.
+              Recommend setting aside 20% for Q2 expansion. Expense optimization
+              suggests renegotiating supplier contracts could save 8% on raw
+              materials.
             </p>
           </div>
           <button className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
@@ -265,7 +653,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Balance</p>
-              <p className="text-2xl font-bold text-blue-600">LKR {totalBalance.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                LKR {totalBalance.toLocaleString()}
+              </p>
               <p className="text-sm text-blue-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +12.5% from last month
@@ -278,7 +668,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Monthly Income</p>
-              <p className="text-2xl font-bold text-green-600">LKR {monthlyIncome.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">
+                LKR {monthlyIncome.toLocaleString()}
+              </p>
               <p className="text-sm text-green-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +18.7% from last month
@@ -291,7 +683,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Monthly Expenses</p>
-              <p className="text-2xl font-bold text-red-600">LKR {monthlyExpenses.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-red-600">
+                LKR {monthlyExpenses.toLocaleString()}
+              </p>
               <p className="text-sm text-red-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +12.3% from last month
@@ -304,7 +698,9 @@ export default function Finance() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Payments</p>
-              <p className="text-2xl font-bold text-yellow-600">{pendingPayments}</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {pendingPayments}
+              </p>
               <p className="text-sm text-gray-600">Requires attention</p>
             </div>
             <Clock className="text-yellow-500" size={24} />
@@ -326,17 +722,25 @@ export default function Finance() {
             <div className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {financialMetrics.map((metric, idx) => (
-                  <div key={idx} className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div
+                    key={idx}
+                    className="text-center p-3 bg-gray-50 rounded-lg"
+                  >
                     <p className="text-sm text-gray-600">{metric.label}</p>
                     <p className="text-xl font-bold text-gray-900">
-                      {metric.format === "currency" 
+                      {metric.format === "currency"
                         ? `LKR ${metric.value.toLocaleString()}`
                         : metric.format === "percentage"
                         ? `${metric.value}%`
                         : metric.value.toLocaleString()}
                     </p>
-                    <p className={`text-sm ${metric.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metric.change >= 0 ? '+' : ''}{metric.change}% {metric.period}
+                    <p
+                      className={`text-sm ${
+                        metric.change >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {metric.change >= 0 ? "+" : ""}
+                      {metric.change}% {metric.period}
                     </p>
                   </div>
                 ))}
@@ -352,13 +756,16 @@ export default function Finance() {
                 Recent Transactions
               </h2>
             </div>
-            
+
             {/* Filters */}
             <div className="p-4 border-b bg-gray-50">
               <div className="flex flex-col lg:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      size={16}
+                    />
                     <input
                       type="text"
                       placeholder="Search transactions..."
@@ -376,7 +783,9 @@ export default function Finance() {
                   >
                     {types.map((type) => (
                       <option key={type} value={type}>
-                        {type === "All" ? "All Types" : type.charAt(0).toUpperCase() + type.slice(1)}
+                        {type === "All"
+                          ? "All Types"
+                          : type.charAt(0).toUpperCase() + type.slice(1)}
                       </option>
                     ))}
                   </select>
@@ -398,17 +807,28 @@ export default function Finance() {
             <div className="p-4">
               <div className="space-y-3">
                 {filteredTransactions.map((transaction) => (
-                  <div key={transaction.id} className="border rounded-lg p-3 hover:bg-gray-50 transition">
+                  <div
+                    key={transaction.id}
+                    className="border rounded-lg p-3 hover:bg-gray-50 transition"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{transaction.description}</h4>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(transaction.status)}`}>
+                          <h4 className="font-medium">
+                            {transaction.description}
+                          </h4>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                              transaction.status
+                            )}`}
+                          >
                             {transaction.status}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          <p>{transaction.category} • {transaction.account}</p>
+                          <p>
+                            {transaction.category} • {transaction.account}
+                          </p>
                           <p className="flex items-center gap-2">
                             <Calendar size={12} />
                             {transaction.date}
@@ -421,8 +841,13 @@ export default function Finance() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`text-lg font-bold ${getTypeColor(transaction.type)}`}>
-                          {transaction.type === "income" ? "+" : "-"}LKR {transaction.amount.toLocaleString()}
+                        <p
+                          className={`text-lg font-bold ${getTypeColor(
+                            transaction.type
+                          )}`}
+                        >
+                          {transaction.type === "income" ? "+" : "-"}LKR{" "}
+                          {transaction.amount.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -449,13 +874,19 @@ export default function Finance() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium">{account.name}</h4>
-                      <p className="text-xs text-gray-500">{account.bank} • {account.accountNumber}</p>
+                      <p className="text-xs text-gray-500">
+                        {account.bank} • {account.accountNumber}
+                      </p>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      account.type === "checking" ? "bg-blue-100 text-blue-600" :
-                      account.type === "savings" ? "bg-green-100 text-green-600" :
-                      "bg-purple-100 text-purple-600"
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        account.type === "checking"
+                          ? "bg-blue-100 text-blue-600"
+                          : account.type === "savings"
+                          ? "bg-green-100 text-green-600"
+                          : "bg-purple-100 text-purple-600"
+                      }`}
+                    >
                       {account.type}
                     </span>
                   </div>
@@ -480,25 +911,42 @@ export default function Finance() {
                 <div key={idx}>
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium text-sm">{budget.category}</h4>
-                    <span className="text-xs text-gray-500 capitalize">{budget.period}</span>
+                    <span className="text-xs text-gray-500 capitalize">
+                      {budget.period}
+                    </span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Spent: LKR {budget.spent.toLocaleString()}</span>
-                      <span>Budget: LKR {budget.allocated.toLocaleString()}</span>
+                      <span>
+                        Budget: LKR {budget.allocated.toLocaleString()}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full ${
-                          (budget.spent / budget.allocated) > 0.9 ? "bg-red-500" :
-                          (budget.spent / budget.allocated) > 0.7 ? "bg-yellow-500" : "bg-green-500"
+                          budget.spent / budget.allocated > 0.9
+                            ? "bg-red-500"
+                            : budget.spent / budget.allocated > 0.7
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
                         }`}
-                        style={{ width: `${Math.min((budget.spent / budget.allocated) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min(
+                            (budget.spent / budget.allocated) * 100,
+                            100
+                          )}%`,
+                        }}
                       />
                     </div>
                     <div className="flex justify-between text-xs text-gray-600">
-                      <span>{Math.round((budget.spent / budget.allocated) * 100)}% used</span>
-                      <span>LKR {budget.remaining.toLocaleString()} remaining</span>
+                      <span>
+                        {Math.round((budget.spent / budget.allocated) * 100)}%
+                        used
+                      </span>
+                      <span>
+                        LKR {budget.remaining.toLocaleString()} remaining
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -512,13 +960,19 @@ export default function Finance() {
               <h2 className="font-semibold text-lg">Quick Actions</h2>
             </div>
             <div className="p-4 space-y-2">
-              <button className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm">
+              <button 
+                onClick={() => setShowAddTransaction(true)}
+                className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm"
+              >
                 Record Payment
               </button>
               <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
                 Generate Invoice
               </button>
-              <button className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm">
+              <button 
+                onClick={() => setShowDownloadReports(true)}
+                className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm"
+              >
                 Financial Report
               </button>
               <button className="w-full bg-yellow-600 text-white py-2 px-3 rounded hover:bg-yellow-700 transition text-sm">
@@ -540,20 +994,25 @@ export default function Finance() {
             </div>
             <div className="p-4 space-y-3">
               <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Cash Flow Optimization</h4>
+                <h4 className="font-medium text-sm mb-1">
+                  Cash Flow Optimization
+                </h4>
                 <p className="text-xs text-gray-600">
-                  Consider delaying non-critical expenses by 10 days to improve cash flow
+                  Consider delaying non-critical expenses by 10 days to improve
+                  cash flow
                 </p>
                 <button className="mt-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition">
                   View Details
                 </button>
               </div>
               <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Investment Opportunity</h4>
+                <h4 className="font-medium text-sm mb-1">
+                  Investment Opportunity
+                </h4>
                 <p className="text-xs text-gray-600">
                   Surplus cash of LKR 500K could earn 8% in short-term deposits
                 </p>
-                <button className="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition">
+                <button className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
                   Calculate Returns
                 </button>
               </div>
@@ -562,7 +1021,7 @@ export default function Finance() {
                 <p className="text-xs text-gray-600">
                   Q1 tax liability estimated at LKR 185K - plan accordingly
                 </p>
-                <button className="mt-2 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition">
+                <button className="mt-2 text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition">
                   Plan Taxes
                 </button>
               </div>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Menu,
   X,
@@ -9,30 +8,33 @@ import {
   DollarSign,
   AlertTriangle,
   BarChart2,
-  Settings,
+  Settings as SettingsIcon,
+  Shield,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
+import React, { use, useState } from "react";
+import type { JSX } from "react";
+import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-export type Page = "Dashboard" | "Inventory" | "Production" | "Employees" | "Orders & Sales" | "Delivery" | "Finance" | "Wastage" | "Reports" | "Settings"| "Procurement";
-
-interface SidebarProps {
-  currentPage: Page;
-  onPageChange: (page: Page) => void;
-}
-
-const menuItems: { name: Page; icon: LucideIcon | (() => React.JSX.Element) }[] = [
-  { name: "Dashboard", icon: BarChart2 },
-  { name: "Inventory", icon: Package },
-  { name: "Production", icon: FactoryIcon },
-  { name: "Employees", icon: Users },
-  { name: "Procurement", icon: Package },
-  { name: "Orders & Sales", icon: ShoppingCart },
-  { name: "Delivery", icon: Truck },
-  { name: "Finance", icon: DollarSign },
-  { name: "Wastage", icon: AlertTriangle },
-  { name: "Reports", icon: BarChart2 },
-  { name: "Settings", icon: Settings },
+const menuItems: {
+  name: string;
+  path: string;
+  icon: LucideIcon | (() => JSX.Element);
+}[] = [
+  { name: "Dashboard", path: "/dashboard", icon: BarChart2 },
+  { name: "Inventory", path: "/inventory", icon: Package },
+  { name: "Production", path: "/production", icon: FactoryIcon },
+  { name: "Employees", path: "/employees", icon: Users },
+  { name: "Orders & Sales", path: "/orders-sales", icon: ShoppingCart },
+  { name: "Delivery", path: "/delivery", icon: Truck },
+  { name: "Finance", path: "/finance", icon: DollarSign },
+  { name: "Administrator", path: "/administrator", icon: Shield },
+  { name: "Warehouse", path: "/warehouse", icon: Warehouse },
+  { name: "Wastage", path: "/wastage", icon: AlertTriangle },
+  { name: "Reports", path: "/reports", icon: BarChart2 },
+  { name: "Settings", path: "/settings", icon: SettingsIcon },
 ];
 
 function FactoryIcon() {
@@ -54,12 +56,57 @@ function FactoryIcon() {
   );
 }
 
-export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
+export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handlePageChange = (page: Page) => {
-    onPageChange(page);
-    setIsOpen(false); // Close mobile menu when navigating
+  // Get user type from localStorage
+  const userDepartment = localStorage.getItem("department");
+  const userlevel = localStorage.getItem("level");
+
+  const inventoryMan = [
+    "Dashboard",
+    "Production",
+    "Employees",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Warehouse",
+    "Wastage",
+    "Settings",
+  ];
+
+  const productionMan = [
+    "Dashboard",
+    "Employees",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Warehouse",
+    "Wastage",
+    "Settings",
+  ];
+
+  let filteredMenuItems = menuItems;
+
+  if (userDepartment === "Inventory") {
+    filteredMenuItems = menuItems.filter(
+      (item) => !inventoryMan.includes(item.name)
+    );
+  }
+
+  if (userDepartment === "production") {
+    filteredMenuItems = menuItems.filter(
+      (item) => !productionMan.includes(item.name)
+    );
+  }
+
+  // Logout handler
+  const handleLogout = () => {
+    const confirmLogout = window.confirm("Are you sure you want to logout?");
+    if (confirmLogout) {
+      localStorage.clear();
+      window.location.href = "/login"; // redirect to login page
+    }
   };
 
   return (
@@ -67,7 +114,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       {/* Mobile Toggle */}
       <div className="lg:hidden p-4 flex justify-between items-center border-b bg-card border-border">
         <h1 className="font-bold text-lg text-foreground">Planet's Pick</h1>
-        <button 
+        <button
           onClick={() => setIsOpen(!isOpen)}
           className="text-foreground hover:text-accent transition-colors"
         >
@@ -78,41 +125,55 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:static top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg",
+          "bg-sidebar text-sidebar-foreground w-64 h-screen fixed lg:fixed top-0 left-0 transform transition-transform duration-300 z-50 shadow-lg flex flex-col justify-between",
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="p-6 font-bold text-xl border-b border-sidebar-border">
-          <span className="text-sidebar-foreground">Planet's</span>
-          <span className="text-accent ml-1">Pick</span>
+        <div>
+          <div className="p-6 font-bold text-xl border-b border-sidebar-border">
+            <span className="text-sidebar-foreground">Planet's</span>
+            <span className="text-accent ml-1">Pick</span>
+          </div>
+          <nav className="p-4 space-y-1">
+            {filteredMenuItems.map(({ name, path, icon: Icon }) => (
+              <NavLink
+                key={name}
+                to={path}
+                onClick={() => setIsOpen(false)} // close mobile menu
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )
+                }
+              >
+                <Icon
+                  size={18}
+                  className="transition-colors duration-200 group-hover:text-accent"
+                />
+                <span className="font-medium">{name}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
-        <nav className="p-4 space-y-1">
-          {menuItems.map(({ name, icon: Icon }) => (
-            <button
-              key={name}
-              onClick={() => handlePageChange(name)}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200 w-full text-left group",
-                currentPage === name 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <Icon size={18} className={cn(
-                "transition-colors duration-200",
-                currentPage === name 
-                  ? "text-sidebar-primary-foreground" 
-                  : "text-sidebar-foreground group-hover:text-accent"
-              )} />
-              <span className="font-medium">{name}</span>
-            </button>
-          ))}
-        </nav>
+
+        {/* Logout Button */}
+        <div className="p-4 border-t border-sidebar-border">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 p-3 w-full text-left text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+          >
+            <X size={18} />
+            <span className="font-medium">Logout</span>
+          </button>
+        </div>
       </aside>
-      
+
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
           aria-label="Close sidebar"

@@ -3,8 +3,19 @@ import { QuickActions } from "@/components/QuickActions";
 import { ProductionProgress } from "@/components/ProductionProgress";
 import { LowStockAlerts } from "@/components/LowStockAlerts";
 import { RecentActivity } from "@/components/RecentActivity";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const username = localStorage.getItem("name"); // 👈 check localStorage
+    if (!username) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
   return (
     <>
       <header className="hidden lg:flex justify-between h-16 items-center bg-card border-b border-border shadow-sm px-6">
