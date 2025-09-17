@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { Modal, Form, Input, Select, Button, Space, InputNumber, Divider, Alert, message } from "antd";
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+// import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { PurchaseOrder, Supplier } from "../../types";
 import { listSuppliersLite } from "../services/supplierService";
 
@@ -236,14 +236,14 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
                   >
                     <InputNumber min={0} step={0.01} placeholder="Price" />
                   </Form.Item>
-                  <MinusCircleOutlined onClick={() => remove(field.name)} />
+                  {/* <MinusCircleOutlined onClick={() => remove(field.name)} /> */}
                 </Space>
               ))}
               <Form.ErrorList errors={errors} />
               <Form.Item>
-                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                {/* <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}> */}
                   Add item
-                </Button>
+                {/* </Button> */}
               </Form.Item>
             </>
           )}
