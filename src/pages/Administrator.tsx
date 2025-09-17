@@ -26,8 +26,10 @@ export default function Administrator() {
   const [selectedRole, setSelectedRole] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userLevels, setUserLevels] = useState<Record<string, string>>({});
 
   const rolesList = ["All", "admin", "manager", "employee", "viewer"];
   const statusList = ["All", "active", "inactive", "suspended"];
@@ -43,9 +45,8 @@ export default function Administrator() {
       const res = await fetch("http://localhost:4000/api/user/all_users");
       if (!res.ok) throw new Error("Failed to fetch users");
       const data: User[] = await res.json();
+      setAllUsers(data);
       const pendingUsers = data.filter((user) => !user.approved);
-
-      console.log(pendingUsers);
 
       setUsers(pendingUsers);
     } catch (err: any) {
@@ -66,7 +67,11 @@ export default function Administrator() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  async function handleApproval(userId: string, status: boolean | "rejected") {
+  async function handleApproval(
+    userId: string,
+    status: boolean | "rejected",
+    level?: string
+  ) {
     try {
       const res = await fetch(
         `http://localhost:4000/api/user/edit_approval/${userId}`,
@@ -75,15 +80,33 @@ export default function Administrator() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ approved: status }),
+          body: JSON.stringify({ approved: status, level: level || "L1" }),
         }
       );
       if (!res.ok) throw new Error("Failed to update user approval");
+
       const updatedUser = await res.json();
-      // Update state to reflect change
       setUsers((prev) =>
         prev.map((user) => (user._id === userId ? updatedUser : user))
       );
+      await fetchUsers();
+    } catch (err: any) {
+      console.error(err.message);
+    }
+  }
+
+  async function handleDelete(userId: string) {
+    try {
+      const res = await fetch(`http://localhost:4000/api/user/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete user");
+
+      // Remove user from state
+      setUsers((prev) => prev.filter((user) => user._id !== userId));
+
+      // Optionally re-fetch users (if you want to be extra sure)
       await fetchUsers();
     } catch (err: any) {
       console.error(err.message);
@@ -102,74 +125,69 @@ export default function Administrator() {
             Manage user access, roles, and system permissions
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
-            <UserPlus size={16} />
-            Add User
-          </button>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
-            <Plus size={16} />
-            Add Role
-          </button>
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
-            <Settings size={16} />
-            System Settings
-          </button>
-        </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Users */}
+        <div className="bg-gradient-to-br from-blue-100 to-blue-50 p-5 rounded-xl shadow-lg border border-blue-200 hover:scale-105 transform transition">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-blue-600">25</p>
-              <p className="text-sm text-blue-600 flex items-center gap-1">
+              <p className="text-sm text-blue-600 font-medium">Total Users</p>
+              <p className="text-3xl font-bold text-blue-700">
+                {allUsers.length}
+              </p>
+              {/* <p className="text-xs text-blue-500 flex items-center gap-1 mt-1">
                 <Users size={14} />
                 System users
-              </p>
+              </p> */}
             </div>
-            <Users className="text-blue-500" size={24} />
+            <Users className="text-blue-600" size={28} />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
+
+        {/* Active Users */}
+        <div className="bg-gradient-to-br from-green-100 to-green-50 p-5 rounded-xl shadow-lg border border-green-200 hover:scale-105 transform transition">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Users</p>
-              <p className="text-2xl font-bold text-green-600">22</p>
-              <p className="text-sm text-green-600 flex items-center gap-1">
+              <p className="text-sm text-green-600 font-medium">Active Users</p>
+              <p className="text-3xl font-bold text-green-700">22</p>
+              {/* <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
                 <UserCheck size={14} />
                 Currently active
-              </p>
+              </p> */}
             </div>
-            <UserCheck className="text-green-500" size={24} />
+            <UserCheck className="text-green-600" size={28} />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
+
+        {/* Suspended */}
+        <div className="bg-gradient-to-br from-red-100 to-red-50 p-5 rounded-xl shadow-lg border border-red-200 hover:scale-105 transform transition">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Suspended</p>
-              <p className="text-2xl font-bold text-red-600">2</p>
-              <p className="text-sm text-red-600 flex items-center gap-1">
+              <p className="text-sm text-red-600 font-medium">Suspended</p>
+              <p className="text-3xl font-bold text-red-700">2</p>
+              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                 <UserX size={14} />
                 Access revoked
               </p>
             </div>
-            <UserX className="text-red-500" size={24} />
+            <UserX className="text-red-600" size={28} />
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
+
+        {/* User Roles */}
+        <div className="bg-gradient-to-br from-purple-100 to-purple-50 p-5 rounded-xl shadow-lg border border-purple-200 hover:scale-105 transform transition">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">User Roles</p>
-              <p className="text-2xl font-bold text-purple-600">4</p>
-              <p className="text-sm text-purple-600 flex items-center gap-1">
+              <p className="text-sm text-purple-600 font-medium">User Roles</p>
+              <p className="text-3xl font-bold text-purple-700">4</p>
+              <p className="text-xs text-purple-500 flex items-center gap-1 mt-1">
                 <Shield size={14} />
                 Defined roles
               </p>
             </div>
-            <Shield className="text-purple-500" size={24} />
+            <Shield className="text-purple-600" size={28} />
           </div>
         </div>
       </div>
@@ -261,15 +279,38 @@ export default function Administrator() {
                         <td className="border-b px-4 py-2">{user.email}</td>
                         <td className="border-b px-4 py-2">{user.role}</td>
                         {/* <td className="border-b px-4 py-2">{user.approved}</td> */}
-                        <td className="border-b px-4 py-2 flex gap-2">
+                        <td className="border-b px-4 py-2 flex items-center gap-2">
+                          <select
+                            value={userLevels[user._id] || "L1"} // default to L1
+                            onChange={(e) =>
+                              setUserLevels((prev) => ({
+                                ...prev,
+                                [user._id]: e.target.value,
+                              }))
+                            }
+                            className="border rounded px-2 py-1 text-sm"
+                          >
+                            {["L1", "L2", "L3", "L4", "L5"].map((level) => (
+                              <option key={level} value={level}>
+                                {level}
+                              </option>
+                            ))}
+                          </select>
+
                           <button
-                            onClick={() => handleApproval(user._id, true)}
+                            onClick={() =>
+                              handleApproval(
+                                user._id,
+                                true,
+                                userLevels[user._id] || "L1"
+                              )
+                            }
                             className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                           >
                             Approve
                           </button>
                           <button
-                            onClick={() => handleApproval(user._id, "rejected")}
+                            onClick={() => handleDelete(user._id)}
                             className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                           >
                             Reject
@@ -291,13 +332,13 @@ export default function Administrator() {
             <div className="p-4 border-b">
               <h2 className="font-semibold text-lg">Quick Actions</h2>
             </div>
-            <div className="p-4 space-y-2">
-              <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
+            <div className="p-4 space-y-2 space-x-1">
+              {/* <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
                 Add New User
               </button>
               <button className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm">
                 Create Role
-              </button>
+              </button> */}
               <button className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm">
                 Bulk Import
               </button>
@@ -311,7 +352,7 @@ export default function Administrator() {
           </div>
 
           {/* System Health */}
-          <div className="bg-white rounded-lg shadow border">
+          {/* <div className="bg-white rounded-lg shadow border">
             <div className="p-4 border-b">
               <h2 className="font-semibold text-lg flex items-center gap-2">
                 <Activity size={20} />
@@ -336,7 +377,7 @@ export default function Administrator() {
                 <span className="text-sm font-medium text-blue-600">99.9%</span>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
