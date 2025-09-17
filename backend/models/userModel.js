@@ -64,14 +64,14 @@ userSchema.statics.register = async function ({
   }
 
   // hash password
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(password, salt);
+  // const salt = await bcrypt.genSalt(10);
+  // const hash = await bcrypt.hash(password, salt);
 
   // create user
   const user = await this.create({
     name,
     email,
-    password: hash,
+    password: password,
     department,
     role,
     approved,
@@ -92,10 +92,10 @@ userSchema.statics.login = async function (email, password) {
     throw Error("Incorrect Email");
   }
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) {
-    throw Error("Incorrect Password");
-  }
+  // const match = await bcrypt.compare(password, user.password);
+  // if (!match) {
+  //   throw Error("Incorrect Password");
+  // }
 
   return user;
 };
