@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcrypt");
-const { log } = require("console");
 
 const Schema = mongoose.Schema;
 
@@ -9,65 +8,78 @@ const userSchema = new Schema(
   {
     name: {
       type: String,
-      require: true,
+      required: true,
       unique: true,
     },
     email: {
       type: String,
-      require: true,
+      required: true,
       unique: true,
     },
     password: {
       type: String,
-      require: true,
+      required: true,
     },
     department: {
       type: String,
-      require: true,
+      required: true,
     },
     level: {
       type: String,
-      require: true,
+      default: "", // start blank
     },
     role: {
       type: String,
-      require: true,
+      required: true,
     },
     approved: {
-      type: String,
-      require: true,
+      type: Boolean,
+      default: false, // always start unapproved
     },
   },
   { timestamps: true }
 );
 
 // static register method
-// userSchema.statics.register = async function (name, email, password) {
-//   // validation
-//   if (!email || !password || !name) {
-//     throw Error("All fields must be filled");
-//   }
-//   if (!validator.isEmail(email)) {
-//     throw Error("Email is not valid");
-//   }
-//   // if (!validator.isStrongPassword(password)) {
-//   //   throw error ("Password is not strong enough")
-//   // }
+userSchema.statics.register = async function ({
+  name,
+  email,
+  password,
+  department,
+  role,
+  approved = false,
+  level = "",
+}) {
+  // validation
+  if (!email || !password || !name || !department || !role) {
+    throw Error("All required fields must be filled");
+  }
+  if (!validator.isEmail(email)) {
+    throw Error("Email is not valid");
+  }
 
-//   const exists = await this.findOne({ email });
-//   if (exists) {
-//     throw Error("Email already in use");
-//   }
+  const exists = await this.findOne({ email });
+  if (exists) {
+    throw Error("Email already in use");
+  }
 
-//   if (!exists && email && password && name) {
-//     const salt = await bcrypt.genSalt(10);
-//     const hash = await bcrypt.hash(password, salt);
+  // hash password
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(password, salt);
 
-//     const user = await this.create({ name, email, password: hash });
+  // create user
+  const user = await this.create({
+    name,
+    email,
+    password: hash,
+    department,
+    role,
+    approved,
+    level,
+  });
 
-//     return user;
-//   }
-// };
+  return user;
+};
 
 // static login method
 userSchema.statics.login = async function (email, password) {
@@ -76,17 +88,14 @@ userSchema.statics.login = async function (email, password) {
   }
 
   const user = await this.findOne({ email });
-
   if (!user) {
     throw Error("Incorrect Email");
   }
 
-  console.log(password, user.password);
   const match = await bcrypt.compare(password, user.password);
-  console.log(match);
-  // if (!match) {
-  //   throw Error("Incorrect Password");
-  // }
+  if (!match) {
+    throw Error("Incorrect Password");
+  }
 
   return user;
 };
