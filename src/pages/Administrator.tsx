@@ -2,13 +2,9 @@ import { useEffect, useState } from "react";
 import {
   Users,
   Shield,
-  Settings,
-  UserPlus,
   UserCheck,
   UserX,
   Search,
-  Plus,
-  Activity,
 } from "lucide-react";
 
 interface User {
@@ -128,58 +124,60 @@ export default function Administrator() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Users */}
-        <div className="bg-gradient-to-br from-blue-100 to-blue-50 p-5 rounded-xl shadow-lg border border-blue-200 hover:scale-105 transform transition">
+        <div className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-600 font-medium">Total Users</p>
-              <p className="text-3xl font-bold text-blue-700">
+              <p className="text-sm text-gray-500">Total Users</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {allUsers.length}
               </p>
             </div>
-            <Users className="text-blue-600" size={28} />
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <Users className="text-blue-600" size={20} />
+            </div>
           </div>
         </div>
 
         {/* Active Users */}
-        <div className="bg-gradient-to-br from-green-100 to-green-50 p-5 rounded-xl shadow-lg border border-green-200 hover:scale-105 transform transition">
+        <div className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-600 font-medium">Active Users</p>
-              <p className="text-3xl font-bold text-green-700">22</p>
+              <p className="text-sm text-gray-500">Active Users</p>
+              <p className="text-2xl font-bold text-gray-900">22</p>
             </div>
-            <UserCheck className="text-green-600" size={28} />
+            <div className="p-2 bg-green-50 rounded-lg">
+              <UserCheck className="text-green-600" size={20} />
+            </div>
           </div>
         </div>
 
         {/* Suspended */}
-        <div className="bg-gradient-to-br from-red-100 to-red-50 p-5 rounded-xl shadow-lg border border-red-200 hover:scale-105 transform transition">
+        <div className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-red-600 font-medium">Suspended</p>
-              <p className="text-3xl font-bold text-red-700">2</p>
-              <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                <UserX size={14} />
-                Access revoked
-              </p>
+              <p className="text-sm text-gray-500">Suspended</p>
+              <p className="text-2xl font-bold text-gray-900">2</p>
+              <p className="text-xs text-gray-400 mt-1">Access revoked</p>
             </div>
-            <UserX className="text-red-600" size={28} />
+            <div className="p-2 bg-red-50 rounded-lg">
+              <UserX className="text-red-600" size={20} />
+            </div>
           </div>
         </div>
 
         {/* User Roles */}
-        <div className="bg-gradient-to-br from-purple-100 to-purple-50 p-5 rounded-xl shadow-lg border border-purple-200 hover:scale-105 transform transition">
+        <div className="bg-white p-4 rounded-lg shadow border hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-purple-600 font-medium">User Roles</p>
-              <p className="text-3xl font-bold text-purple-700">4</p>
-              <p className="text-xs text-purple-500 flex items-center gap-1 mt-1">
-                <Shield size={14} />
-                Defined roles
-              </p>
+              <p className="text-sm text-gray-500">User Roles</p>
+              <p className="text-2xl font-bold text-gray-900">4</p>
+              <p className="text-xs text-gray-400 mt-1">Defined roles</p>
             </div>
-            <Shield className="text-purple-600" size={28} />
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <Shield className="text-purple-600" size={20} />
+            </div>
           </div>
         </div>
       </div>
