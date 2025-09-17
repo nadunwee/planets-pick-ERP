@@ -43,7 +43,10 @@ export default function Administrator() {
       const res = await fetch("http://localhost:4000/api/user/all_users");
       if (!res.ok) throw new Error("Failed to fetch users");
       const data: User[] = await res.json();
-      const pendingUsers = data.filter((user) => user.approved === "false");
+      const pendingUsers = data.filter((user) => !user.approved);
+
+      console.log(pendingUsers);
+
       setUsers(pendingUsers);
     } catch (err: any) {
       setError(err.message);
@@ -51,6 +54,8 @@ export default function Administrator() {
       setLoading(false);
     }
   }
+
+  console.log(users);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name
