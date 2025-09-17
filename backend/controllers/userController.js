@@ -52,19 +52,37 @@ async function editUserApproval(req, res) {
   }
 }
 
-// const registerUser = async (req, res) => {
-//   const { name, email, password } = req.body;
-//   const date = await User.findOne({ email });
+const registerUser = async (req, res) => {
+  const { name, email, password, department, role } = req.body;
 
-//   try {
-//     const user = await User.register(name, email, password);
-//     // create a token
-//     const token = createToken(user._id);
-//     res.status(200).json({ name, email, token });
-//   } catch (error) {
-//     res.status(400).json({ error: error.message });
-//   }
-// };
+  try {
+    // register with extra fields
+    const user = await User.register({
+      name,
+      email,
+      password,
+      department,
+      role,
+      approved: false, // default
+      level: "", // leave blank
+    });
+
+    // create a token
+    const token = createToken(user._id);
+
+    res.status(200).json({
+      name: user.name,
+      email: user.email,
+      department: user.department,
+      role: user.role,
+      approved: user.approved,
+      level: user.level,
+      token,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
 // const deleteUser = async (req, res) => {
 //   const { id } = req.params;
@@ -86,4 +104,4 @@ async function editUserApproval(req, res) {
 //   res.status(200).json(user);
 // };
 
-module.exports = { loginUser, getAllUsers, editUserApproval };
+module.exports = { loginUser, getAllUsers, editUserApproval, registerUser };

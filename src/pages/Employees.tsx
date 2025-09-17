@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+// For employees already in system
 interface Employee {
   id: string;
   name: string;
@@ -41,7 +42,7 @@ interface Employee {
   contractType: "full-time" | "part-time" | "contract" | "temporary";
   workLocation: string;
   workingHours: number;
-  overtimeEligible: boolean;
+  createUser: boolean;
   benefits: string[];
   certifications: string[];
   lastReviewDate?: string;
@@ -58,6 +59,26 @@ interface Employee {
   };
 }
 
+// For the Add Employee form (includes createUser checkbox)
+type NewEmployee = {
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  salary: string;
+  shift: "morning" | "evening" | "night";
+  emergencyContact: string;
+  address: string;
+  contractType: "full-time" | "part-time" | "contract" | "temporary";
+  workLocation: string;
+  workingHours: string;
+  overtimeEligible: boolean;
+  skills: string;
+  benefits: string;
+  certifications: string;
+  createUser: boolean; // 👈 only in form
+};
 interface Attendance {
   employeeId: string;
   date: string;
@@ -100,7 +121,6 @@ interface PayrollRecord {
   status: "pending" | "processed" | "paid";
   paymentDate?: string;
 }
-
 const initialEmployees: Employee[] = [
   {
     id: "1",
@@ -123,7 +143,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Main Factory",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: true,
     benefits: ["Health Insurance", "Provident Fund", "Annual Bonus"],
     certifications: ["Food Safety Level 3", "HACCP Certification"],
     lastReviewDate: "2023-12-01",
@@ -160,7 +180,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Quality Lab",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund"],
     certifications: ["Laboratory Safety", "ISO 22000"],
     lastReviewDate: "2023-11-15",
@@ -197,7 +217,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Production Floor",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund"],
     certifications: ["Machine Safety", "First Aid"],
     lastReviewDate: "2023-10-20",
@@ -233,7 +253,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Admin Office",
     workingHours: 40,
-    overtimeEligible: false,
+    createUser: false,
     benefits: [
       "Health Insurance",
       "Provident Fund",
@@ -279,7 +299,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Maintenance Workshop",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund", "Night Shift Allowance"],
     certifications: ["Electrical Safety", "Mechanical Engineering"],
     lastReviewDate: "2023-11-30",
@@ -438,27 +458,24 @@ export default function Employees() {
   const [reportEndDate, setReportEndDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [newEmployee, setNewEmployee] = useState({
+  const [newEmployee, setNewEmployee] = useState<NewEmployee>({
     name: "",
     email: "",
     phone: "",
     position: "",
     department: "Production",
     salary: "",
-    shift: "morning" as "morning" | "evening" | "night",
+    shift: "morning",
     emergencyContact: "",
     address: "",
-    contractType: "full-time" as
-      | "full-time"
-      | "part-time"
-      | "contract"
-      | "temporary",
+    contractType: "full-time",
     workLocation: "",
     workingHours: "40",
     overtimeEligible: true,
     skills: "",
     benefits: "",
     certifications: "",
+    createUser: false, // 👈 default unchecked
   });
 
   const departments = [
@@ -539,7 +556,7 @@ export default function Employees() {
         contractType: newEmployee.contractType,
         workLocation: newEmployee.workLocation,
         workingHours: parseInt(newEmployee.workingHours),
-        overtimeEligible: newEmployee.overtimeEligible,
+        createUser: newEmployee.createUser,
         benefits: newEmployee.benefits
           .split(",")
           .map((s) => s.trim())
@@ -563,6 +580,17 @@ export default function Employees() {
       // 1️⃣ Add locally for UI update
       setEmployees([...employees, newEmployeeData]);
 
+      const generatePassword = (length = 12) => {
+        const charset =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+        let password = "";
+        for (let i = 0; i < length; i++) {
+          const randomIndex = Math.floor(Math.random() * charset.length);
+          password += charset[randomIndex];
+        }
+        return password;
+      };
+
       // 2️⃣ Send POST request to backend to create employee
       const empRes = await fetch("http://localhost:4000/api/employees", {
         method: "POST",
@@ -574,20 +602,26 @@ export default function Employees() {
         throw new Error(empData.error || "Failed to add employee");
 
       // 3️⃣ If "Create User" is checked, create a system user
-      if (newEmployee.overtimeEligible) {
+      if (newEmployee.createUser) {
         // assuming checkbox now stored in overtimeEligible
         const userPayload = {
           name: newEmployee.name,
           email: newEmployee.email,
-          password: "Default@123", // default password
-          type: "employee",
+          password: generatePassword(),
+          department: newEmployee.department,
+          level: "",
+          role: newEmployee.position,
+          approved: "false",
         };
 
-        const userRes = await fetch("http://localhost:4000/api/user/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userPayload),
-        });
+        const userRes = await fetch(
+          "http://localhost:4000/api/user/createUser",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userPayload),
+          }
+        );
         const userData = await userRes.json();
         if (!userRes.ok)
           throw new Error(userData.error || "Failed to create user");
@@ -609,6 +643,7 @@ export default function Employees() {
         workLocation: "",
         workingHours: "40",
         overtimeEligible: true,
+        createUser: false, // ✅ added this
         skills: "",
         benefits: "",
         certifications: "",
@@ -1456,11 +1491,11 @@ export default function Employees() {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={newEmployee.overtimeEligible}
+                    checked={newEmployee.createUser}
                     onChange={(e) =>
                       setNewEmployee({
                         ...newEmployee,
-                        overtimeEligible: e.target.checked,
+                        createUser: e.target.checked,
                       })
                     }
                     className="mr-2"
@@ -1845,17 +1880,17 @@ export default function Employees() {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={editingEmployee.overtimeEligible}
+                    checked={newEmployee.createUser}
                     onChange={(e) =>
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        overtimeEligible: e.target.checked,
+                      setNewEmployee({
+                        ...newEmployee,
+                        createUser: e.target.checked,
                       })
                     }
                     className="mr-2"
                   />
                   <label className="text-sm font-medium text-gray-700">
-                    Overtime Eligible
+                    Create User
                   </label>
                 </div>
 
