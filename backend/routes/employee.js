@@ -10,19 +10,23 @@ const {
 
 const router = express.Router();
 
-// Create a new employee
+/**
+ * Employee Routes
+ */
+
+// ➕ Create a new employee (with optional user account request)
 router.post("/", addEmployee);
 
-// Get all employees
+// 📋 Get all employees
 router.get("/", getEmployees);
 
-// Get single employee by ID
+// 🔍 Get single employee by ID
 router.get("/:id", getEmployeeById);
 
-// Update employee by ID
+// ✏️ Update employee by ID (HR can also promote employee to user here)
 router.put("/:id", updateEmployee);
 
-// Delete employee by ID
+// ❌ Delete employee by ID
 router.delete("/:id", deleteEmployee);
 
 module.exports = router;
