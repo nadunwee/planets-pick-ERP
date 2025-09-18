@@ -21,6 +21,7 @@ import {
 
 // For employees already in system
 interface Employee {
+  _id?: string; // ✅ add this
   id: string;
   name: string;
   email: string;
@@ -32,6 +33,8 @@ interface Employee {
   salary: number;
   performance: number;
   attendance: number;
+  hasUserAccount?: boolean;
+  userId?: string;
   skills: string[];
   avatar?: string;
   shift: "morning" | "evening" | "night";
@@ -680,26 +683,38 @@ export default function Employees() {
     if (!editingEmployee) return;
 
     try {
-      // Send the updated employee to the backend
-      const response = await fetch(`/api/employees/${editingEmployee.id}`, {
+      const employeeId = editingEmployee._id || editingEmployee.id;
+      if (!employeeId) {
+        alert("Employee ID is missing!");
+        return;
+      }
+
+      const response = await fetch(`/api/employees/${employeeId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingEmployee),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update employee");
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch (err) {
+        // fallback if backend returned empty response
+        data = null;
       }
 
-      const updatedEmployee = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to update employee");
+      }
 
-      // Update the local state
-      setEmployees((prevEmployees) =>
-        prevEmployees.map((emp) =>
-          emp.id === updatedEmployee._id ? updatedEmployee : emp
+      const updatedEmployee = data?.employee;
+
+      // Update local state
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          (emp._id || emp.id) === (updatedEmployee._id || updatedEmployee.id)
+            ? updatedEmployee
+            : emp
         )
       );
 
@@ -1891,11 +1906,12 @@ export default function Employees() {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={newEmployee.createUser}
+                    checked={editingEmployee.hasUserAccount || false}
+                    disabled={editingEmployee.hasUserAccount} // disable if user already exists
                     onChange={(e) =>
-                      setNewEmployee({
-                        ...newEmployee,
-                        createUser: e.target.checked,
+                      setEditingEmployee({
+                        ...editingEmployee,
+                        hasUserAccount: e.target.checked,
                       })
                     }
                     className="mr-2"
