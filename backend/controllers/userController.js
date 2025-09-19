@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 const User = require("../models/userModel.js");
 const { log } = require("console");
@@ -36,10 +37,15 @@ async function getAllUsers(req, res) {
 
 async function editUserApproval(req, res) {
   const { id } = req.params;
-  const { approved } = req.body; // expected: true, false, or "rejected"
+  const { approved, level } = req.body; // get level as well
 
   try {
-    const user = await User.findByIdAndUpdate(id, { approved }, { new: true });
+    const updates = {
+      approved,
+      level: level || undefined, // undefined will not overwrite if not provided
+    };
+
+    const user = await User.findByIdAndUpdate(id, updates, { new: true });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -84,24 +90,32 @@ const registerUser = async (req, res) => {
   }
 };
 
-// const deleteUser = async (req, res) => {
-//   const { id } = req.params;
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
 
-//   if (!mongoose.Types.ObjectId.isValid(id)) {
-//     return res
-//       .status(400)
-//       .json({ error: "NO such a contact (mongoose ID is invalid)" });
-//   }
+  try {
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
 
-//   const user = await User.findOneAndDelete({ _id: id });
+    const user = await User.findByIdAndDelete(id);
 
-//   if (!user) {
-//     return res
-//       .status(400)
-//       .json({ error: "NO such a contact (contact ID is invalid)" });
-//   }
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-//   res.status(200).json(user);
-// };
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+};
 
-module.exports = { loginUser, getAllUsers, editUserApproval, registerUser };
+module.exports = {
+  loginUser,
+  getAllUsers,
+  editUserApproval,
+  registerUser,
+  deleteUser,
+};
