@@ -10,7 +10,6 @@ import {
   Phone,
   Edit,
   Eye,
-  Bot,
   UserCheck,
   UserX,
   CheckCircle,
@@ -65,7 +64,7 @@ interface Attendance {
   checkOut?: string;
   hoursWorked: number;
   overtime: number;
-  status: "present" | "absent" | "late" | "half-day";
+  status: "present" | "absent" | "late" | "half-day" | "not-set";
   location: string;
   device: string;
   notes?: string;
@@ -408,6 +407,7 @@ const payrollRecords: PayrollRecord[] = [
 
 export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [attendanceData, setAttendanceData] = useState<Attendance[]>(todayAttendance);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -416,11 +416,15 @@ export default function Employees() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportStartDate, setReportStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const todayDateString = new Date().toISOString().split('T')[0];
+  const isReadOnlyDate = selectedDate !== todayDateString;
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     email: "",
@@ -463,14 +467,14 @@ export default function Employees() {
   };
 
   const getAttendanceStatus = (employeeId: string) => {
-    const attendance = todayAttendance.find(a => a.employeeId === employeeId);
+    const attendance = attendanceData.find(a => a.employeeId === employeeId);
     return attendance?.status || "absent";
   };
 
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter(e => e.status === "active").length;
   const onLeaveEmployees = employees.filter(e => e.status === "on-leave").length;
-  const presentToday = todayAttendance.filter(a => a.status === "present").length;
+  const presentToday = attendanceData.filter(a => a.status === "present").length;
   const pendingLeaveRequests = leaveRequests.filter(r => r.status === "pending").length;
   const totalPayrollAmount = payrollRecords.reduce((sum, record) => sum + record.netSalary, 0);
 
@@ -563,18 +567,29 @@ export default function Employees() {
     setDeletingEmployee(null);
   };
 
-  const handleAttendanceUpdate = (employeeId: string, status: "present" | "absent" | "late" | "half-day") => {
-    const existingAttendance = todayAttendance.find(a => a.employeeId === employeeId && a.date === selectedDate);
-    
-    if (existingAttendance) {
-      // Update existing attendance
-      // In a real app, you'd update the state here
-      console.log(`Updating attendance for ${employeeId} to ${status}`);
-    } else {
-      // Create new attendance record
-      // In a real app, you'd add this to state
-      console.log(`Creating new attendance for ${employeeId} with status ${status}`);
-    }
+  const handleAttendanceUpdate = (employeeId: string, status: "present" | "absent" | "late" | "half-day" | "not-set") => {
+    setAttendanceData(prev => {
+      const index = prev.findIndex(a => a.employeeId === employeeId && a.date === selectedDate);
+      if (index !== -1) {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], status };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          employeeId,
+          date: selectedDate,
+          checkIn: "",
+          checkOut: "",
+          hoursWorked: 0,
+          overtime: 0,
+          status,
+          location: "",
+          device: "",
+        },
+      ];
+    });
   };
 
   const generateAttendanceReport = () => {
@@ -586,10 +601,10 @@ export default function Employees() {
       attendanceSummary: employees.map(emp => ({
         name: emp.name,
         department: emp.department,
-        attendance: todayAttendance.filter(a => a.employeeId === emp.id).length,
-        present: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "present").length,
-        absent: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "absent").length,
-        late: todayAttendance.filter(a => a.employeeId === emp.id && a.status === "late").length
+        attendance: attendanceData.filter(a => a.employeeId === emp.id).length,
+        present: attendanceData.filter(a => a.employeeId === emp.id && a.status === "present").length,
+        absent: attendanceData.filter(a => a.employeeId === emp.id && a.status === "absent").length,
+        late: attendanceData.filter(a => a.employeeId === emp.id && a.status === "late").length
       }))
     };
     
@@ -618,6 +633,35 @@ export default function Employees() {
     alert("Excel export ready! Check console for details. In production, this would download an Excel file.");
   };
 
+  const handleTimeChange = (
+    employeeId: string,
+    field: "checkIn" | "checkOut",
+    value: string
+  ) => {
+    setAttendanceData(prev => {
+      const index = prev.findIndex(a => a.employeeId === employeeId && a.date === selectedDate);
+      if (index !== -1) {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value } as Attendance;
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          employeeId,
+          date: selectedDate,
+          checkIn: field === "checkIn" ? value : "",
+          checkOut: field === "checkOut" ? value : "",
+          hoursWorked: 0,
+          overtime: 0,
+          status: "present",
+          location: "",
+          device: "",
+        },
+      ];
+    });
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -641,38 +685,29 @@ export default function Employees() {
               <Clock size={16} />
               Manage Attendance
             </button>
-            <button 
-              onClick={() => setShowReportModal(true)}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
-            >
-              <Calendar size={16} />
-              Reports
-            </button>
-           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
-             <Bot size={16} />
-             AI Insights
-           </button>
-         </div>
+          </div>
       </div>
 
-      {/* AI HR Assistant */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-500 text-white p-2 rounded-lg">
-            <Bot size={20} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-blue-900">AI HR Insights</h3>
-            <p className="text-blue-700 text-sm">
-              Priya Silva shows 15% productivity increase this month. Consider for leadership training.
-              Optimal shift scheduling suggests moving 2 employees to evening shift for better coverage.
-            </p>
-          </div>
-          <button className="ml-auto bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition">
-            View Recommendations
-          </button>
-        </div>
-      </div>
+      {/* AI HR Insights section commented out */}
+      {/**
+       * <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+       *   <div className="flex items-center gap-3">
+       *     <div className="bg-blue-500 text-white p-2 rounded-lg">
+       *       <Bot size={20} />
+       *     </div>
+       *     <div>
+       *       <h3 className="font-semibold text-blue-900">AI HR Insights</h3>
+       *       <p className="text-blue-700 text-sm">
+       *         Priya Silva shows 15% productivity increase this month. Consider for leadership training.
+       *         Optimal shift scheduling suggests moving 2 employees to evening shift for better coverage.
+       *       </p>
+       *     </div>
+       *     <button className="ml-auto bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition">
+       *       View Recommendations
+       *     </button>
+       *   </div>
+       * </div>
+       */}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -871,7 +906,10 @@ export default function Employees() {
                    <span className="text-xs text-gray-600 capitalize">{employee.shift} shift</span>
                  </div>
                  <div className="flex gap-1">
-                   <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                   <button 
+                     onClick={() => { setViewEmployee(employee); setShowViewModal(true); }}
+                     className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                   >
                      <Eye size={16} />
                    </button>
                    <button 
@@ -926,81 +964,66 @@ export default function Employees() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                          {employee.name.split(" ").map(n => n[0]).join("")}
+                {filteredEmployees.map((employee) => {
+                  const attendance = attendanceData.find(a => a.employeeId === employee.id && a.date === selectedDate);
+                  return (
+                    <tr key={employee.id} className="border-b hover:bg-gray-50">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            {employee.name.split(" ").map(n => n[0]).join("")}
+                          </div>
+                          <div>
+                            <p className="font-medium">{employee.name}</p>
+                            <p className="text-sm text-gray-600">{employee.position}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{employee.name}</p>
-                          <p className="text-sm text-gray-600">{employee.position}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm">{employee.department}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(employee.status)}`}>
-                        {employee.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-green-500 h-2 rounded-full"
-                            style={{ width: `${employee.performance}%` }}
-                          />
-                        </div>
-                        <span className="text-sm">{employee.performance}%</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-500 h-2 rounded-full"
-                            style={{ width: `${employee.attendance}%` }}
-                          />
-                        </div>
-                        <span className="text-sm">{employee.attendance}%</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          getAttendanceStatus(employee.id) === "present"
-                            ? "bg-green-100 text-green-600"
-                            : getAttendanceStatus(employee.id) === "late"
-                            ? "bg-yellow-100 text-yellow-600"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {getAttendanceStatus(employee.id)}
-                      </span>
-                    </td>
-                                         <td className="p-4">
-                       <div className="flex gap-1">
-                         <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                           <Eye size={16} />
-                         </button>
-                         <button 
-                           onClick={() => handleEditEmployee(employee)}
-                           className="p-1 text-gray-600 hover:bg-gray-50 rounded"
-                         >
-                           <Edit size={16} />
-                         </button>
-                         <button 
-                           onClick={() => handleDeleteEmployee(employee)}
-                           className="p-1 text-red-600 hover:bg-red-50 rounded"
-                         >
-                           <Trash2 size={16} />
-                         </button>
-                       </div>
-                     </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4 text-sm">{employee.department}</td>
+                      <td className="p-4">
+                        <select
+                          value={attendance?.status || "absent"}
+                          onChange={(e) => handleAttendanceUpdate(
+                            employee.id, 
+                            e.target.value as "present" | "absent" | "late" | "half-day"
+                          )}
+                          className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        >
+                          <option value="present">Present</option>
+                          <option value="absent">Absent</option>
+                          <option value="late">Late</option>
+                          <option value="half-day">Half Day</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <input
+                          type="time"
+                          value={attendance?.checkIn || ""}
+                          onChange={(e) => handleTimeChange(employee.id, "checkIn", e.target.value)}
+                          className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          placeholder="HH:MM"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <input
+                          type="time"
+                          value={attendance?.checkOut || ""}
+                          onChange={(e) => handleTimeChange(employee.id, "checkOut", e.target.value)}
+                          className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          placeholder="HH:MM"
+                        />
+                      </td>
+                      <td className="p-4">
+                        <button
+                          onClick={() => handleAttendanceUpdate(employee.id, "present")}
+                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                        >
+                          Mark Present
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1619,7 +1642,7 @@ export default function Employees() {
                      </thead>
                      <tbody>
                        {employees.map((employee) => {
-                         const attendance = todayAttendance.find(a => a.employeeId === employee.id && a.date === selectedDate);
+                         const attendance = attendanceData.find(a => a.employeeId === employee.id && a.date === selectedDate);
                          return (
                            <tr key={employee.id} className="border-b hover:bg-gray-50">
                              <td className="p-4">
@@ -1635,14 +1658,16 @@ export default function Employees() {
                              </td>
                              <td className="p-4 text-sm">{employee.department}</td>
                              <td className="p-4">
-                               <select
-                                 value={attendance?.status || "absent"}
+                              <select
+                                 value={attendance?.status || "not-set"}
                                  onChange={(e) => handleAttendanceUpdate(
                                    employee.id, 
-                                   e.target.value as "present" | "absent" | "late" | "half-day"
-                                 )}
-                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                   e.target.value as "present" | "absent" | "late" | "half-day" | "not-set"
+                                )}
+                                disabled={isReadOnlyDate}
+                                className={`px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 ${isReadOnlyDate ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                >
+                                 <option value="not-set">Not Set</option>
                                  <option value="present">Present</option>
                                  <option value="absent">Absent</option>
                                  <option value="late">Late</option>
@@ -1650,35 +1675,57 @@ export default function Employees() {
                                </select>
                              </td>
                              <td className="p-4">
-                               <input
+                              <input
                                  type="time"
                                  value={attendance?.checkIn || ""}
-                                 onChange={(e) => {
-                                   // In a real app, this would update check-in time
-                                   console.log(`Check-in time updated for ${employee.id}: ${e.target.value}`);
-                                 }}
-                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                 onChange={(e) => handleTimeChange(employee.id, "checkIn", e.target.value)}
+                                disabled={isReadOnlyDate || attendance?.status === "absent"}
+                                className={`px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 ${
+                                  isReadOnlyDate || attendance?.status === "absent" ? "bg-gray-100 cursor-not-allowed" : ""
+                                 }`}
                                  placeholder="HH:MM"
                                />
                              </td>
                              <td className="p-4">
-                               <input
+                              <input
                                  type="time"
                                  value={attendance?.checkOut || ""}
-                                 onChange={(e) => {
-                                   // In a real app, this would update check-out time
-                                   console.log(`Check-out time updated for ${employee.id}: ${e.target.value}`);
-                                 }}
-                                 className="px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                 onChange={(e) => handleTimeChange(employee.id, "checkOut", e.target.value)}
+                                disabled={isReadOnlyDate || attendance?.status === "absent"}
+                                className={`px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 ${
+                                  isReadOnlyDate || attendance?.status === "absent" ? "bg-gray-100 cursor-not-allowed" : ""
+                                 }`}
                                  placeholder="HH:MM"
                                />
                              </td>
                              <td className="p-4">
-                               <button
-                                 onClick={() => handleAttendanceUpdate(employee.id, "present")}
-                                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                              <button
+                                 onClick={() => {
+                                   const currentStatus = attendance?.status || "not-set";
+                                   let newStatus: "present" | "absent" | "late" | "half-day" | "not-set";
+                                   if (currentStatus === "present") {
+                                     newStatus = "absent";
+                                   } else if (currentStatus === "absent") {
+                                     newStatus = "present";
+                                   } else {
+                                     newStatus = "present";
+                                   }
+                                   handleAttendanceUpdate(employee.id, newStatus);
+                                 }}
+                                disabled={isReadOnlyDate || (attendance?.status || "not-set") === "not-set"}
+                                className={`px-3 py-1 rounded text-sm transition ${
+                                  isReadOnlyDate
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : (attendance?.status || "not-set") === "not-set"
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : (attendance?.status || "not-set") === "absent" 
+                                    ? "bg-red-600 text-white hover:bg-red-700" 
+                                    : (attendance?.status || "not-set") === "present"
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                }`}
                                >
-                                 Mark Present
+                                 Mark
                                </button>
                              </td>
                            </tr>
@@ -1697,13 +1744,14 @@ export default function Employees() {
                  >
                    Close
                  </button>
-                 <button
-                   onClick={() => {
-                     alert("Attendance saved! In production, this would update the database.");
-                     setShowAttendanceModal(false);
-                   }}
-                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                 >
+                <button
+                  onClick={() => {
+                    alert("Attendance saved! In production, this would update the database.");
+                    setShowAttendanceModal(false);
+                  }}
+                  disabled={isReadOnlyDate}
+                  className={`px-4 py-2 rounded-lg transition text-white ${isReadOnlyDate ? 'bg-gray-300 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
+                >
                    Save Attendance
                  </button>
                </div>
@@ -1835,6 +1883,162 @@ export default function Employees() {
                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
                  >
                    Delete Employee
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+         {/* View Employee Modal */}
+         {showViewModal && viewEmployee && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+               <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-xl font-bold">Employee Details: {viewEmployee.name}</h2>
+                 <button
+                   onClick={() => { setShowViewModal(false); setViewEmployee(null); }}
+                   className="text-gray-500 hover:text-gray-700"
+                 >
+                   <X size={24} />
+                 </button>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-3">
+                   <div>
+                     <p className="text-xs text-gray-500">Employee ID</p>
+                     <p className="font-medium">{viewEmployee.employeeId}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Position</p>
+                     <p className="font-medium">{viewEmployee.position}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Department</p>
+                     <p className="font-medium">{viewEmployee.department}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Status</p>
+                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(viewEmployee.status)}`}>{viewEmployee.status}</span>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Join Date</p>
+                     <p className="font-medium">{viewEmployee.joinDate}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Shift</p>
+                     <p className="font-medium capitalize">{viewEmployee.shift}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Contract Type</p>
+                     <p className="font-medium capitalize">{viewEmployee.contractType}</p>
+                   </div>
+                 </div>
+
+                 <div className="space-y-3">
+                   <div className="flex items-center gap-2 text-sm text-gray-700">
+                     <Mail size={14} />
+                     <span>{viewEmployee.email}</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-sm text-gray-700">
+                     <Phone size={14} />
+                     <span>{viewEmployee.phone}</span>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Emergency Contact</p>
+                     <p className="font-medium">{viewEmployee.emergencyContact}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Address</p>
+                     <p className="font-medium">{viewEmployee.address}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs text-gray-500">Work Location</p>
+                     <p className="font-medium">{viewEmployee.workLocation}</p>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                 <div className="bg-gray-50 rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Salary (Rs.)</p>
+                   <p className="text-lg font-semibold">{viewEmployee.salary.toLocaleString()}</p>
+                 </div>
+                 <div className="bg-gray-50 rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Performance</p>
+                   <p className="text-lg font-semibold">{viewEmployee.performance}%</p>
+                 </div>
+                 <div className="bg-gray-50 rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Attendance</p>
+                   <p className="text-lg font-semibold">{viewEmployee.attendance}%</p>
+                 </div>
+               </div>
+
+               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <p className="text-xs text-gray-500 mb-1">Skills</p>
+                   <div className="flex flex-wrap gap-1">
+                     {viewEmployee.skills.map((s, i) => (
+                       <span key={i} className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">{s}</span>
+                     ))}
+                   </div>
+                 </div>
+                 <div>
+                   <p className="text-xs text-gray-500 mb-1">Benefits</p>
+                   <div className="flex flex-wrap gap-1">
+                     {viewEmployee.benefits.map((b, i) => (
+                       <span key={i} className="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">{b}</span>
+                     ))}
+                   </div>
+                 </div>
+                 <div>
+                   <p className="text-xs text-gray-500 mb-1">Certifications</p>
+                   <div className="flex flex-wrap gap-1">
+                     {viewEmployee.certifications.map((c, i) => (
+                       <span key={i} className="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">{c}</span>
+                     ))}
+                   </div>
+                 </div>
+                 <div className="grid grid-cols-3 gap-3">
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Annual Leave</p>
+                     <p className="font-medium">{viewEmployee.leaveBalance.annual}</p>
+                   </div>
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Sick Leave</p>
+                     <p className="font-medium">{viewEmployee.leaveBalance.sick}</p>
+                   </div>
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Personal Leave</p>
+                     <p className="font-medium">{viewEmployee.leaveBalance.personal}</p>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="mt-6">
+                 <h3 className="font-semibold text-gray-700 mb-2">Payroll Info</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Bank</p>
+                     <p className="font-medium">{viewEmployee.payrollInfo.bankName}</p>
+                   </div>
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Account #</p>
+                     <p className="font-medium">{viewEmployee.payrollInfo.accountNumber}</p>
+                   </div>
+                   <div className="bg-gray-50 rounded-lg p-3">
+                     <p className="text-xs text-gray-500">Tax ID</p>
+                     <p className="font-medium">{viewEmployee.payrollInfo.taxId}</p>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                 <button
+                   onClick={() => { setShowViewModal(false); setViewEmployee(null); }}
+                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                 >
+                   Close
                  </button>
                </div>
              </div>
