@@ -8,8 +8,12 @@ const cors = require("cors");
 const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
+const financeRoutes = require("./routes/finance.js");
 
 const app = express();
+
+// ✅ Middleware first
+app.use(express.json()); // Parse JSON request body
 
 // ✅ Fix CORS issue (allow frontend requests)
 app.use(
@@ -19,16 +23,14 @@ app.use(
   })
 );
 
-// ✅ Middleware
-app.use(express.json()); // Parse JSON request body
-
-// Request logger (for debugging)
+// ✅ Request logger (for debugging)
 app.use((req, res, next) => {
   console.log(`[SERVER] ${req.method} ${req.path}`);
   next();
 });
 
 // ✅ Routes
+app.use("/api/finance", financeRoutes);
 app.use("/api/users", userRoutes); // pluralized for consistency
 app.use("/api/employees", employeeRoutes);
 app.use("/api/inventory", inventoryRoutes);
