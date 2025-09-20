@@ -8,105 +8,95 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-
-interface InventoryItem {
-  _id: string;
-  name: string;
-  category: string;
-  currentStock: number;
-  minStock: number;
-  unit: string;
-  price: number;
-  value: number;
-  lastUpdated: string;
-  status: "in-stock" | "low-stock" | "out-of-stock";
-}
+import AddItemModal from "@/components/inventory/AddItemModal";
 
 const categories = ["All", "Raw Materials", "Finished Products", "Packaging"];
 
 export default function Inventory() {
-  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
+  const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  async function fetchInventory() {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        "http://localhost:4000/api/inventory/all_inventory"
+      );
+      if (!res.ok) throw new Error("Failed to fetch inventory");
+      const data = await res.json();
+      setInventoryData(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchInventory() {
-      try {
-        const res = await fetch(
-          "http://localhost:4000/api/inventory/all_inventory"
-        ); // adjust URL if needed
-        if (!res.ok) throw new Error("Failed to fetch inventory");
-        const data = await res.json();
-        // Map backend data to your frontend format if necessary
-        const formattedData = data.map((item: any) => ({
-          ...item,
-          value: item.currentStock * item.price,
-          status:
-            item.currentStock === 0
-              ? "out-of-stock"
-              : item.currentStock <= item.minStock
-              ? "low-stock"
-              : "in-stock",
-          lastUpdated: new Date(item.updatedAt).toLocaleDateString(),
-        }));
-        setInventoryData(formattedData);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchInventory();
+    fetchInventory(); // call once on mount
   }, []);
 
   const filteredItems = inventoryData.filter((item) => {
     const matchesSearch = item.name
-      .toLowerCase()
+      ?.toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
-      selectedCategory === "All" || item.category === selectedCategory;
+      selectedCategory === "All" || item.type === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
+  const totalValue = inventoryData.reduce(
+    (sum, item) =>
+      sum + item.currentStock * (item.price || item.unitPrice || 0),
+    0
+  );
   const lowStockItems = inventoryData.filter(
-    (item) => item.status === "low-stock"
+    (item) => item.currentStock <= item.minStock && item.currentStock > 0
   ).length;
   const outOfStockItems = inventoryData.filter(
-    (item) => item.status === "out-of-stock"
+    (item) => item.currentStock === 0
   ).length;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "in-stock":
-        return "text-green-600 bg-green-100";
-      case "low-stock":
-        return "text-yellow-600 bg-yellow-100";
-      case "out-of-stock":
-        return "text-red-600 bg-red-100";
-      default:
-        return "text-gray-600 bg-gray-100";
-    }
+  const getStatusColor = (item: any) => {
+    if (item.currentStock === 0) return "text-red-600 bg-red-100";
+    if (item.currentStock <= item.minStock)
+      return "text-yellow-600 bg-yellow-100";
+    return "text-green-600 bg-green-100";
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "in-stock":
-        return <TrendingUp size={16} />;
-      case "low-stock":
-        return <AlertCircle size={16} />;
-      case "out-of-stock":
-        return <TrendingDown size={16} />;
-      default:
-        return <Package size={16} />;
-    }
+  const getStatusIcon = (item: any) => {
+    if (item.currentStock === 0) return <TrendingDown size={16} />;
+    if (item.currentStock <= item.minStock) return <AlertCircle size={16} />;
+    return <TrendingUp size={16} />;
   };
 
   if (loading) return <p className="p-4">Loading inventory...</p>;
   if (error) return <p className="p-4 text-red-600">{error}</p>;
+
+  async function handleAddItem(payload: any) {
+    try {
+      const res = await fetch(
+        "http://localhost:4000/api/inventory/add_inventory",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to add item");
+      await fetchInventory(); // refresh list
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    }
+  }
 
   return (
     <div className="p-4 space-y-6">
@@ -121,7 +111,7 @@ export default function Inventory() {
           </p>
         </div>
         <button
-          onClick={() => alert("Add new inventory item")}
+          onClick={() => setIsModalOpen(true)}
           className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition w-fit"
         >
           <Plus size={16} />
@@ -219,7 +209,7 @@ export default function Inventory() {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredItems.map((item) => (
           <div
-            key={item.name}
+            key={item._id}
             className="bg-white p-4 rounded-lg shadow border hover:shadow-lg transition"
           >
             <div className="flex justify-between items-start mb-3">
@@ -227,15 +217,19 @@ export default function Inventory() {
                 <h3 className="font-semibold text-lg text-gray-900">
                   {item.name}
                 </h3>
-                <p className="text-sm text-gray-600">{item.name}</p>
+                <p className="text-sm text-gray-600">{item.type}</p>
               </div>
               <span
                 className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(
-                  item.status
+                  item
                 )}`}
               >
-                {getStatusIcon(item.status)}
-                {item.status.replace("-", " ")}
+                {getStatusIcon(item)}
+                {item.currentStock === 0
+                  ? "Out of stock"
+                  : item.currentStock <= item.minStock
+                  ? "Low stock"
+                  : "In stock"}
               </span>
             </div>
 
@@ -254,42 +248,20 @@ export default function Inventory() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Unit Price:</span>
-                <span className="font-medium">LKR {item.price}</span>
+                <span className="font-medium">
+                  LKR {item.price || item.unitPrice}
+                </span>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-sm font-medium text-gray-700">
                   Total Value:
                 </span>
                 <span className="font-bold text-green-600">
-                  LKR {item.value.toLocaleString()}
+                  LKR{" "}
+                  {(
+                    item.currentStock * (item.price || item.unitPrice || 0)
+                  ).toLocaleString()}
                 </span>
-              </div>
-            </div>
-
-            {/* Stock Level Progress Bar */}
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>Stock Level</span>
-                <span>
-                  {Math.round((item.currentStock / (item.minStock * 2)) * 100)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${
-                    item.status === "out-of-stock"
-                      ? "bg-red-500"
-                      : item.status === "low-stock"
-                      ? "bg-yellow-500"
-                      : "bg-green-500"
-                  }`}
-                  style={{
-                    width: `${Math.min(
-                      (item.currentStock / (item.minStock * 2)) * 100,
-                      100
-                    )}%`,
-                  }}
-                />
               </div>
             </div>
 
@@ -319,6 +291,11 @@ export default function Inventory() {
           </p>
         </div>
       )}
+      <AddItemModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleAddItem}
+      />
     </div>
   );
 }
