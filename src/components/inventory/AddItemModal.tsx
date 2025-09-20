@@ -5,12 +5,31 @@ export default function AddItemModal({
   isOpen,
   onClose,
   onSubmit,
+  initialData, // new prop
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  initialData?: any;
 }) {
   const firstInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const form = document.querySelector<HTMLFormElement>("form");
+    if (form && initialData) {
+      (form.elements.namedItem("name") as HTMLInputElement).value =
+        initialData.name;
+      (form.elements.namedItem("type") as HTMLInputElement).value =
+        initialData.type;
+      (form.elements.namedItem("currentStock") as HTMLInputElement).value =
+        initialData.currentStock;
+      (form.elements.namedItem("minStock") as HTMLInputElement).value =
+        initialData.minStock;
+      (form.elements.namedItem("unitPrice") as HTMLInputElement).value =
+        initialData.unitPrice;
+    }
+  }, [isOpen, initialData]);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +72,6 @@ export default function AddItemModal({
       unitPrice: Number(raw.unitPrice),
     };
     onSubmit(payload);
-    onClose();
   }
 
   return (
@@ -144,12 +162,6 @@ export default function AddItemModal({
                     name: "minStock",
                     type: "number",
                     placeholder: "0",
-                  },
-                  {
-                    label: "Unit",
-                    name: "unit",
-                    type: "text",
-                    placeholder: "e.g. pcs / kg",
                   },
                   {
                     label: "Unit Price",

@@ -19,6 +19,7 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any | null>(null); // new
 
   async function fetchInventory() {
     try {
@@ -77,26 +78,38 @@ export default function Inventory() {
   if (loading) return <p className="p-4">Loading inventory...</p>;
   if (error) return <p className="p-4 text-red-600">{error}</p>;
 
-  async function handleAddItem(payload: any) {
+  // handle add or edit
+  async function handleSaveItem(payload: any) {
     try {
-      const res = await fetch(
-        "http://localhost:4000/api/inventory/add_inventory",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      let url = "http://localhost:4000/api/inventory/add_inventory";
+      let method = "POST";
 
-      if (!res.ok) throw new Error("Failed to add item");
-      await fetchInventory(); // refresh list
+      if (editingItem) {
+        url = `http://localhost:4000/api/inventory/edit_inventory/${editingItem._id}`;
+        method = "PUT";
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to save item");
+
+      setIsModalOpen(false);
+      setEditingItem(null);
+      await fetchInventory();
     } catch (err: any) {
       console.error(err);
       alert(err.message);
     }
   }
+
+  const handleEditClick = (item: any) => {
+    setEditingItem(item);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -266,14 +279,14 @@ export default function Inventory() {
             </div>
 
             <div className="flex gap-2 mt-4">
-              <button
+              {/* <button
                 onClick={() => alert(`Update stock for ${item.name}`)}
                 className="flex-1 px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition"
               >
                 Update Stock
-              </button>
+              </button> */}
               <button
-                onClick={() => alert(`Edit ${item.name}`)}
+                onClick={() => handleEditClick(item)}
                 className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
               >
                 Edit Item
@@ -293,8 +306,12 @@ export default function Inventory() {
       )}
       <AddItemModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleAddItem}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingItem(null);
+        }}
+        onSubmit={handleSaveItem}
+        initialData={editingItem} // pass current values
       />
     </div>
   );
