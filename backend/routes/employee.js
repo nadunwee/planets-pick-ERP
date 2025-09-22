@@ -14,7 +14,7 @@ const router = express.Router();
  * Employee Routes
  */
 
-// ➕ Create a new employee (with optional user account request)
+// ➕ Create a new employee (with optional linked user account)
 router.post("/", addEmployee);
 
 // 📋 Get all employees
@@ -23,7 +23,7 @@ router.get("/", getEmployees);
 // 🔍 Get single employee by ID
 router.get("/:id", getEmployeeById);
 
-// ✏️ Update employee by ID (HR can also promote employee to user here)
+// ✏️ Update employee by ID
 router.put("/:id", updateEmployee);
 
 // ❌ Delete employee by ID
