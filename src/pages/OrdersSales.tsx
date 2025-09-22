@@ -20,6 +20,7 @@ import {
   Download,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
+import OrderFormModal from "@/components/order-sales/OrderFormModal";
 
 interface Order {
   id: string;
@@ -206,6 +207,21 @@ export default function OrdersSales() {
   const [dateRange, setDateRange] = useState("all");
   const [userLevel, setUserLevel] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
+  const handleCreateOrder = async (data: any) => {
+    try {
+      const res = await fetch("http://localhost:4000/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      console.log("✅ Order created:", result);
+    } catch (error) {
+      console.error("❌ Error creating order:", error);
+    }
+  };
 
   useEffect(() => {
     const level = localStorage.getItem("level") || "{}";
@@ -317,7 +333,10 @@ export default function OrdersSales() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
+          <button
+            onClick={() => setShowOrderModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+          >
             <Plus size={16} />
             New Order
           </button>
@@ -652,6 +671,11 @@ export default function OrdersSales() {
         isOpen={showCustomerModal}
         onClose={() => setShowCustomerModal(false)}
         onSubmit={handleCreateCustomer}
+      />
+      <OrderFormModal
+        isOpen={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        onSubmit={handleCreateOrder}
       />
     </div>
   );

@@ -9,6 +9,7 @@ const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
 const customerRoutes = require("./routes/customer.js");
+const orderRoutes = require("./routes/order.js");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/users", userRoutes); // pluralized for consistency
 app.use("/api/employees", employeeRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/orders", orderRoutes);
 
 // ✅ Connect to database
 mongoose
