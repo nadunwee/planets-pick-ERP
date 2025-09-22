@@ -126,6 +126,18 @@ export default function Finance() {
     return matchesSearch && matchesType && matchesCategory;
   });
 
+  // --- CALCULATIONS ---
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenses = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalAssets = 0; // Placeholder
+  const totalLiabilities = 0; // Placeholder
+
   // --- UTILS ---
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -274,6 +286,48 @@ export default function Finance() {
           >
             <FileText size={16} /> Download Reports
           </button>
+        </div>
+      </div>
+
+      {/* Summary Blocks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-green-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Income</h3>
+          <p className="text-2xl font-bold text-green-700">
+            {totalIncome.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-red-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Expenses</h3>
+          <p className="text-2xl font-bold text-red-700">
+            {totalExpenses.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-blue-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Assets</h3>
+          <p className="text-2xl font-bold text-blue-700">
+            {totalAssets.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">
+            Total Liabilities
+          </h3>
+          <p className="text-2xl font-bold text-yellow-700">
+            {totalLiabilities.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
         </div>
       </div>
 
@@ -534,6 +588,22 @@ export default function Finance() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
+          <span className="text-gray-400">Non-current Assets Chart</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
+          <span className="text-gray-400">Current Assets Chart</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
+          <span className="text-gray-400">Current Liabilities Chart</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
+          <span className="text-gray-400">Non-current Liabilities Chart</span>
+        </div>
       </div>
     </div>
   );
