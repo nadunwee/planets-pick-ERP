@@ -8,6 +8,7 @@ const cors = require("cors");
 const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
+const customerRoutes = require("./routes/customer.js");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 app.use("/api/users", userRoutes); // pluralized for consistency
 app.use("/api/employees", employeeRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/customers", customerRoutes);
 
 // ✅ Connect to database
 mongoose
