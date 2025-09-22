@@ -633,14 +633,11 @@ export default function Employees() {
           approved: "false",
         };
 
-        const userRes = await fetch(
-          "http://localhost:4000/api/user/createUser",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(userPayload),
-          }
-        );
+        const userRes = await fetch("http://localhost:4000/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userPayload),
+        });
         const userData = await userRes.json();
         if (!userRes.ok)
           throw new Error(userData.error || "Failed to create user");
@@ -674,12 +671,37 @@ export default function Employees() {
     }
   };
 
+  // --- State for checkbox ---
+  const [createUserChecked, setCreateUserChecked] = useState(false);
+  const [createUserDisabled, setCreateUserDisabled] = useState(false);
+
+  // --- Open Edit Modal ---
   const handleEditEmployee = (employee: Employee) => {
     setEditingEmployee(employee);
+
+    if (employee.userId) {
+      setCreateUserChecked(true);
+      setCreateUserDisabled(true); // already a user, cannot edit
+    } else {
+      setCreateUserChecked(false);
+      setCreateUserDisabled(false); // can tick/untick
+    }
+
     setShowEditModal(true);
   };
 
+  // --- Update Employee Handler ---
   const handleUpdateEmployee = async () => {
+    const generatePassword = (length = 12) => {
+      const charset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+      let password = "";
+      for (let i = 0; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+      }
+      return password;
+    };
+
     if (!editingEmployee) return;
 
     try {
@@ -689,17 +711,20 @@ export default function Employees() {
         return;
       }
 
-      const response = await fetch(`/api/employees/${employeeId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingEmployee),
-      });
+      // 1️⃣ Update employee in backend
+      const response = await fetch(
+        `http://localhost:4000/api/employees/${employeeId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingEmployee),
+        }
+      );
 
       let data: any = null;
       try {
         data = await response.json();
-      } catch (err) {
-        // fallback if backend returned empty response
+      } catch {
         data = null;
       }
 
@@ -709,7 +734,44 @@ export default function Employees() {
 
       const updatedEmployee = data?.employee;
 
-      // Update local state
+      // 2️⃣ Handle "Create User" logic
+      // Use the checkbox state, not editingEmployee.hasUserAccount
+      if (createUserChecked && !updatedEmployee.userId) {
+        if (
+          !updatedEmployee.department ||
+          !updatedEmployee.position ||
+          !updatedEmployee.email
+        ) {
+          throw new Error(
+            "Employee must have department, position, and email to create a user"
+          );
+        }
+
+        const userPayload = {
+          name: updatedEmployee.name,
+          email: updatedEmployee.email,
+          password: generatePassword(),
+          department: updatedEmployee.department,
+          role: updatedEmployee.position,
+          level: "employee",
+          approved: "false",
+        };
+
+        const userRes = await fetch("http://localhost:4000/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userPayload),
+        });
+
+        const userData = await userRes.json();
+        if (!userRes.ok)
+          throw new Error(userData.error || "Failed to create user");
+
+        // Update employee locally with new userId
+        updatedEmployee.userId = userData.user?._id || null;
+      }
+
+      // 3️⃣ Update local state
       setEmployees((prev) =>
         prev.map((emp) =>
           (emp._id || emp.id) === (updatedEmployee._id || updatedEmployee.id)
@@ -718,28 +780,63 @@ export default function Employees() {
         )
       );
 
+      // Reset modal state
       setShowEditModal(false);
       setEditingEmployee(null);
+      setCreateUserChecked(false);
+      setCreateUserDisabled(false);
     } catch (error: any) {
       console.error("Error updating employee:", error.message);
       alert("Failed to update employee: " + error.message);
     }
   };
 
+  // --- Open Delete Modal ---
   const handleDeleteEmployee = (employee: Employee) => {
     setDeletingEmployee(employee);
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteEmployee = () => {
+  // --- Confirm Delete Employee ---
+  const confirmDeleteEmployee = async () => {
     if (!deletingEmployee) return;
 
-    const updatedEmployees = employees.filter(
-      (emp) => emp.id !== deletingEmployee.id
-    );
-    setEmployees(updatedEmployees);
-    setShowDeleteModal(false);
-    setDeletingEmployee(null);
+    try {
+      const employeeId = deletingEmployee._id || deletingEmployee.id;
+      if (!employeeId) {
+        alert("Employee ID is missing!");
+        return;
+      }
+
+      // Call backend DELETE API
+      const res = await fetch(
+        `http://localhost:4000/api/employees/${employeeId}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete employee");
+      }
+
+      // Remove from local state
+      setEmployees((prev) =>
+        prev.filter((emp) => (emp._id || emp.id) !== employeeId)
+      );
+
+      alert(data.message || "Employee deleted successfully");
+
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setDeletingEmployee(null);
+    } catch (error: any) {
+      console.error("Error deleting employee:", error);
+      alert("Failed to delete employee: " + error.message);
+    }
   };
 
   const handleAttendanceUpdate = (
@@ -855,7 +952,6 @@ export default function Employees() {
           </button>
         </div>
       </div>
-
       {/* AI HR Assistant */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-center gap-3">
@@ -875,7 +971,6 @@ export default function Employees() {
           </button>
         </div>
       </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
@@ -945,7 +1040,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow border">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -1003,7 +1097,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Employees List */}
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1222,7 +1315,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {filteredEmployees.length === 0 && (
         <div className="bg-white rounded-lg shadow border p-8 text-center">
           <Users className="mx-auto text-gray-400 mb-4" size={48} />
@@ -1234,7 +1326,6 @@ export default function Employees() {
           </p>
         </div>
       )}
-
       {/* Leave Requests and Payroll Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow border p-4">
@@ -1302,7 +1393,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1429,7 +1519,6 @@ export default function Employees() {
                 <h3 className="font-semibold text-gray-700 border-b pb-2">
                   Employment Details
                 </h3>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Shift *
@@ -1452,7 +1541,6 @@ export default function Employees() {
                     <option value="night">Night</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Contract Type *
@@ -1477,7 +1565,6 @@ export default function Employees() {
                     <option value="temporary">Temporary</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Work Location
@@ -1495,7 +1582,6 @@ export default function Employees() {
                     placeholder="Enter work location"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Working Hours
@@ -1513,15 +1599,14 @@ export default function Employees() {
                     placeholder="Hours per week"
                   />
                 </div>
-
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={newEmployee.createUser}
+                    checked={newEmployee.createUser} // tied to newEmployee.createUser
                     onChange={(e) =>
                       setNewEmployee({
                         ...newEmployee,
-                        createUser: e.target.checked,
+                        createUser: e.target.checked, // update state on toggle
                       })
                     }
                     className="mr-2"
@@ -1651,7 +1736,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Edit Employee Modal */}
       {showEditModal && editingEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1906,8 +1990,10 @@ export default function Employees() {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={editingEmployee.hasUserAccount || false}
-                    disabled={editingEmployee.hasUserAccount} // disable if user already exists
+                    checked={
+                      !!editingEmployee.userId || editingEmployee.hasUserAccount
+                    }
+                    disabled={!!editingEmployee.userId} // cannot uncheck if already a user
                     onChange={(e) =>
                       setEditingEmployee({
                         ...editingEmployee,
@@ -2097,7 +2183,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Attendance Management Modal */}
       {showAttendanceModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2258,7 +2343,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Reports Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2357,8 +2441,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
-      {/* Delete Employee Confirmation Modal */}
       {showDeleteModal && deletingEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -2405,7 +2487,7 @@ export default function Employees() {
             </div>
           </div>
         </div>
-      )}
+      )}{" "}
     </div>
   );
 }

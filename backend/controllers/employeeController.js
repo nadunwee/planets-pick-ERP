@@ -1,5 +1,6 @@
 const Employee = require("../models/employeeModel.js");
 const User = require("../models/userModel.js");
+const mongoose = require("mongoose");
 
 // Add a new employee
 async function addEmployee(req, res) {
@@ -13,9 +14,11 @@ async function addEmployee(req, res) {
     if (employee.hasUserAccount) {
       const user = new User({
         email: employee.email,
-        name: employee.name, // or firstName + lastName if you have those
-        employeeId: employee._id,
-        pendingApproval: true,
+        name: employee.name,
+        department: employee.department || "General",
+        role: employee.position || "Employee",
+        password: employee.password || "changeme123!", // default if not provided
+        approved: false,
       });
 
       await user.save();
@@ -54,8 +57,10 @@ async function updateEmployee(req, res) {
       const user = new User({
         email: employee.email,
         name: employee.name,
-        employeeId: employee._id,
-        pendingApproval: true,
+        department: employee.department || "General",
+        role: employee.position || "Employee",
+        password: "changeme123!",
+        approved: false,
       });
 
       await user.save();
@@ -63,7 +68,6 @@ async function updateEmployee(req, res) {
       await employee.save();
     }
 
-    // Always return JSON
     return res.status(200).json({ employee });
   } catch (error) {
     console.error("Update employee error:", error);
@@ -71,16 +75,26 @@ async function updateEmployee(req, res) {
   }
 }
 
-// Delete employee
+// Delete employee (soft delete + optional user deletion)
 async function deleteEmployee(req, res) {
   try {
     const { id } = req.params;
-    const employee = await Employee.findByIdAndDelete(id);
+    const employee = await Employee.findById(id);
 
     if (!employee) return res.status(404).json({ error: "Employee not found" });
 
-    return res.status(200).json({ message: "Employee deleted successfully" });
+    // If employee has linked user, delete user (hard delete)
+    if (employee.userId) {
+      await User.findByIdAndDelete(employee.userId);
+    }
+
+    // Soft delete employee
+    employee.status = "inactive";
+    await employee.save();
+
+    res.status(200).json({ message: "Employee deleted successfully" });
   } catch (error) {
+    console.error("Delete employee error:", error);
     return res.status(500).json({ error: error.message });
   }
 }

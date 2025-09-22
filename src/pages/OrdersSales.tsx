@@ -32,7 +32,13 @@ interface Order {
     country: string;
   };
   items: OrderItem[];
-  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   orderDate: string;
   expectedDelivery: string;
@@ -198,15 +204,26 @@ export default function OrdersSales() {
   const [selectedPriority, setSelectedPriority] = useState("All");
   const [dateRange, setDateRange] = useState("all");
 
-  const statuses = ["All", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+  const statuses = [
+    "All",
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
   const priorities = ["All", "low", "medium", "high", "urgent"];
 
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === "All" || order.status === selectedStatus;
-    const matchesPriority = selectedPriority === "All" || order.priority === selectedPriority;
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "All" || order.status === selectedStatus;
+    const matchesPriority =
+      selectedPriority === "All" || order.priority === selectedPriority;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -259,9 +276,12 @@ export default function OrdersSales() {
     }
   };
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const totalRevenue = orders.reduce(
+    (sum, order) => sum + order.totalAmount,
+    0
+  );
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => o.status === "pending").length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const averageOrderValue = totalRevenue / totalOrders;
 
   return (
@@ -270,7 +290,9 @@ export default function OrdersSales() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Orders & Sales</h1>
-          <p className="text-gray-600">Manage orders, track sales, and analyze performance</p>
+          <p className="text-gray-600">
+            Manage orders, track sales, and analyze performance
+          </p>
         </div>
         <div className="flex gap-2">
           <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
@@ -297,8 +319,10 @@ export default function OrdersSales() {
           <div>
             <h3 className="font-semibold text-green-900">AI Sales Insights</h3>
             <p className="text-green-700 text-sm">
-              Sales trending 22% above last month. German market showing strong demand for VCO.
-              Recommend increasing production capacity by 15% for Q2. Optimal pricing strategy suggests 5% increase for premium products.
+              Sales trending 22% above last month. German market showing strong
+              demand for VCO. Recommend increasing production capacity by 15%
+              for Q2. Optimal pricing strategy suggests 5% increase for premium
+              products.
             </p>
           </div>
           <button className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
@@ -313,7 +337,9 @@ export default function OrdersSales() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-green-600">LKR {totalRevenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">
+                LKR {totalRevenue.toLocaleString()}
+              </p>
               <p className="text-sm text-green-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +18.7% from last month
@@ -339,7 +365,9 @@ export default function OrdersSales() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Avg Order Value</p>
-              <p className="text-2xl font-bold text-purple-600">LKR {Math.round(averageOrderValue).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-purple-600">
+                LKR {Math.round(averageOrderValue).toLocaleString()}
+              </p>
               <p className="text-sm text-purple-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +8.2% from last month
@@ -352,7 +380,9 @@ export default function OrdersSales() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Orders</p>
-              <p className="text-2xl font-bold text-yellow-600">{pendingOrders}</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {pendingOrders}
+              </p>
               <p className="text-sm text-gray-600">Requires attention</p>
             </div>
             <AlertTriangle className="text-yellow-500" size={24} />
@@ -366,7 +396,10 @@ export default function OrdersSales() {
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={16}
+              />
               <input
                 type="text"
                 placeholder="Search orders, customers, or companies..."
@@ -388,7 +421,9 @@ export default function OrdersSales() {
               >
                 {statuses.map((status) => (
                   <option key={status} value={status}>
-                    {status === "All" ? "All Status" : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status === "All"
+                      ? "All Status"
+                      : status.charAt(0).toUpperCase() + status.slice(1)}
                   </option>
                 ))}
               </select>
@@ -401,7 +436,9 @@ export default function OrdersSales() {
             >
               {priorities.map((priority) => (
                 <option key={priority} value={priority}>
-                  {priority === "All" ? "All Priority" : priority.charAt(0).toUpperCase() + priority.slice(1)}
+                  {priority === "All"
+                    ? "All Priority"
+                    : priority.charAt(0).toUpperCase() + priority.slice(1)}
                 </option>
               ))}
             </select>
@@ -428,17 +465,28 @@ export default function OrdersSales() {
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">
                   <div>
-                    <h3 className="font-semibold text-lg">{order.orderNumber}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {order.orderNumber}
+                    </h3>
                     <p className="text-sm text-gray-600">
-                      Ordered on {order.orderDate} • Expected: {order.expectedDelivery}
+                      Ordered on {order.orderDate} • Expected:{" "}
+                      {order.expectedDelivery}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(order.priority)}`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(
+                      order.priority
+                    )}`}
+                  >
                     {order.priority} priority
                   </span>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                      order.status
+                    )}`}
+                  >
                     {order.status}
                   </span>
                 </div>
@@ -488,13 +536,18 @@ export default function OrdersSales() {
                           <div>
                             <p className="font-medium">{item.productName}</p>
                             <p className="text-gray-600">
-                              {item.quantity} {item.unit} × LKR {item.unitPrice.toLocaleString()}
+                              {item.quantity} {item.unit} × LKR{" "}
+                              {item.unitPrice.toLocaleString()}
                             </p>
                             {item.specifications && (
-                              <p className="text-xs text-gray-500">{item.specifications}</p>
+                              <p className="text-xs text-gray-500">
+                                {item.specifications}
+                              </p>
                             )}
                           </div>
-                          <p className="font-medium">LKR {item.totalPrice.toLocaleString()}</p>
+                          <p className="font-medium">
+                            LKR {item.totalPrice.toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -510,17 +563,25 @@ export default function OrdersSales() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Total Amount:</span>
-                      <span className="font-bold text-lg">LKR {order.totalAmount.toLocaleString()}</span>
+                      <span className="font-bold text-lg">
+                        LKR {order.totalAmount.toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment Status:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getPaymentStatusColor(order.paymentStatus)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getPaymentStatusColor(
+                          order.paymentStatus
+                        )}`}
+                      >
                         {order.paymentStatus}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment Method:</span>
-                      <span className="capitalize">{order.paymentMethod.replace("-", " ")}</span>
+                      <span className="capitalize">
+                        {order.paymentMethod.replace("-", " ")}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Shipping:</span>
@@ -529,7 +590,9 @@ export default function OrdersSales() {
                     {order.actualDelivery && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Delivered:</span>
-                        <span className="text-green-600">{order.actualDelivery}</span>
+                        <span className="text-green-600">
+                          {order.actualDelivery}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -571,8 +634,12 @@ export default function OrdersSales() {
       {filteredOrders.length === 0 && (
         <div className="bg-white rounded-lg shadow border p-8 text-center">
           <ShoppingCart className="mx-auto text-gray-400 mb-4" size={48} />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
-          <p className="text-gray-600">No orders match your current search criteria.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No orders found
+          </h3>
+          <p className="text-gray-600">
+            No orders match your current search criteria.
+          </p>
         </div>
       )}
     </div>
