@@ -11,6 +11,27 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+// --- Register ChartJS components ---
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
 // --- TYPES ---
 interface Transaction {
   _id: string;
@@ -63,6 +84,7 @@ export default function Finance() {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // --- Modals ---
+  const [showAddAssetModal, setShowAddAssetModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -72,7 +94,8 @@ export default function Finance() {
     useState<Transaction | null>(null);
 
   const [formData, setFormData] = useState({
-    type: "expense" as "income" | "expense",
+    type: "expense" as "income" | "expense" | "asset" | "liability",
+    subType: "current" as "current" | "non-current",
     category: "",
     description: "",
     amount: "",
@@ -135,8 +158,45 @@ export default function Finance() {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalAssets = 0; // Placeholder
-  const totalLiabilities = 0; // Placeholder
+  const totalAssets = transactions
+    .filter((t) => t.type === "asset")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalLiabilities = transactions
+    .filter((t) => t.type === "liability")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netWorth = totalAssets - totalLiabilities; // new
+
+  // --- ASSET CHART DATA ---
+  const assetHistory = transactions
+    .filter((t) => t.type === "asset")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const currentAssetsData = {
+    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: "Current Assets",
+        data: assetHistory
+          .filter((t) => t.subType === "current")
+          .map((t) => t.amount),
+        backgroundColor: "rgba(59, 130, 246, 0.6)",
+      },
+    ],
+  };
+
+  const nonCurrentAssetsData = {
+    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: "Non-current Assets",
+        data: assetHistory
+          .filter((t) => t.subType === "non-current")
+          .map((t) => t.amount),
+        backgroundColor: "rgba(16, 185, 129, 0.6)",
+      },
+    ],
+  };
 
   // --- UTILS ---
   const getStatusColor = (status: string) => {
@@ -152,7 +212,11 @@ export default function Finance() {
     }
   };
   const getTypeColor = (type: string) =>
-    type === "income" ? "text-green-600" : "text-red-600";
+    type === "income" || type === "asset"
+      ? "text-green-600"
+      : type === "expense" || type === "liability"
+      ? "text-red-600"
+      : "text-gray-600";
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -164,6 +228,7 @@ export default function Finance() {
     setFormData({
       type: "expense",
       category: "",
+      subType: "current",
       description: "",
       amount: "",
       account: "",
@@ -253,14 +318,34 @@ export default function Finance() {
     }
   };
 
-  function setShowDownloadReports(arg0: boolean): void {
-    throw new Error("Function not implemented.");
-  }
+  const setShowDownloadReports = (show: boolean) => {
+    console.log("Download reports clicked", show);
+  };
+
+  // --- ADD ASSET/LIABILITY HANDLER ---
+  const handleAddAssetLiability = async () => {
+    if (!formData.category || !formData.description || !formData.amount) {
+      alert("Please fill all required fields");
+      return;
+    }
+    try {
+      const res = await API.post<Transaction>("/transactions", {
+        ...formData,
+        amount: Number(formData.amount),
+      });
+      setTransactions([res.data, ...transactions]);
+      setShowAddAssetModal(false);
+      resetForm();
+    } catch (err: any) {
+      console.error(err.response?.data || err.message);
+      alert("Failed to add asset/liability");
+    }
+  };
 
   // --- RENDER ---
   return (
     <div className="p-4 space-y-6">
-      {/* Header */}
+      {/* Header + Add Buttons */}
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -277,6 +362,12 @@ export default function Finance() {
           >
             <Plus size={16} /> Add Transaction
           </button>
+          <button
+            onClick={() => setShowAddAssetModal(true)}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-700 transition"
+          >
+            <Plus size={16} /> Add Asset / Liability
+          </button>
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
             Financial AI
           </button>
@@ -290,7 +381,7 @@ export default function Finance() {
       </div>
 
       {/* Summary Blocks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-green-50 p-4 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-600">Total Income</h3>
           <p className="text-2xl font-bold text-green-700">
@@ -329,7 +420,92 @@ export default function Finance() {
             })}
           </p>
         </div>
+        <div className="bg-indigo-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Net Worth</h3>
+          <p className="text-2xl font-bold text-indigo-700">
+            {netWorth.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
       </div>
+
+      {/* ASSET/LIABILITY MODAL */}
+      {showAddAssetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+            <button
+              onClick={() => setShowAddAssetModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-semibold mb-4">
+              Add Asset / Liability
+            </h2>
+            <form className="space-y-4">
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              >
+                <option value="asset">Asset</option>
+                <option value="liability">Liability</option>
+              </select>
+              <select
+                name="subType"
+                value={formData.subType}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              >
+                <option value="current">Current</option>
+                <option value="non-current">Non-current</option>
+              </select>
+              <input
+                type="text"
+                name="category"
+                placeholder="Category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="text"
+                name="description"
+                placeholder="Description"
+                value={formData.description}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="number"
+                name="amount"
+                placeholder="Amount"
+                value={formData.amount}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="text"
+                name="account"
+                placeholder="Account"
+                value={formData.account}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <button
+                type="button"
+                onClick={handleAddAssetLiability}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
+              >
+                Add
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ADD / EDIT MODAL */}
       {(showAddModal || showEditModal) && (
@@ -592,17 +768,28 @@ export default function Finance() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
-          <span className="text-gray-400">Non-current Assets Chart</span>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Non-current Assets
+          </h3>
+          <Bar data={nonCurrentAssetsData} />
         </div>
-        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
-          <span className="text-gray-400">Current Assets Chart</span>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">Current Assets</h3>
+          <Bar data={currentAssetsData} />
         </div>
-        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
-          <span className="text-gray-400">Current Liabilities Chart</span>
+
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Non-current Liabilities
+          </h3>
+          <Bar data={nonCurrentAssetsData} />
         </div>
-        <div className="bg-white rounded-lg shadow p-4 h-64 flex items-center justify-center">
-          <span className="text-gray-400">Non-current Liabilities Chart</span>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Current Liabilities
+          </h3>
+          <Bar data={currentAssetsData} />
         </div>
       </div>
     </div>

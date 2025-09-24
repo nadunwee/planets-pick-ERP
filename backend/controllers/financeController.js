@@ -1,4 +1,9 @@
-const { Transaction, Account, Budget } = require("../models/financeModel");
+const {
+  Transaction,
+  Account,
+  Budget,
+  AssetLiability,
+} = require("../models/financeModel");
 
 // --- Transactions ---
 
@@ -18,7 +23,6 @@ exports.addTransaction = async (req, res) => {
     const { type, category, description, amount, account, reference, date } =
       req.body;
 
-    // ✅ Validation
     if (!type || !category || !description || !amount || !account || !date) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -48,7 +52,6 @@ exports.updateTransaction = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Convert amount to number if present
     if (updateData.amount) updateData.amount = Number(updateData.amount);
     if (updateData.date) updateData.date = new Date(updateData.date);
 
@@ -101,6 +104,83 @@ exports.getBudgets = async (req, res) => {
     const budgets = await Budget.find();
     res.json(budgets);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// --- Assets & Liabilities ---
+
+// Get all assets & liabilities
+exports.getAssetsLiabilities = async (req, res) => {
+  try {
+    const items = await AssetLiability.find().sort({ date: -1 });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Add new asset/liability
+exports.addAssetLiability = async (req, res) => {
+  try {
+    const { type, category, description, amount, date } = req.body;
+
+    if (!type || !category || !description || !amount || !date) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const newItem = new AssetLiability({
+      type, // "asset" or "liability"
+      category, // "current" or "non-current"
+      description,
+      amount: Number(amount),
+      date: new Date(date),
+    });
+
+    await newItem.save();
+    res.status(201).json(newItem);
+  } catch (err) {
+    console.error("❌ Add asset/liability error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update asset/liability
+exports.updateAssetLiability = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (updateData.amount) updateData.amount = Number(updateData.amount);
+    if (updateData.date) updateData.date = new Date(updateData.date);
+
+    const updatedItem = await AssetLiability.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!updatedItem)
+      return res.status(404).json({ error: "Asset/Liability not found" });
+
+    res.json(updatedItem);
+  } catch (err) {
+    console.error("❌ Update asset/liability error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete asset/liability
+exports.deleteAssetLiability = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedItem = await AssetLiability.findByIdAndDelete(id);
+
+    if (!deletedItem)
+      return res.status(404).json({ error: "Asset/Liability not found" });
+
+    res.json({ message: "Asset/Liability deleted successfully" });
+  } catch (err) {
+    console.error("❌ Delete asset/liability error:", err);
     res.status(500).json({ error: err.message });
   }
 };

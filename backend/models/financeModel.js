@@ -16,6 +16,7 @@ const transactionSchema = new mongoose.Schema({
   },
 });
 
+// Account Schema
 const accountSchema = new mongoose.Schema({
   name: { type: String, required: true },
   type: {
@@ -29,6 +30,7 @@ const accountSchema = new mongoose.Schema({
   accountNumber: { type: String },
 });
 
+// Budget Schema
 const budgetSchema = new mongoose.Schema({
   category: { type: String, required: true },
   allocated: { type: Number, required: true },
@@ -40,8 +42,23 @@ const budgetSchema = new mongoose.Schema({
   },
 });
 
+// Asset / Liability Schema
+const assetLiabilitySchema = new mongoose.Schema({
+  type: { type: String, enum: ["asset", "liability"], required: true },
+  subtype: { type: String, enum: ["current", "non-current"], required: true },
+  name: { type: String, required: true }, // e.g. "Office Building", "Bank Loan"
+  value: { type: Number, required: true },
+  date: { type: Date, default: Date.now },
+  status: {
+    type: String,
+    enum: ["active", "sold", "settled"],
+    default: "active",
+  },
+});
+
 module.exports = {
   Transaction: mongoose.model("Transaction", transactionSchema),
   Account: mongoose.model("Account", accountSchema),
   Budget: mongoose.model("Budget", budgetSchema),
+  AssetLiability: mongoose.model("AssetLiability", assetLiabilitySchema),
 };

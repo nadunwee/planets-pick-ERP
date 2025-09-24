@@ -21,4 +21,20 @@ router.get("/accounts", financeController.getAccounts);
 // --- Budgets ---
 router.get("/budgets", financeController.getBudgets);
 
+// --- Assets & Liabilities ---
+// Get all assets & liabilities
+router.get("/assets-liabilities", financeController.getAssetsLiabilities);
+
+// Add a new asset/liability
+router.post("/assets-liabilities", financeController.addAssetLiability);
+
+// Update an asset/liability by ID
+router.put("/assets-liabilities/:id", financeController.updateAssetLiability);
+
+// Delete an asset/liability by ID
+router.delete(
+  "/assets-liabilities/:id",
+  financeController.deleteAssetLiability
+);
+
 module.exports = router;
