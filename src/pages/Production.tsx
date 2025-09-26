@@ -11,7 +11,8 @@ import {
   Zap,
   X,
 } from "lucide-react";
-import { productionService, ProductionBatch, transformBatchForFrontend, transformBatchForBackend } from "../components/services/productionService";
+import { productionService } from "../components/services/productionService";
+import type { ProductionBatch } from "../components/services/productionService";
 
 interface FrontendProductionBatch {
   id: string;

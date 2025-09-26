@@ -90,4 +90,4 @@ export const transformBatchForBackend = (batch: any): CreateBatchRequest => {
   };
 };
 
-export default productionService;
+// Export the service
