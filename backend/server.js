@@ -29,6 +29,15 @@ app.use("/api/user", userRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/inventory", inventoryRoutes);
 
+app.use("/api/reports", require("./routes/reportRoutes.js"));
+app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
+app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
+
+// error handling middleware
+app.use(require("./middleware/errorHandler.js").notFound);
+app.use(require("./middleware/errorHandler.js").errorHandler);
+
+
 // Connect to database
 mongoose
   .connect(process.env.MONGO_URI)
