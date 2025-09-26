@@ -17,12 +17,7 @@ const app = express();
 
 // ✅ Middleware
 app.use(express.json()); // Parse JSON request body
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173", // frontend origin
-    credentials: true,
-  })
-);
+app.use(cors()); // allow all origins for testing
 
 // ✅ Request logger (for debugging)
 app.use((req, res, next) => {
@@ -44,25 +39,25 @@ const startServer = async () => {
   try {
     // Try to connect to MongoDB with a timeout
     const connectPromise = mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000, // 5 seconds timeout
+      serverSelectionTimeoutMS: 4000, // 5 seconds timeout
     });
-    
+
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("MongoDB connection timeout")), 6000)
     );
-    
+
     await Promise.race([connectPromise, timeoutPromise]);
     console.log("✅ Connected to MongoDB");
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
-    console.log("🔄 Starting server without database connection for testing...");
+    console.log(
+      "🔄 Starting server without database connection for testing..."
+    );
   }
-  
+
   // Start server regardless of database connection
   app.listen(process.env.PORT, () => {
-    console.log(
-      `✅ Server listening on port ${process.env.PORT}`
-    );
+    console.log(`✅ Server listening on port ${process.env.PORT}`);
   });
 };
 

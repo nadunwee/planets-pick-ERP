@@ -1,6 +1,6 @@
 import type { Supplier } from "../types";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:4000/api";
 
 export const fetchSuppliers = async () => {
   const res = await fetch(`${API_URL}/suppliers`);
