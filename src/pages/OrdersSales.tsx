@@ -41,6 +41,13 @@ interface Order {
     | "shipped"
     | "delivered"
     | "cancelled";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
   orderDate: string;
   expectedDelivery: string;
@@ -352,6 +359,27 @@ export default function OrdersSales() {
           <button className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
             <Download size={16} />
             Export
+          </button>
+        </div>
+      </div>
+
+      {/* AI Sales Assistant */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-green-500 text-white p-2 rounded-lg">
+            <Bot size={20} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-green-900">AI Sales Insights</h3>
+            <p className="text-green-700 text-sm">
+              Sales trending 22% above last month. German market showing strong
+              demand for VCO. Recommend increasing production capacity by 15%
+              for Q2. Optimal pricing strategy suggests 5% increase for premium
+              products.
+            </p>
+          </div>
+          <button className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
+            View Analytics
           </button>
         </div>
       </div>

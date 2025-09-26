@@ -1,26 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   TrendingUp,
   TrendingDown,
-  CreditCard,
-  Banknote,
-  BarChart3,
-  Receipt,
   FileText,
-  Calendar,
-  Search,
-  Download,
   Plus,
-  Bot,
-  Clock,
-  Target,
   X,
-  Eye,
-  Printer,
+  Download,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+// --- Register ChartJS components ---
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+// --- TYPES ---
 interface Transaction {
-  id: string;
+  _id: string;
   date: string;
   type: "income" | "expense";
   category: string;
@@ -32,7 +46,7 @@ interface Transaction {
 }
 
 interface Account {
-  id: string;
+  _id: string;
   name: string;
   type: "checking" | "savings" | "credit" | "investment";
   balance: number;
@@ -42,255 +56,46 @@ interface Account {
 }
 
 interface Budget {
+  _id: string;
   category: string;
   allocated: number;
   spent: number;
-  remaining: number;
   period: "monthly" | "quarterly" | "yearly";
-}
-
-interface FinancialMetric {
-  label: string;
-  value: number;
-  change: number;
-  period: string;
-  format: "currency" | "percentage" | "number";
 }
 
 interface ReportType {
   id: string;
   name: string;
-  description: string;
-  icon: React.ReactNode;
   format: "pdf" | "excel" | "csv";
 }
 
-const transactions: Transaction[] = [
-  {
-    id: "1",
-    date: "2024-01-15",
-    type: "income",
-    category: "Sales",
-    description: "Payment from Organic Food GmbH - ORD-2024-001",
-    amount: 280000,
-    account: "Business Checking",
-    reference: "INV-2024-001",
-    status: "completed",
-  },
-  {
-    id: "2",
-    date: "2024-01-15",
-    type: "expense",
-    category: "Raw Materials",
-    description: "Coconut purchase from local suppliers",
-    amount: 125000,
-    account: "Business Checking",
-    reference: "PO-2024-015",
-    status: "completed",
-  },
-  {
-    id: "3",
-    date: "2024-01-14",
-    type: "income",
-    category: "Sales",
-    description: "Payment from Health Store Canada - ORD-2024-002",
-    amount: 120000,
-    account: "Business Checking",
-    reference: "INV-2024-002",
-    status: "pending",
-  },
-  {
-    id: "4",
-    date: "2024-01-14",
-    type: "expense",
-    category: "Operations",
-    description: "Monthly electricity bill",
-    amount: 450000,
-    account: "Business Checking",
-    reference: "UTIL-2024-001",
-    status: "completed",
-  },
-  {
-    id: "5",
-    date: "2024-01-13",
-    type: "expense",
-    category: "Payroll",
-    description: "Employee salaries - January 2024",
-    amount: 385000,
-    account: "Payroll Account",
-    reference: "PAY-2024-001",
-    status: "completed",
-  },
-];
-
-const accounts: Account[] = [
-  {
-    id: "1",
-    name: "Business Checking",
-    type: "checking",
-    balance: 1250000,
-    currency: "LKR",
-    bank: "Commercial Bank of Ceylon",
-    accountNumber: "****6789",
-  },
-  {
-    id: "2",
-    name: "Savings Account",
-    type: "savings",
-    balance: 850000,
-    currency: "LKR",
-    bank: "Bank of Ceylon",
-    accountNumber: "****1234",
-  },
-  {
-    id: "3",
-    name: "Payroll Account",
-    type: "checking",
-    balance: 425000,
-    currency: "LKR",
-    bank: "Commercial Bank of Ceylon",
-    accountNumber: "****5678",
-  },
-  {
-    id: "4",
-    name: "Export Revenue USD",
-    type: "checking",
-    balance: 15500,
-    currency: "USD",
-    bank: "Commercial Bank of Ceylon",
-    accountNumber: "****9012",
-  },
-];
-
-const budgets: Budget[] = [
-  {
-    category: "Raw Materials",
-    allocated: 800000,
-    spent: 650000,
-    remaining: 150000,
-    period: "monthly",
-  },
-  {
-    category: "Payroll",
-    allocated: 400000,
-    spent: 385000,
-    remaining: 15000,
-    period: "monthly",
-  },
-  {
-    category: "Operations",
-    allocated: 200000,
-    spent: 165000,
-    remaining: 35000,
-    period: "monthly",
-  },
-  {
-    category: "Marketing",
-    allocated: 100000,
-    spent: 75000,
-    remaining: 25000,
-    period: "monthly",
-  },
-  {
-    category: "Equipment",
-    allocated: 300000,
-    spent: 125000,
-    remaining: 175000,
-    period: "quarterly",
-  },
-];
-
-const financialMetrics: FinancialMetric[] = [
-  {
-    label: "Total Revenue",
-    value: 2450000,
-    change: 18.7,
-    period: "this month",
-    format: "currency",
-  },
-  {
-    label: "Total Expenses",
-    value: 1850000,
-    change: 12.3,
-    period: "this month",
-    format: "currency",
-  },
-  {
-    label: "Net Profit",
-    value: 600000,
-    change: 24.5,
-    period: "this month",
-    format: "currency",
-  },
-  {
-    label: "Profit Margin",
-    value: 24.5,
-    change: 3.2,
-    period: "this month",
-    format: "percentage",
-  },
-  {
-    label: "Cash Flow",
-    value: 325000,
-    change: -5.8,
-    period: "this month",
-    format: "currency",
-  },
-  {
-    label: "ROI",
-    value: 15.8,
-    change: 2.1,
-    period: "this quarter",
-    format: "percentage",
-  },
-];
-
-const reportTypes: ReportType[] = [
-  {
-    id: "profit-loss",
-    name: "Profit & Loss Statement",
-    description: "Detailed income, expenses, and net profit analysis",
-    icon: <BarChart3 size={20} />,
-    format: "pdf",
-  },
-  {
-    id: "cash-flow",
-    name: "Cash Flow Statement",
-    description: "Operating, investing, and financing cash flows",
-    icon: <TrendingUp size={20} />,
-    format: "excel",
-  },
-  {
-    id: "balance-sheet",
-    name: "Balance Sheet",
-    description: "Assets, liabilities, and equity overview",
-    icon: <CreditCard size={20} />,
-    format: "pdf",
-  },
-  {
-    id: "budget-variance",
-    name: "Budget Variance Report",
-    description: "Actual vs. budgeted performance analysis",
-    icon: <Target size={20} />,
-    format: "excel",
-  },
-  {
-    id: "transaction-summary",
-    name: "Transaction Summary",
-    description: "Detailed transaction listing and categorization",
-    icon: <Receipt size={20} />,
-    format: "csv",
-  },
-];
+// --- API ---
+const API = axios.create({
+  baseURL: "http://localhost:4000/api/finance",
+});
 
 export default function Finance() {
+  // --- STATES ---
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
-  const [showDownloadReports, setShowDownloadReports] = useState(false);
-  const [newTransaction, setNewTransaction] = useState({
-    type: "expense" as "income" | "expense",
+
+  // --- Modals ---
+  const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] =
+    useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
+
+  const [formData, setFormData] = useState({
+    type: "expense" as "income" | "expense" | "asset" | "liability",
+    subType: "current" as "current" | "non-current",
     category: "",
     description: "",
     amount: "",
@@ -309,20 +114,91 @@ export default function Finance() {
     "Marketing",
     "Equipment",
   ];
+  const reportTypes: ReportType[] = [
+    { id: "1", name: "Monthly Report", format: "pdf" },
+    { id: "2", name: "Quarterly Report", format: "excel" },
+  ];
 
-  const filteredTransactions = transactions.filter((transaction) => {
+  // --- FETCH DATA ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [tRes, aRes, bRes] = await Promise.all([
+          API.get<Transaction[]>("/transactions"),
+          API.get<Account[]>("/accounts"),
+          API.get<Budget[]>("/budgets"),
+        ]);
+        setTransactions(tRes.data);
+        setAccounts(aRes.data);
+        setBudgets(bRes.data);
+      } catch (err: any) {
+        console.error("Fetch error:", err.response?.data || err.message);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // --- FILTERED TRANSACTIONS ---
+  const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
-      transaction.description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType =
-      selectedType === "All" || transaction.type === selectedType;
+      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === "All" || t.type === selectedType;
     const matchesCategory =
-      selectedCategory === "All" || transaction.category === selectedCategory;
+      selectedCategory === "All" || t.category === selectedCategory;
     return matchesSearch && matchesType && matchesCategory;
   });
 
+  // --- CALCULATIONS ---
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenses = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalAssets = transactions
+    .filter((t) => t.type === "asset")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalLiabilities = transactions
+    .filter((t) => t.type === "liability")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netWorth = totalAssets - totalLiabilities; // new
+
+  // --- ASSET CHART DATA ---
+  const assetHistory = transactions
+    .filter((t) => t.type === "asset")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const currentAssetsData = {
+    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: "Current Assets",
+        data: assetHistory
+          .filter((t) => t.subType === "current")
+          .map((t) => t.amount),
+        backgroundColor: "rgba(59, 130, 246, 0.6)",
+      },
+    ],
+  };
+
+  const nonCurrentAssetsData = {
+    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: "Non-current Assets",
+        data: assetHistory
+          .filter((t) => t.subType === "non-current")
+          .map((t) => t.amount),
+        backgroundColor: "rgba(16, 185, 129, 0.6)",
+      },
+    ],
+  };
+
+  // --- UTILS ---
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
@@ -335,35 +211,24 @@ export default function Finance() {
         return "text-gray-600 bg-gray-100";
     }
   };
+  const getTypeColor = (type: string) =>
+    type === "income" || type === "asset"
+      ? "text-green-600"
+      : type === "expense" || type === "liability"
+      ? "text-red-600"
+      : "text-gray-600";
 
-  const getTypeColor = (type: string) => {
-    return type === "income" ? "text-green-600" : "text-red-600";
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const totalBalance = accounts.reduce((sum, account) => {
-    if (account.currency === "LKR") return sum + account.balance;
-    return sum + account.balance * 320; // Assuming USD to LKR conversion
-  }, 0);
-
-  const monthlyIncome = transactions
-    .filter((t) => t.type === "income" && t.status === "completed")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const monthlyExpenses = transactions
-    .filter((t) => t.type === "expense" && t.status === "completed")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const pendingPayments = transactions.filter(
-    (t) => t.status === "pending"
-  ).length;
-
-  const handleAddTransaction = () => {
-    // Here you would typically save to your backend
-    console.log("Adding transaction:", newTransaction);
-    setShowAddTransaction(false);
-    setNewTransaction({
+  const resetForm = () => {
+    setFormData({
       type: "expense",
       category: "",
+      subType: "current",
       description: "",
       amount: "",
       account: "",
@@ -372,18 +237,116 @@ export default function Finance() {
     });
   };
 
-
-
-  const handleDownloadReport = (report: ReportType) => {
-    // Here you would typically generate and download the specific report
-    console.log(`Downloading ${report.name} in ${report.format} format`);
-    setShowDownloadReports(false);
+  // --- CRUD HANDLERS ---
+  const handleAddTransaction = async () => {
+    if (
+      !formData.category ||
+      !formData.description ||
+      !formData.amount ||
+      !formData.account
+    ) {
+      alert("Please fill all required fields");
+      return;
+    }
+    try {
+      const res = await API.post<Transaction>("/transactions", {
+        ...formData,
+        amount: Number(formData.amount),
+      });
+      setTransactions([res.data, ...transactions]);
+      setShowAddModal(false);
+      resetForm();
+    } catch (err: any) {
+      console.error(err.response?.data || err.message);
+      alert("Failed to add transaction");
+    }
   };
 
+  const handleEditTransaction = (t: Transaction) => {
+    setTransactionToEdit(t);
+    setFormData({
+      type: t.type,
+      category: t.category,
+      description: t.description,
+      amount: t.amount.toString(),
+      account: t.account,
+      reference: t.reference || "",
+      date: t.date.split("T")[0],
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTransaction = async () => {
+    if (!transactionToEdit) return;
+    try {
+      const res = await API.put<Transaction>(
+        `/transactions/${transactionToEdit._id}`,
+        {
+          ...formData,
+          amount: Number(formData.amount),
+        }
+      );
+      setTransactions(
+        transactions.map((t) => (t._id === res.data._id ? res.data : t))
+      );
+      setShowEditModal(false);
+      setTransactionToEdit(null);
+      resetForm();
+    } catch (err: any) {
+      console.error(err.response?.data || err.message);
+      alert("Failed to update transaction");
+    }
+  };
+
+  const handleDeleteTransaction = (t: Transaction) => {
+    setTransactionToDelete(t);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    try {
+      await API.delete(`/transactions/${transactionToDelete._id}`);
+      setTransactions(
+        transactions.filter((t) => t._id !== transactionToDelete._id)
+      );
+      setShowDeleteModal(false);
+      setTransactionToDelete(null);
+    } catch (err: any) {
+      console.error(err.response?.data || err.message);
+      alert("Failed to delete transaction");
+    }
+  };
+
+  const setShowDownloadReports = (show: boolean) => {
+    console.log("Download reports clicked", show);
+  };
+
+  // --- ADD ASSET/LIABILITY HANDLER ---
+  const handleAddAssetLiability = async () => {
+    if (!formData.category || !formData.description || !formData.amount) {
+      alert("Please fill all required fields");
+      return;
+    }
+    try {
+      const res = await API.post<Transaction>("/transactions", {
+        ...formData,
+        amount: Number(formData.amount),
+      });
+      setTransactions([res.data, ...transactions]);
+      setShowAddAssetModal(false);
+      resetForm();
+    } catch (err: any) {
+      console.error(err.response?.data || err.message);
+      alert("Failed to add asset/liability");
+    }
+  };
+
+  // --- RENDER ---
   return (
     <div className="p-4 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start">
+      {/* Header + Add Buttons */}
+      <div className="flex justify-between items-start flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Finance Management
@@ -392,641 +355,441 @@ export default function Finance() {
             Monitor financial performance, manage budgets, and track cash flow
           </p>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setShowAddTransaction(true)}
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setShowAddModal(true)}
             className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
           >
-            <Plus size={16} />
-            Add Transaction
+            <Plus size={16} /> Add Transaction
+          </button>
+          <button
+            onClick={() => setShowAddAssetModal(true)}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-700 transition"
+          >
+            <Plus size={16} /> Add Asset / Liability
           </button>
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
-            <Bot size={16} />
             Financial AI
           </button>
-
-          <button 
+          <button
             onClick={() => setShowDownloadReports(true)}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition"
           >
-            <FileText size={16} />
-            Download Reports
+            <FileText size={16} /> Download Reports
           </button>
         </div>
       </div>
 
-      {/* Add Transaction Modal */}
-      {showAddTransaction && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl border border-gray-100">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Add New Transaction</h2>
-              <button
-                onClick={() => setShowAddTransaction(false)}
-                className="text-gray-500 hover:text-gray-700"
+      {/* Summary Blocks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-green-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Income</h3>
+          <p className="text-2xl font-bold text-green-700">
+            {totalIncome.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-red-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Expenses</h3>
+          <p className="text-2xl font-bold text-red-700">
+            {totalExpenses.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-blue-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Total Assets</h3>
+          <p className="text-2xl font-bold text-blue-700">
+            {totalAssets.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">
+            Total Liabilities
+          </h3>
+          <p className="text-2xl font-bold text-yellow-700">
+            {totalLiabilities.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+        <div className="bg-indigo-50 p-4 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-600">Net Worth</h3>
+          <p className="text-2xl font-bold text-indigo-700">
+            {netWorth.toLocaleString("en-LK", {
+              style: "currency",
+              currency: "LKR",
+            })}
+          </p>
+        </div>
+      </div>
+
+      {/* ASSET/LIABILITY MODAL */}
+      {showAddAssetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+            <button
+              onClick={() => setShowAddAssetModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-semibold mb-4">
+              Add Asset / Liability
+            </h2>
+            <form className="space-y-4">
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
               >
-                <X size={24} />
+                <option value="asset">Asset</option>
+                <option value="liability">Liability</option>
+              </select>
+              <select
+                name="subType"
+                value={formData.subType}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              >
+                <option value="current">Current</option>
+                <option value="non-current">Non-current</option>
+              </select>
+              <input
+                type="text"
+                name="category"
+                placeholder="Category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="text"
+                name="description"
+                placeholder="Description"
+                value={formData.description}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="number"
+                name="amount"
+                placeholder="Amount"
+                value={formData.amount}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <input
+                type="text"
+                name="account"
+                placeholder="Account"
+                value={formData.account}
+                onChange={handleInputChange}
+                className="border border-gray-300 rounded-lg p-2 w-full"
+              />
+              <button
+                type="button"
+                onClick={handleAddAssetLiability}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
+              >
+                Add
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT MODAL */}
+      {(showAddModal || showEditModal) && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+            <button
+              onClick={() => {
+                setShowAddModal(false);
+                setShowEditModal(false);
+              }}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+            >
+              <X size={24} />
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+              <div
+                className={`p-3 rounded-full ${
+                  formData.type === "income"
+                    ? "bg-green-100 text-green-600"
+                    : "bg-red-100 text-red-600"
+                }`}
+              >
+                {formData.type === "income" ? (
+                  <TrendingUp size={20} />
+                ) : (
+                  <TrendingDown size={20} />
+                )}
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900">
+                {showAddModal ? "Add" : "Edit"} Transaction
+              </h2>
             </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Transaction Type
-                </label>
+            <form className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <select
-                  value={newTransaction.type}
-                  onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value as "income" | "expense"})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 >
-                  <option value="expense">Expense</option>
                   <option value="income">Income</option>
+                  <option value="expense">Expense</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  value={newTransaction.category}
-                  onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                >
-                  <option value="">Select Category</option>
-                  {categories.slice(1).map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
                 <input
                   type="text"
-                  value={newTransaction.description}
-                  onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
-                  placeholder="Enter transaction description"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  name="category"
+                  placeholder="Category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (LKR)
-                </label>
+              <input
+                type="text"
+                name="description"
+                placeholder="Description"
+                value={formData.description}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+              />
+              <div className="grid grid-cols-2 gap-4">
                 <input
                   type="number"
-                  value={newTransaction.amount}
-                  onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
-                  placeholder="0.00"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  name="amount"
+                  placeholder="Amount"
+                  value={formData.amount}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Account
-                </label>
-                <select
-                  value={newTransaction.account}
-                  onChange={(e) => setNewTransaction({...newTransaction, account: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                >
-                  <option value="">Select Account</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.name}>
-                      {account.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reference (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={newTransaction.reference}
-                  onChange={(e) => setNewTransaction({...newTransaction, reference: e.target.value})}
-                  placeholder="Invoice/PO number"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date
-                </label>
                 <input
                   type="date"
-                  value={newTransaction.date}
-                  onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 />
               </div>
-            </div>
-
-            <div className="flex gap-3 mt-8">
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="account"
+                  placeholder="Account"
+                  value={formData.account}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                />
+                <input
+                  type="text"
+                  name="reference"
+                  placeholder="Reference"
+                  value={formData.reference}
+                  onChange={handleInputChange}
+                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                />
+              </div>
               <button
-                onClick={() => setShowAddTransaction(false)}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                type="button"
+                onClick={
+                  showAddModal ? handleAddTransaction : handleUpdateTransaction
+                }
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold hover:from-indigo-600 hover:to-purple-600 transition"
+              >
+                {showAddModal ? "Add Transaction" : "Update Transaction"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE MODAL */}
+      {showDeleteModal && transactionToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
+            >
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-semibold mb-4">Confirm Delete</h2>
+            <p>
+              Are you sure you want to delete transaction{" "}
+              <span className="font-bold">
+                {transactionToDelete.description}
+              </span>
+              ?
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddTransaction}
-                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+                onClick={confirmDeleteTransaction}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
               >
-                Add Transaction
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
 
-
-
-      {/* Download Specific Reports Modal */}
-      {showDownloadReports && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Download Financial Reports</h2>
-              <button
-                onClick={() => setShowDownloadReports(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {reportTypes.map((report) => (
-                <div key={report.id} className="border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 hover:border-blue-200">
-                  <div className="flex items-start gap-4">
-                    <div className="text-blue-600 p-2 bg-blue-50 rounded-lg">
-                      {report.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                        {report.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        {report.description}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleDownloadReport(report)}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-sm"
-                        >
-                          <Download size={16} />
-                          Download {report.format.toUpperCase()}
-                        </button>
-                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
-                          <Eye size={16} />
-                          Preview
-                        </button>
-                        <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium">
-                          <Printer size={16} />
-                          Print
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-              <h4 className="font-semibold text-gray-900 mb-4 text-lg">Report Options</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="font-medium">Include charts and graphs</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="font-medium">Include detailed notes</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="font-medium">Auto-schedule reports</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Transactions Table */}
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <div className="p-4 flex gap-2 flex-wrap items-center">
+          <input
+            type="text"
+            placeholder="Search transactions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border rounded p-2 flex-1 min-w-[200px]"
+          />
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className="border rounded p-2"
+          >
+            {types.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="border rounded p-2"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
-
-      {/* AI Financial Assistant */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-green-500 text-white p-2 rounded-lg">
-            <Bot size={20} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-green-900">
-              AI Financial Insights
-            </h3>
-            <p className="text-green-700 text-sm">
-              Cash flow trending positive with 24.5% profit margin increase.
-              Recommend setting aside 20% for Q2 expansion. Expense optimization
-              suggests renegotiating supplier contracts could save 8% on raw
-              materials.
-            </p>
-          </div>
-          <button className="ml-auto bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
-            View Analysis
-          </button>
-        </div>
-      </div>
-
-      {/* Financial Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Balance</p>
-              <p className="text-2xl font-bold text-blue-600">
-                LKR {totalBalance.toLocaleString()}
-              </p>
-              <p className="text-sm text-blue-600 flex items-center gap-1">
-                <TrendingUp size={14} />
-                +12.5% from last month
-              </p>
-            </div>
-            <Banknote className="text-blue-500" size={24} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Monthly Income</p>
-              <p className="text-2xl font-bold text-green-600">
-                LKR {monthlyIncome.toLocaleString()}
-              </p>
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <TrendingUp size={14} />
-                +18.7% from last month
-              </p>
-            </div>
-            <TrendingUp className="text-green-500" size={24} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Monthly Expenses</p>
-              <p className="text-2xl font-bold text-red-600">
-                LKR {monthlyExpenses.toLocaleString()}
-              </p>
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <TrendingUp size={14} />
-                +12.3% from last month
-              </p>
-            </div>
-            <TrendingDown className="text-red-500" size={24} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Payments</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {pendingPayments}
-              </p>
-              <p className="text-sm text-gray-600">Requires attention</p>
-            </div>
-            <Clock className="text-yellow-500" size={24} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Financial Metrics */}
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <BarChart3 size={20} />
-                Key Financial Metrics
-              </h2>
-            </div>
-            <div className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {financialMetrics.map((metric, idx) => (
-                  <div
-                    key={idx}
-                    className="text-center p-3 bg-gray-50 rounded-lg"
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Date
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Description
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Category
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Account
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Amount
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Status
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
+                  No transactions found.
+                </td>
+              </tr>
+            ) : (
+              filteredTransactions.map((t) => (
+                <tr key={t._id}>
+                  <td className="px-4 py-2">
+                    {new Date(t.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-2">{t.description}</td>
+                  <td className="px-4 py-2">{t.category}</td>
+                  <td className="px-4 py-2">{t.account}</td>
+                  <td
+                    className={`px-4 py-2 font-semibold ${getTypeColor(
+                      t.type
+                    )}`}
                   >
-                    <p className="text-sm text-gray-600">{metric.label}</p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {metric.format === "currency"
-                        ? `LKR ${metric.value.toLocaleString()}`
-                        : metric.format === "percentage"
-                        ? `${metric.value}%`
-                        : metric.value.toLocaleString()}
-                    </p>
-                    <p
-                      className={`text-sm ${
-                        metric.change >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {metric.change >= 0 ? "+" : ""}
-                      {metric.change}% {metric.period}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Transactions */}
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Receipt size={20} />
-                Recent Transactions
-              </h2>
-            </div>
-
-            {/* Filters */}
-            <div className="p-4 border-b bg-gray-50">
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search transactions..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    {types.map((type) => (
-                      <option key={type} value={type}>
-                        {type === "All"
-                          ? "All Types"
-                          : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4">
-              <div className="space-y-3">
-                {filteredTransactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="border rounded-lg p-3 hover:bg-gray-50 transition"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">
-                            {transaction.description}
-                          </h4>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                              transaction.status
-                            )}`}
-                          >
-                            {transaction.status}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          <p>
-                            {transaction.category} • {transaction.account}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <Calendar size={12} />
-                            {transaction.date}
-                            {transaction.reference && (
-                              <>
-                                • <FileText size={12} /> {transaction.reference}
-                              </>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className={`text-lg font-bold ${getTypeColor(
-                            transaction.type
-                          )}`}
-                        >
-                          {transaction.type === "income" ? "+" : "-"}LKR{" "}
-                          {transaction.amount.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Accounts Overview */}
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <CreditCard size={20} />
-                Accounts
-              </h2>
-            </div>
-            <div className="p-4 space-y-3">
-              {accounts.map((account) => (
-                <div key={account.id} className="border rounded-lg p-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium">{account.name}</h4>
-                      <p className="text-xs text-gray-500">
-                        {account.bank} • {account.accountNumber}
-                      </p>
-                    </div>
+                    {t.amount.toLocaleString("en-LK", {
+                      style: "currency",
+                      currency: "LKR",
+                    })}
+                  </td>
+                  <td className="px-4 py-2">
                     <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        account.type === "checking"
-                          ? "bg-blue-100 text-blue-600"
-                          : account.type === "savings"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-purple-100 text-purple-600"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                        t.status
+                      )}`}
                     >
-                      {account.type}
+                      {t.status}
                     </span>
-                  </div>
-                  <p className="font-bold text-lg">
-                    {account.currency} {account.balance.toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  </td>
+                  <td className="px-4 py-2 flex gap-2">
+                    <button
+                      onClick={() => handleEditTransaction(t)}
+                      className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition flex items-center gap-1"
+                    >
+                      <Edit2 size={16} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTransaction(t)}
+                      className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"
+                    >
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          {/* Budget Overview */}
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Target size={20} />
-                Budget Overview
-              </h2>
-            </div>
-            <div className="p-4 space-y-4">
-              {budgets.map((budget, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium text-sm">{budget.category}</h4>
-                    <span className="text-xs text-gray-500 capitalize">
-                      {budget.period}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>Spent: LKR {budget.spent.toLocaleString()}</span>
-                      <span>
-                        Budget: LKR {budget.allocated.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${
-                          budget.spent / budget.allocated > 0.9
-                            ? "bg-red-500"
-                            : budget.spent / budget.allocated > 0.7
-                            ? "bg-yellow-500"
-                            : "bg-green-500"
-                        }`}
-                        style={{
-                          width: `${Math.min(
-                            (budget.spent / budget.allocated) * 100,
-                            100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-600">
-                      <span>
-                        {Math.round((budget.spent / budget.allocated) * 100)}%
-                        used
-                      </span>
-                      <span>
-                        LKR {budget.remaining.toLocaleString()} remaining
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Non-current Assets
+          </h3>
+          <Bar data={nonCurrentAssetsData} />
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">Current Assets</h3>
+          <Bar data={currentAssetsData} />
+        </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow border">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-lg">Quick Actions</h2>
-            </div>
-            <div className="p-4 space-y-2">
-              <button 
-                onClick={() => setShowAddTransaction(true)}
-                className="w-full bg-green-600 text-white py-2 px-3 rounded hover:bg-green-700 transition text-sm"
-              >
-                Record Payment
-              </button>
-              <button className="w-full bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 transition text-sm">
-                Generate Invoice
-              </button>
-              <button 
-                onClick={() => setShowDownloadReports(true)}
-                className="w-full bg-purple-600 text-white py-2 px-3 rounded hover:bg-purple-700 transition text-sm"
-              >
-                Financial Report
-              </button>
-              <button className="w-full bg-yellow-600 text-white py-2 px-3 rounded hover:bg-yellow-700 transition text-sm">
-                Budget Planning
-              </button>
-              <button className="w-full bg-indigo-600 text-white py-2 px-3 rounded hover:bg-indigo-700 transition text-sm">
-                Tax Calculator
-              </button>
-            </div>
-          </div>
-
-          {/* AI Finance Suggestions */}
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg border border-emerald-200">
-            <div className="p-4 border-b border-emerald-200">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Bot className="text-emerald-600" size={20} />
-                AI Finance Assistant
-              </h2>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">
-                  Cash Flow Optimization
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Consider delaying non-critical expenses by 10 days to improve
-                  cash flow
-                </p>
-                <button className="mt-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition">
-                  View Details
-                </button>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">
-                  Investment Opportunity
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Surplus cash of LKR 500K could earn 8% in short-term deposits
-                </p>
-                <button className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
-                  Calculate Returns
-                </button>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Tax Planning</h4>
-                <p className="text-xs text-gray-600">
-                  Q1 tax liability estimated at LKR 185K - plan accordingly
-                </p>
-                <button className="mt-2 text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 transition">
-                  Plan Taxes
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Non-current Liabilities
+          </h3>
+          <Bar data={nonCurrentAssetsData} />
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-gray-700 font-semibold mb-2">
+            Current Liabilities
+          </h3>
+          <Bar data={currentAssetsData} />
         </div>
       </div>
     </div>
