@@ -123,18 +123,19 @@ exports.getAssetsLiabilities = async (req, res) => {
 // Add new asset/liability
 exports.addAssetLiability = async (req, res) => {
   try {
-    const { type, category, description, amount, date } = req.body;
+    const { type, subtype, name, value, date } = req.body;
 
-    if (!type || !category || !description || !amount || !date) {
+    if (!type || !subtype || !name || !value) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     const newItem = new AssetLiability({
       type, // "asset" or "liability"
-      category, // "current" or "non-current"
-      description,
-      amount: Number(amount),
-      date: new Date(date),
+      subtype, // "current" or "non-current"
+      name,
+      value: Number(value),
+      date: date ? new Date(date) : new Date(),
+      status: "active"
     });
 
     await newItem.save();
@@ -151,7 +152,7 @@ exports.updateAssetLiability = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    if (updateData.amount) updateData.amount = Number(updateData.amount);
+    if (updateData.value) updateData.value = Number(updateData.value);
     if (updateData.date) updateData.date = new Date(updateData.date);
 
     const updatedItem = await AssetLiability.findByIdAndUpdate(id, updateData, {

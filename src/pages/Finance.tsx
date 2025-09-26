@@ -69,6 +69,16 @@ interface ReportType {
   format: "pdf" | "excel" | "csv";
 }
 
+interface AssetLiability {
+  _id: string;
+  type: "asset" | "liability";
+  subtype: "current" | "non-current";
+  name: string;
+  value: number;
+  date: string;
+  status: "active" | "sold" | "settled";
+}
+
 // --- API ---
 const API = axios.create({
   baseURL: "http://localhost:4000/api/finance",
@@ -79,6 +89,7 @@ export default function Finance() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [assetsLiabilities, setAssetsLiabilities] = useState<AssetLiability[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -102,6 +113,9 @@ export default function Finance() {
     account: "",
     reference: "",
     date: new Date().toISOString().split("T")[0],
+    // For assets/liabilities
+    name: "",
+    value: "",
   });
 
   const types = ["All", "income", "expense"];
@@ -123,14 +137,16 @@ export default function Finance() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tRes, aRes, bRes] = await Promise.all([
+        const [tRes, aRes, bRes, alRes] = await Promise.all([
           API.get<Transaction[]>("/transactions"),
           API.get<Account[]>("/accounts"),
           API.get<Budget[]>("/budgets"),
+          API.get<AssetLiability[]>("/assets-liabilities"),
         ]);
         setTransactions(tRes.data);
         setAccounts(aRes.data);
         setBudgets(bRes.data);
+        setAssetsLiabilities(alRes.data);
       } catch (err: any) {
         console.error("Fetch error:", err.response?.data || err.message);
       }
@@ -158,42 +174,80 @@ export default function Finance() {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalAssets = transactions
-    .filter((t) => t.type === "asset")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalLiabilities = transactions
-    .filter((t) => t.type === "liability")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalAssets = assetsLiabilities
+    .filter((al) => al.type === "asset")
+    .reduce((sum, al) => sum + al.value, 0);
+  const totalLiabilities = assetsLiabilities
+    .filter((al) => al.type === "liability")
+    .reduce((sum, al) => sum + al.value, 0);
 
-  const netWorth = totalAssets - totalLiabilities; // new
+  const netWorth = totalAssets - totalLiabilities;
 
   // --- ASSET CHART DATA ---
-  const assetHistory = transactions
-    .filter((t) => t.type === "asset")
+  const assets = assetsLiabilities
+    .filter((al) => al.type === "asset")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const liabilities = assetsLiabilities
+    .filter((al) => al.type === "liability")
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const currentAssetsData = {
-    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    labels: assets
+      .filter((a) => a.subtype === "current")
+      .map((a) => a.name),
     datasets: [
       {
         label: "Current Assets",
-        data: assetHistory
-          .filter((t) => t.subType === "current")
-          .map((t) => t.amount),
+        data: assets
+          .filter((a) => a.subtype === "current")
+          .map((a) => a.value),
         backgroundColor: "rgba(59, 130, 246, 0.6)",
       },
     ],
   };
 
   const nonCurrentAssetsData = {
-    labels: assetHistory.map((t) => new Date(t.date).toLocaleDateString()),
+    labels: assets
+      .filter((a) => a.subtype === "non-current")
+      .map((a) => a.name),
     datasets: [
       {
         label: "Non-current Assets",
-        data: assetHistory
-          .filter((t) => t.subType === "non-current")
-          .map((t) => t.amount),
+        data: assets
+          .filter((a) => a.subtype === "non-current")
+          .map((a) => a.value),
         backgroundColor: "rgba(16, 185, 129, 0.6)",
+      },
+    ],
+  };
+
+  const currentLiabilitiesData = {
+    labels: liabilities
+      .filter((l) => l.subtype === "current")
+      .map((l) => l.name),
+    datasets: [
+      {
+        label: "Current Liabilities",
+        data: liabilities
+          .filter((l) => l.subtype === "current")
+          .map((l) => l.value),
+        backgroundColor: "rgba(239, 68, 68, 0.6)",
+      },
+    ],
+  };
+
+  const nonCurrentLiabilitiesData = {
+    labels: liabilities
+      .filter((l) => l.subtype === "non-current")
+      .map((l) => l.name),
+    datasets: [
+      {
+        label: "Non-current Liabilities",
+        data: liabilities
+          .filter((l) => l.subtype === "non-current")
+          .map((l) => l.value),
+        backgroundColor: "rgba(245, 158, 11, 0.6)",
       },
     ],
   };
@@ -234,6 +288,8 @@ export default function Finance() {
       account: "",
       reference: "",
       date: new Date().toISOString().split("T")[0],
+      name: "",
+      value: "",
     });
   };
 
@@ -324,16 +380,19 @@ export default function Finance() {
 
   // --- ADD ASSET/LIABILITY HANDLER ---
   const handleAddAssetLiability = async () => {
-    if (!formData.category || !formData.description || !formData.amount) {
+    if (!formData.type || !formData.subType || !formData.name || !formData.value) {
       alert("Please fill all required fields");
       return;
     }
     try {
-      const res = await API.post<Transaction>("/transactions", {
-        ...formData,
-        amount: Number(formData.amount),
+      const res = await API.post<AssetLiability>("/assets-liabilities", {
+        type: formData.type,
+        subtype: formData.subType,
+        name: formData.name,
+        value: Number(formData.value),
+        date: formData.date,
       });
-      setTransactions([res.data, ...transactions]);
+      setAssetsLiabilities([res.data, ...assetsLiabilities]);
       setShowAddAssetModal(false);
       resetForm();
     } catch (err: any) {
@@ -465,33 +524,24 @@ export default function Finance() {
               </select>
               <input
                 type="text"
-                name="category"
-                placeholder="Category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <input
-                type="text"
-                name="description"
-                placeholder="Description"
-                value={formData.description}
+                name="name"
+                placeholder="Asset/Liability Name"
+                value={formData.name}
                 onChange={handleInputChange}
                 className="border border-gray-300 rounded-lg p-2 w-full"
               />
               <input
                 type="number"
-                name="amount"
-                placeholder="Amount"
-                value={formData.amount}
+                name="value"
+                placeholder="Value"
+                value={formData.value}
                 onChange={handleInputChange}
                 className="border border-gray-300 rounded-lg p-2 w-full"
               />
               <input
-                type="text"
-                name="account"
-                placeholder="Account"
-                value={formData.account}
+                type="date"
+                name="date"
+                value={formData.date}
                 onChange={handleInputChange}
                 className="border border-gray-300 rounded-lg p-2 w-full"
               />
@@ -783,13 +833,13 @@ export default function Finance() {
           <h3 className="text-gray-700 font-semibold mb-2">
             Non-current Liabilities
           </h3>
-          <Bar data={nonCurrentAssetsData} />
+          <Bar data={nonCurrentLiabilitiesData} />
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-gray-700 font-semibold mb-2">
             Current Liabilities
           </h3>
-          <Bar data={currentAssetsData} />
+          <Bar data={currentLiabilitiesData} />
         </div>
       </div>
     </div>
