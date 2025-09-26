@@ -11,6 +11,7 @@ const inventoryRoutes = require("./routes/inventory.js");
 const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
+const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/finance", financeRoutes); // Finance endpoints
 app.use("/api/users", userRoutes); // User endpoints
 app.use("/api/employees", employeeRoutes); // Employee endpoints
 app.use("/api/inventory", inventoryRoutes); // Inventory endpoints
+app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 
