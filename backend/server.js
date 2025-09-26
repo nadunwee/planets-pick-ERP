@@ -40,15 +40,30 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 
 // ✅ Connect to MongoDB and start server
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log(
-        `✅ Connected to DB and listening on port ${process.env.PORT}`
-      );
+const startServer = async () => {
+  try {
+    // Try to connect to MongoDB with a timeout
+    const connectPromise = mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000, // 5 seconds timeout
     });
-  })
-  .catch((error) => {
-    console.error("❌ Database connection error:", error);
+    
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("MongoDB connection timeout")), 6000)
+    );
+    
+    await Promise.race([connectPromise, timeoutPromise]);
+    console.log("✅ Connected to MongoDB");
+  } catch (error) {
+    console.error("❌ Database connection error:", error.message);
+    console.log("🔄 Starting server without database connection for testing...");
+  }
+  
+  // Start server regardless of database connection
+  app.listen(process.env.PORT, () => {
+    console.log(
+      `✅ Server listening on port ${process.env.PORT}`
+    );
   });
+};
+
+startServer();
