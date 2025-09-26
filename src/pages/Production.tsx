@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Play,
   Pause,
@@ -11,8 +11,10 @@ import {
   Zap,
   X,
 } from "lucide-react";
+import { productionService } from "../components/services/productionService";
+import type { ProductionBatch } from "../components/services/productionService";
 
-interface ProductionBatch {
+interface FrontendProductionBatch {
   id: string;
   productName: string;
   batchNumber: string;
@@ -100,70 +102,50 @@ export default function Production() {
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [editingBatch, setEditingBatch] = useState<string | null>(null);
-  const [productionBatches, setProductionBatches] = useState<ProductionBatch[]>([
-    {
-      id: "1",
-      productName: "Virgin Coconut Oil",
-      batchNumber: "VCO-2024-045",
-      status: "running",
-      processStatus: "machine-2",
-      progress: 75,
-      estimatedTime: "45 min",
-      operator: "Priya Silva",
-      startTime: "08:30 AM",
-      yield: 185,
-      targetYield: 200,
-      quality: "good",
-      level: 3,
-    },
-    {
-      id: "2",
-      productName: "Dried Jackfruit",
-      batchNumber: "DJF-2024-023",
-      status: "completed",
-      processStatus: "completed",
-      progress: 100,
-      estimatedTime: "2 hours",
-      actualTime: "1h 45m",
-      operator: "Kasun Perera",
-      startTime: "06:00 AM",
-      endTime: "07:45 AM",
-      yield: 55,
-      targetYield: 50,
-      quality: "excellent",
-      level: 6,
-    },
-    {
-      id: "3",
-      productName: "Coconut Flour",
-      batchNumber: "CF-2024-012",
-      status: "paused",
-      processStatus: "washing-materials",
-      progress: 45,
-      estimatedTime: "1 hour",
-      operator: "Nimal Fernando",
-      startTime: "09:00 AM",
-      yield: 0,
-      targetYield: 75,
-      quality: "good",
-      level: 2,
-    },
-    {
-      id: "4",
-      productName: "Coconut Milk",
-      batchNumber: "CM-2024-001",
-      status: "idle",
-      processStatus: "getting-raw-materials",
-      progress: 0,
-      estimatedTime: "30 min",
-      operator: "Current User",
-      startTime: "Pending",
-      yield: 0,
-      targetYield: 100,
-      quality: "good",
-      level: 0,
-    },
-  ]);
+  const [productionBatches, setProductionBatches] = useState<FrontendProductionBatch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Transform backend batch to frontend format
+  const transformBackendBatch = (backendBatch: ProductionBatch): FrontendProductionBatch => {
+    return {
+      id: backendBatch._id || backendBatch.id || "",
+      productName: backendBatch.product,
+      batchNumber: backendBatch.batchName,
+      status: backendBatch.status,
+      processStatus: backendBatch.processStatus,
+      progress: backendBatch.progress,
+      estimatedTime: backendBatch.estimatedTime,
+      actualTime: backendBatch.actualTime,
+      operator: backendBatch.operator,
+      startTime: backendBatch.startTime,
+      endTime: backendBatch.endTime,
+      yield: backendBatch.yield,
+      targetYield: backendBatch.targetYield,
+      quality: backendBatch.quality,
+      level: backendBatch.level,
+    };
+  };
+
+  // Load production batches on component mount
+  useEffect(() => {
+    const loadBatches = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const batches = await productionService.getBatches();
+        const transformedBatches = batches.map(transformBackendBatch);
+        setProductionBatches(transformedBatches);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load batches");
+        console.error("Error loading batches:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBatches();
+  }, []);
   const [batchFormData, setBatchFormData] = useState<BatchFormData>({
     date: new Date().toISOString().split('T')[0],
     time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
@@ -182,59 +164,66 @@ export default function Production() {
     }));
   };
 
-  const handleSubmitBatch = (e: React.FormEvent) => {
+  const handleSubmitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingBatch) {
-      // Update existing batch
-      setProductionBatches(prev => prev.map(batch => 
-        batch.id === editingBatch 
-          ? {
-              ...batch,
-              productName: batchFormData.batchItem,
-              batchNumber: batchFormData.batchNo,
-              startTime: `${batchFormData.date} ${batchFormData.time}`,
-              targetYield: batchFormData.qty,
-              yield: 0,
-              progress: 0,
-              status: "running" as const,
-            }
-          : batch
-      ));
-      setEditingBatch(null);
-    } else {
-                    // Add new batch
-        const newBatch: ProductionBatch = {
-          id: Date.now().toString(),
-          productName: batchFormData.batchItem,
-          batchNumber: batchFormData.batchNo,
-          status: "idle",
-          processStatus: "getting-raw-materials",
-          progress: 0,
-          estimatedTime: "1 hour",
-          operator: batchFormData.operatorName || "Current User",
-          startTime: `${batchFormData.date} ${batchFormData.time}`,
-          yield: 0,
-          targetYield: batchFormData.qty,
-          quality: batchFormData.qualityChecked ? "excellent" : "good",
-          level: 0,
-        };
+    try {
+      setError(null);
       
-      setProductionBatches(prev => [...prev, newBatch]);
+      if (editingBatch) {
+        // Update existing batch
+        const updates = {
+          batchName: batchFormData.batchNo,
+          product: batchFormData.batchItem,
+          targetYield: batchFormData.qty,
+          operator: batchFormData.operatorName,
+          estimatedTime: "1 hour",
+          startTime: `${batchFormData.date} ${batchFormData.time}`,
+          quality: batchFormData.qualityChecked ? "excellent" : "good",
+        };
+        
+        const updatedBatch = await productionService.updateBatch(editingBatch, updates);
+        const transformedBatch = transformBackendBatch(updatedBatch);
+        
+        setProductionBatches(prev => prev.map(batch => 
+          batch.id === editingBatch ? transformedBatch : batch
+        ));
+        setEditingBatch(null);
+      } else {
+        // Create new batch
+        const newBatchData = {
+          batchName: batchFormData.batchNo,
+          product: batchFormData.batchItem,
+          quantity: batchFormData.qty,
+          targetYield: batchFormData.qty,
+          operator: batchFormData.operatorName || "Current User",
+          estimatedTime: "1 hour",
+          startTime: `${batchFormData.date} ${batchFormData.time}`,
+          quality: batchFormData.qualityChecked ? "excellent" : "good",
+        };
+        
+        const createdBatch = await productionService.createBatch(newBatchData);
+        const transformedBatch = transformBackendBatch(createdBatch);
+        
+        setProductionBatches(prev => [...prev, transformedBatch]);
+      }
+      
+      // Reset form and close modal
+      setBatchFormData({
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        batchNo: '',
+        batchType: '',
+        batchItem: '',
+        qty: 0,
+        qualityChecked: false,
+        operatorName: '',
+      });
+      setShowBatchForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save batch");
+      console.error("Error saving batch:", err);
     }
-    
-         // Reset form and close modal
-     setBatchFormData({
-       date: new Date().toISOString().split('T')[0],
-       time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-       batchNo: '',
-       batchType: '',
-       batchItem: '',
-       qty: 0,
-       qualityChecked: false,
-       operatorName: '',
-     });
-    setShowBatchForm(false);
   };
 
   const resetForm = () => {
@@ -251,7 +240,7 @@ export default function Production() {
     setEditingBatch(null);
   };
 
-  const handleEditBatch = (batch: ProductionBatch) => {
+  const handleEditBatch = (batch: FrontendProductionBatch) => {
     setEditingBatch(batch.id);
     setBatchFormData({
       date: batch.startTime.split(' ')[0] || new Date().toISOString().split('T')[0],
@@ -266,12 +255,57 @@ export default function Production() {
     setShowBatchForm(true);
   };
 
-  const handleDeleteBatch = (batchId: string) => {
+  const handleDeleteBatch = async (batchId: string) => {
     if (window.confirm('Are you sure you want to delete this batch?')) {
-      setProductionBatches(prev => prev.filter(batch => batch.id !== batchId));
-      if (selectedBatch === batchId) {
-        setSelectedBatch(null);
+      try {
+        setError(null);
+        await productionService.deleteBatch(batchId);
+        setProductionBatches(prev => prev.filter(batch => batch.id !== batchId));
+        if (selectedBatch === batchId) {
+          setSelectedBatch(null);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete batch");
+        console.error("Error deleting batch:", err);
       }
+    }
+  };
+
+  const handleUpdateBatchStatus = async (batchId: string, updates: Partial<FrontendProductionBatch>) => {
+    try {
+      setError(null);
+      const backendUpdates = {
+        status: updates.status,
+        processStatus: updates.processStatus,
+        progress: updates.progress,
+        level: updates.level,
+        endTime: updates.endTime,
+      };
+      
+      const updatedBatch = await productionService.updateBatch(batchId, backendUpdates);
+      const transformedBatch = transformBackendBatch(updatedBatch);
+      
+      setProductionBatches(prev => prev.map(batch => 
+        batch.id === batchId ? transformedBatch : batch
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update batch");
+      console.error("Error updating batch:", err);
+    }
+  };
+
+  const handleCompleteBatch = async (batchId: string) => {
+    try {
+      setError(null);
+      const completedBatch = await productionService.completeBatch(batchId);
+      const transformedBatch = transformBackendBatch(completedBatch);
+      
+      setProductionBatches(prev => prev.map(batch => 
+        batch.id === batchId ? transformedBatch : batch
+      ));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to complete batch");
+      console.error("Error completing batch:", err);
     }
   };
 
@@ -350,6 +384,26 @@ export default function Production() {
           </button>
         </div>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-white rounded-lg shadow border p-6 text-center">
+          <p className="text-gray-600">Loading production batches...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-800">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="mt-2 text-red-600 hover:text-red-800 text-sm"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Start Batch Form Section */}
       {showBatchForm && (
@@ -443,11 +497,11 @@ export default function Production() {
                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                  >
                    <option value="">Select batch item</option>
-                   <option value="virgin-coconut-oil">Virgin Coconut Oil</option>
-                   <option value="dried-jackfruit">Dried Jackfruit</option>
-                   <option value="coconut-flour">Coconut Flour</option>
-                   <option value="coconut-milk">Coconut Milk</option>
-                   <option value="coconut-sugar">Coconut Sugar</option>
+                   <option value="Virgin Coconut Oil">Virgin Coconut Oil</option>
+                   <option value="Dried Jackfruit">Dried Jackfruit</option>
+                   <option value="Coconut Flour">Coconut Flour</option>
+                   <option value="Coconut Milk">Coconut Milk</option>
+                   <option value="Coconut Sugar">Coconut Sugar</option>
                  </select>
                </div>
                <div>
@@ -673,9 +727,7 @@ export default function Production() {
                        <button 
                          onClick={(e) => {
                            e.stopPropagation();
-                           setProductionBatches(prev => prev.map(b => 
-                             b.id === batch.id ? { ...b, status: "paused" as const } : b
-                           ));
+                           handleUpdateBatchStatus(batch.id, { status: "paused" });
                          }}
                          className="bg-yellow-600 text-white py-1 px-3 rounded text-sm hover:bg-yellow-700 transition"
                        >
@@ -686,9 +738,7 @@ export default function Production() {
                        <button 
                          onClick={(e) => {
                            e.stopPropagation();
-                           setProductionBatches(prev => prev.map(b => 
-                             b.id === batch.id ? { ...b, status: "running" as const } : b
-                           ));
+                           handleUpdateBatchStatus(batch.id, { status: "running" });
                          }}
                          className="bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700 transition"
                        >
@@ -699,9 +749,7 @@ export default function Production() {
                        <button 
                          onClick={(e) => {
                            e.stopPropagation();
-                           setProductionBatches(prev => prev.map(b => 
-                             b.id === batch.id ? { ...b, status: "completed" as const, progress: 100, endTime: new Date().toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' }) } : b
-                           ));
+                           handleCompleteBatch(batch.id);
                          }}
                          className="bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700 transition"
                        >
@@ -712,15 +760,12 @@ export default function Production() {
                        <button 
                          onClick={(e) => {
                            e.stopPropagation();
-                           setProductionBatches(prev => prev.map(b => 
-                             b.id === batch.id ? { 
-                               ...b, 
-                               status: "running" as const, 
-                               progress: 10,
-                               level: 1,
-                               processStatus: "getting-raw-materials"
-                             } : b
-                           ));
+                           handleUpdateBatchStatus(batch.id, { 
+                             status: "running", 
+                             progress: 10,
+                             level: 1,
+                             processStatus: "getting-raw-materials"
+                           });
                          }}
                          className="bg-blue-600 text-white py-1 px-3 rounded text-sm hover:bg-blue-700 transition"
                        >
@@ -743,14 +788,11 @@ export default function Production() {
                            else if (newLevel === 5) newProcessStatus = "machine-2";
                            else if (newLevel === 6) newProcessStatus = "machine-3";
                            
-                           setProductionBatches(prev => prev.map(b => 
-                             b.id === batch.id ? { 
-                               ...b, 
-                               level: newLevel, 
-                               progress: newProgress,
-                               processStatus: newProcessStatus
-                             } : b
-                           ));
+                           handleUpdateBatchStatus(batch.id, { 
+                             level: newLevel, 
+                             progress: newProgress,
+                             processStatus: newProcessStatus
+                           });
                          }}
                          className="bg-orange-600 text-white py-1 px-3 rounded text-sm hover:bg-orange-700 transition"
                        >
