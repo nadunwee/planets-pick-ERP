@@ -56,22 +56,16 @@ app.use(require("./middleware/errorHandler.js").errorHandler);
 // ✅ Connect to MongoDB and start server
 const startServer = async () => {
   try {
-    // Try to connect to MongoDB with a timeout
-    const connectPromise = mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 4000, // 5 seconds timeout
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 4000,
     });
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("MongoDB connection timeout")), 6000)
-    );
-
-    await Promise.race([connectPromise, timeoutPromise]);
     console.log("✅ Connected to MongoDB");
+    app.listen(process.env.PORT, () => {
+      console.log(`✅ Server listening on port ${process.env.PORT}`);
+    });
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
-    console.log(
-      "🔄 Starting server without database connection for testing..."
-    );
+    process.exit(1); // stop server
   }
 
   // Start server regardless of database connection
