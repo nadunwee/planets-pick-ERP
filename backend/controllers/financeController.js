@@ -5,6 +5,18 @@ const {
   AssetLiability,
 } = require("../models/financeModel");
 
+// Mock data for testing when database is not available
+let mockTransactions = [];
+let mockAccounts = [];
+let mockBudgets = [];
+let mockAssetsLiabilities = [];
+let mockIdCounter = 1;
+
+// Helper to check if database is connected
+const isDatabaseConnected = () => {
+  return require("mongoose").connection.readyState === 1;
+};
+
 // --- Transactions ---
 
 // Get all transactions
@@ -113,6 +125,10 @@ exports.getBudgets = async (req, res) => {
 // Get all assets & liabilities
 exports.getAssetsLiabilities = async (req, res) => {
   try {
+    if (!isDatabaseConnected()) {
+      return res.json(mockAssetsLiabilities.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    }
+    
     const items = await AssetLiability.find().sort({ date: -1 });
     res.json(items);
   } catch (err) {
@@ -127,6 +143,22 @@ exports.addAssetLiability = async (req, res) => {
 
     if (!type || !subtype || !name || !value) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    if (!isDatabaseConnected()) {
+      // Mock implementation for testing
+      const mockItem = {
+        _id: (mockIdCounter++).toString(),
+        type, // "asset" or "liability"
+        subtype, // "current" or "non-current"
+        name,
+        value: Number(value),
+        date: date ? new Date(date).toISOString() : new Date().toISOString(),
+        status: "active"
+      };
+      
+      mockAssetsLiabilities.push(mockItem);
+      return res.status(201).json(mockItem);
     }
 
     const newItem = new AssetLiability({
@@ -155,6 +187,17 @@ exports.updateAssetLiability = async (req, res) => {
     if (updateData.value) updateData.value = Number(updateData.value);
     if (updateData.date) updateData.date = new Date(updateData.date);
 
+    if (!isDatabaseConnected()) {
+      const itemIndex = mockAssetsLiabilities.findIndex(item => item._id === id);
+      if (itemIndex === -1) return res.status(404).json({ error: "Asset/Liability not found" });
+      
+      // Convert date to ISO string for mock data
+      if (updateData.date) updateData.date = updateData.date.toISOString();
+      
+      mockAssetsLiabilities[itemIndex] = { ...mockAssetsLiabilities[itemIndex], ...updateData };
+      return res.json(mockAssetsLiabilities[itemIndex]);
+    }
+
     const updatedItem = await AssetLiability.findByIdAndUpdate(id, updateData, {
       new: true,
     });
@@ -173,6 +216,14 @@ exports.updateAssetLiability = async (req, res) => {
 exports.deleteAssetLiability = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!isDatabaseConnected()) {
+      const itemIndex = mockAssetsLiabilities.findIndex(item => item._id === id);
+      if (itemIndex === -1) return res.status(404).json({ error: "Asset/Liability not found" });
+      
+      mockAssetsLiabilities.splice(itemIndex, 1);
+      return res.json({ message: "Asset/Liability deleted successfully" });
+    }
 
     const deletedItem = await AssetLiability.findByIdAndDelete(id);
 
