@@ -552,38 +552,49 @@ export default function Employees() {
   const handleAddEmployee = async () => {
     try {
       const employeeId = `EMP${String(employees.length + 1).padStart(3, "0")}`;
-      const newEmployeeData: Employee = {
-        id: String(employees.length + 1),
+
+      // Prepare employee data for backend
+      const employeeData = {
         name: newEmployee.name,
         email: newEmployee.email,
         phone: newEmployee.phone,
         position: newEmployee.position,
         department: newEmployee.department,
-        status: "active",
-        joinDate: new Date().toISOString().split("T")[0],
         salary: parseFloat(newEmployee.salary),
-        performance: 85,
-        attendance: 95,
-        skills: newEmployee.skills
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
         shift: newEmployee.shift,
         emergencyContact: newEmployee.emergencyContact,
         address: newEmployee.address,
-        employeeId,
         contractType: newEmployee.contractType,
         workLocation: newEmployee.workLocation,
         workingHours: parseInt(newEmployee.workingHours),
-        createUser: newEmployee.createUser,
-        benefits: newEmployee.benefits
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
-        certifications: newEmployee.certifications
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
+        skills: newEmployee.skills,
+        benefits: newEmployee.benefits,
+        certifications: newEmployee.certifications,
+        createUser: newEmployee.createUser, // This tells backend to create user
+        overtimeEligible: newEmployee.overtimeEligible,
+      };
+
+      // Send POST request to backend
+      const response = await fetch("http://localhost:4000/api/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(employeeData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add employee");
+      }
+
+      // Update local state with the employee returned from backend
+      const newEmployeeForUI: Employee = {
+        ...data.employee,
+        id: data.employee._id,
+        joinDate: new Date(data.employee.createdAt).toISOString().split("T")[0],
+        employeeId,
+        performance: 85,
+        attendance: 95,
         leaveBalance: {
           annual: 20,
           sick: 10,
@@ -596,54 +607,18 @@ export default function Employees() {
         },
       };
 
-      // 1️⃣ Add locally for UI update
-      setEmployees([...employees, newEmployeeData]);
+      setEmployees([...employees, newEmployeeForUI]);
 
-      const generatePassword = (length = 12) => {
-        const charset =
-          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
-        let password = "";
-        for (let i = 0; i < length; i++) {
-          const randomIndex = Math.floor(Math.random() * charset.length);
-          password += charset[randomIndex];
-        }
-        return password;
-      };
-
-      // 2️⃣ Send POST request to backend to create employee
-      const empRes = await fetch("http://localhost:4000/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEmployeeData),
-      });
-      const empData = await empRes.json();
-      if (!empRes.ok)
-        throw new Error(empData.error || "Failed to add employee");
-
-      // 3️⃣ If "Create User" is checked, create a system user
-      if (newEmployee.createUser) {
-        // assuming checkbox now stored in overtimeEligible
-        const userPayload = {
-          name: newEmployee.name,
-          email: newEmployee.email,
-          password: generatePassword(),
-          department: newEmployee.department,
-          level: "",
-          role: newEmployee.position,
-          approved: "false",
-        };
-
-        const userRes = await fetch("http://localhost:4000/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userPayload),
-        });
-        const userData = await userRes.json();
-        if (!userRes.ok)
-          throw new Error(userData.error || "Failed to create user");
+      // Show appropriate message
+      if (data.message) {
+        alert(data.message);
+      } else if (data.warning) {
+        alert(data.warning);
+      } else {
+        alert("Employee added successfully!");
       }
 
-      // 4️⃣ Reset form and close modal
+      // Reset form and close modal
       setShowAddModal(false);
       setNewEmployee({
         name: "",
@@ -679,12 +654,15 @@ export default function Employees() {
   const handleEditEmployee = (employee: Employee) => {
     setEditingEmployee(employee);
 
-    if (employee.userId) {
+    // Check if employee already has a user account
+    const hasExistingUser = employee.userId && employee.hasUserAccount;
+
+    if (hasExistingUser) {
       setCreateUserChecked(true);
-      setCreateUserDisabled(true); // already a user, cannot edit
+      setCreateUserDisabled(true); // Cannot change if already a user
     } else {
       setCreateUserChecked(false);
-      setCreateUserDisabled(false); // can tick/untick
+      setCreateUserDisabled(false); // Can tick/untick for new user request
     }
 
     setShowEditModal(true);
@@ -692,16 +670,6 @@ export default function Employees() {
 
   // --- Update Employee Handler ---
   const handleUpdateEmployee = async () => {
-    const generatePassword = (length = 12) => {
-      const charset =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
-      let password = "";
-      for (let i = 0; i < length; i++) {
-        password += charset[Math.floor(Math.random() * charset.length)];
-      }
-      return password;
-    };
-
     if (!editingEmployee) return;
 
     try {
@@ -711,74 +679,47 @@ export default function Employees() {
         return;
       }
 
-      // 1️⃣ Update employee in backend
+      // Prepare update data
+      const updateData = {
+        ...editingEmployee,
+        createUser: createUserChecked && !editingEmployee.userId, // Only set if not already a user
+      };
+
+      // Send PUT request to backend
       const response = await fetch(
         `http://localhost:4000/api/employees/${employeeId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editingEmployee),
+          body: JSON.stringify(updateData),
         }
       );
 
-      let data: any = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Failed to update employee");
+        throw new Error(data.error || "Failed to update employee");
       }
 
-      const updatedEmployee = data?.employee;
+      const updatedEmployee = data.employee;
 
-      // 2️⃣ Handle "Create User" logic
-      // Use the checkbox state, not editingEmployee.hasUserAccount
-      if (createUserChecked && !updatedEmployee.userId) {
-        if (
-          !updatedEmployee.department ||
-          !updatedEmployee.position ||
-          !updatedEmployee.email
-        ) {
-          throw new Error(
-            "Employee must have department, position, and email to create a user"
-          );
-        }
-
-        const userPayload = {
-          name: updatedEmployee.name,
-          email: updatedEmployee.email,
-          password: generatePassword(),
-          department: updatedEmployee.department,
-          role: updatedEmployee.position,
-          level: "employee",
-          approved: "false",
-        };
-
-        const userRes = await fetch("http://localhost:4000/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userPayload),
-        });
-
-        const userData = await userRes.json();
-        if (!userRes.ok)
-          throw new Error(userData.error || "Failed to create user");
-
-        // Update employee locally with new userId
-        updatedEmployee.userId = userData.user?._id || null;
-      }
-
-      // 3️⃣ Update local state
+      // Update local state
       setEmployees((prev) =>
         prev.map((emp) =>
           (emp._id || emp.id) === (updatedEmployee._id || updatedEmployee.id)
-            ? updatedEmployee
+            ? { ...emp, ...updatedEmployee, id: updatedEmployee._id }
             : emp
         )
       );
+
+      // Show appropriate message
+      if (data.message) {
+        alert(data.message);
+      } else if (data.warning) {
+        alert(data.warning);
+      } else {
+        alert("Employee updated successfully!");
+      }
 
       // Reset modal state
       setShowEditModal(false);
@@ -1114,7 +1055,17 @@ export default function Employees() {
                       .join("")}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">{employee.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">{employee.name}</h3>
+                      {employee.hasUserAccount && employee.userId && (
+                        <div
+                          className="flex items-center"
+                          title="Has user account"
+                        >
+                          <UserCheck size={16} className="text-green-500" />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">{employee.position}</p>
                   </div>
                 </div>
@@ -1237,7 +1188,17 @@ export default function Employees() {
                             .join("")}
                         </div>
                         <div>
-                          <p className="font-medium">{employee.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{employee.name}</p>
+                            {employee.hasUserAccount && employee.userId && (
+                              <div title="Has user account">
+                                <UserCheck
+                                  size={14}
+                                  className="text-green-500"
+                                />
+                              </div>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">
                             {employee.position}
                           </p>
@@ -2152,6 +2113,33 @@ export default function Employees() {
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="e.g., Food Safety Level 3, HACCP Certification"
                 />
+              </div>
+
+              {/* User Account Creation */}
+              <div className="col-span-full">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="createUserEdit"
+                    checked={createUserChecked}
+                    disabled={createUserDisabled}
+                    onChange={(e) => setCreateUserChecked(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="createUserEdit"
+                    className="ml-2 text-sm text-gray-700"
+                  >
+                    Create User Account{" "}
+                    {createUserDisabled && "(Already has account)"}
+                  </label>
+                </div>
+                {createUserChecked && !createUserDisabled && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    A user account request will be sent to the admin for
+                    approval
+                  </p>
+                )}
               </div>
             </div>
 

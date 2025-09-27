@@ -89,6 +89,13 @@ const employeeSchema = new Schema(
       ref: "User",
       default: null,
     },
+
+    // Status for soft delete functionality
+    status: {
+      type: String,
+      enum: ["active", "on-leave", "inactive"],
+      default: "active",
+    },
   },
   { timestamps: true }
 );
