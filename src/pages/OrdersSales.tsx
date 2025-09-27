@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ShoppingCart,
   Search,
@@ -18,196 +18,15 @@ import {
   Eye,
   Edit,
   Download,
+  Trash2,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  customer: {
-    name: string;
-    email: string;
-    phone: string;
-    company?: string;
-    address: string;
-    country: string;
-  };
-  items: OrderItem[];
-  status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled";
-  status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
-  orderDate: string;
-  expectedDelivery: string;
-  actualDelivery?: string;
-  totalAmount: number;
-  paymentStatus: "pending" | "paid" | "partially-paid" | "overdue";
-  paymentMethod: "bank-transfer" | "credit-card" | "cash" | "cryptocurrency";
-  shippingMethod: "standard" | "express" | "overnight" | "pickup";
-  notes?: string;
-}
-
-interface OrderItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  totalPrice: number;
-  specifications?: string;
-}
-
-const orders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2024-001",
-    customer: {
-      name: "Hans Mueller",
-      email: "hans.mueller@organicfood.de",
-      phone: "+49 30 123456789",
-      company: "Organic Food GmbH",
-      address: "Hauptstraße 123, Berlin",
-      country: "Germany",
-    },
-    items: [
-      {
-        productId: "vco-500",
-        productName: "Virgin Coconut Oil",
-        quantity: 200,
-        unit: "L",
-        unitPrice: 1200,
-        totalPrice: 240000,
-        specifications: "500ml bottles, organic certified",
-      },
-      {
-        productId: "djf-1kg",
-        productName: "Dried Jackfruit",
-        quantity: 50,
-        unit: "kg",
-        unitPrice: 800,
-        totalPrice: 40000,
-      },
-    ],
-    status: "confirmed",
-    priority: "high",
-    orderDate: "2024-01-10",
-    expectedDelivery: "2024-01-25",
-    totalAmount: 280000,
-    paymentStatus: "paid",
-    paymentMethod: "bank-transfer",
-    shippingMethod: "express",
-    notes: "Export order - requires phytosanitary certificate",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2024-002",
-    customer: {
-      name: "Sarah Johnson",
-      email: "sarah@healthstore.ca",
-      phone: "+1 416 555 0123",
-      company: "Health Store Canada",
-      address: "789 Queen Street, Toronto",
-      country: "Canada",
-    },
-    items: [
-      {
-        productId: "vco-250",
-        productName: "Virgin Coconut Oil",
-        quantity: 100,
-        unit: "L",
-        unitPrice: 1200,
-        totalPrice: 120000,
-        specifications: "250ml bottles",
-      },
-    ],
-    status: "processing",
-    priority: "medium",
-    orderDate: "2024-01-12",
-    expectedDelivery: "2024-01-28",
-    totalAmount: 120000,
-    paymentStatus: "partially-paid",
-    paymentMethod: "credit-card",
-    shippingMethod: "standard",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2024-003",
-    customer: {
-      name: "Rajesh Gupta",
-      email: "rajesh@spicesworld.in",
-      phone: "+91 98765 43210",
-      company: "Spices World Pvt Ltd",
-      address: "MG Road, Mumbai",
-      country: "India",
-    },
-    items: [
-      {
-        productId: "djf-500g",
-        productName: "Dried Jackfruit",
-        quantity: 200,
-        unit: "kg",
-        unitPrice: 800,
-        totalPrice: 160000,
-        specifications: "500g packets, premium grade",
-      },
-    ],
-    status: "shipped",
-    priority: "high",
-    orderDate: "2024-01-08",
-    expectedDelivery: "2024-01-20",
-    actualDelivery: "2024-01-19",
-    totalAmount: 160000,
-    paymentStatus: "paid",
-    paymentMethod: "bank-transfer",
-    shippingMethod: "express",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-2024-004",
-    customer: {
-      name: "Emma Wilson",
-      email: "emma@localmarket.au",
-      phone: "+61 2 9876 5432",
-      company: "Local Market Australia",
-      address: "Circular Quay, Sydney",
-      country: "Australia",
-    },
-    items: [
-      {
-        productId: "vco-1l",
-        productName: "Virgin Coconut Oil",
-        quantity: 300,
-        unit: "L",
-        unitPrice: 1200,
-        totalPrice: 360000,
-        specifications: "1L bottles, retail packaging",
-      },
-    ],
-    status: "pending",
-    priority: "urgent",
-    orderDate: "2024-01-14",
-    expectedDelivery: "2024-02-01",
-    totalAmount: 360000,
-    paymentStatus: "pending",
-    paymentMethod: "credit-card",
-    shippingMethod: "standard",
-    notes: "Rush order - customer requested expedited processing",
-  },
-];
+import { getAllOrders, deleteOrder, type Order as OrderType } from "@/components/services/orderService";
 
 export default function OrdersSales() {
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedPriority, setSelectedPriority] = useState("All");
@@ -215,6 +34,93 @@ export default function OrdersSales() {
   const [userLevel, setUserLevel] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllOrders();
+      // Transform the data to match the expected format
+      const transformedOrders = data.map((order: any) => ({
+        ...order,
+        id: order._id,
+        orderNumber: order.orderId,
+        orderDate: order.orderedOn,
+        expectedDelivery: order.expectedDate,
+        items: order.items.map((item: any) => ({
+          ...item,
+          productName: item.name || item.productName,
+        })),
+      }));
+      setOrders(transformedOrders);
+    } catch (error) {
+      console.error("❌ Error fetching orders:", error);
+      // For demo purposes, load some sample data if API fails
+      const sampleOrders: OrderType[] = [
+        {
+          _id: "sample1",
+          orderId: "ORD-2024-SAMPLE-001",
+          orderedOn: "2024-01-15",
+          expectedDate: "2024-01-30",
+          priority: "high",
+          status: "pending",
+          customer: {
+            name: "Sample Customer",
+            email: "sample@example.com",
+            phone: "+1234567890",
+            company: "Sample Company Ltd",
+            address: "123 Sample Street",
+            country: "Sample Country",
+          },
+          items: [
+            {
+              name: "Sample Product",
+              quantity: 10,
+              unit: "pieces",
+              unitPrice: 100,
+              totalPrice: 1000,
+              notes: "Sample product for demo",
+            },
+          ],
+          totalAmount: 1000,
+          paymentStatus: "pending",
+          paymentMethod: "bank-transfer",
+          shippingMethod: "standard",
+          notes: "This is sample data since the database is not available",
+          createdAt: "2024-01-15T10:00:00Z",
+          updatedAt: "2024-01-15T10:00:00Z",
+        },
+      ];
+      setOrders(sampleOrders);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
+
+    try {
+      await deleteOrder(orderId);
+      console.log("✅ Order deleted successfully");
+      // Refresh the orders list
+      fetchOrders();
+    } catch (error) {
+      console.error("❌ Error deleting order:", error);
+      alert("Failed to delete order. Please try again.");
+    }
+  };
+
+  const handleEditOrder = (order: OrderType) => {
+    // For now, just log the order to be edited
+    // In a complete implementation, you would open an edit modal
+    console.log("Edit order:", order);
+    alert("Edit functionality would be implemented with a detailed form modal");
+  };
 
   const handleCreateOrder = async (data: any) => {
     try {
@@ -225,6 +131,8 @@ export default function OrdersSales() {
       });
       const result = await res.json();
       console.log("✅ Order created:", result);
+      // Refresh the orders list after creation
+      fetchOrders();
     } catch (error) {
       console.error("❌ Error creating order:", error);
     }
@@ -262,7 +170,7 @@ export default function OrdersSales() {
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
@@ -311,8 +219,10 @@ export default function OrdersSales() {
       case "paid":
         return "text-green-600 bg-green-100";
       case "partially-paid":
+      case "partial":
         return "text-yellow-600 bg-yellow-100";
       case "pending":
+      case "unpaid":
         return "text-blue-600 bg-blue-100";
       case "overdue":
         return "text-red-600 bg-red-100";
@@ -327,7 +237,7 @@ export default function OrdersSales() {
   );
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const averageOrderValue = totalRevenue / totalOrders;
+  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   return (
     <div className="p-4 space-y-6">
@@ -511,178 +421,200 @@ export default function OrdersSales() {
       </div>
 
       {/* Orders List */}
-      <div className="space-y-4">
-        {filteredOrders.map((order) => (
-          <div key={order.id} className="bg-white rounded-lg shadow border">
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-4">
+      {loading ? (
+        <div className="bg-white rounded-lg shadow border p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading orders...</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredOrders.map((order) => (
+            <div key={order.id || order._id} className="bg-white rounded-lg shadow border">
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {order.orderNumber || order.orderId}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Ordered on {order.orderDate || order.orderedOn} • Expected:{" "}
+                        {order.expectedDelivery || order.expectedDate}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(
+                        order.priority
+                      )}`}
+                    >
+                      {order.priority} priority
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-3 gap-6">
+                  {/* Customer Information */}
                   <div>
-                    <h3 className="font-semibold text-lg">
-                      {order.orderNumber}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      Ordered on {order.orderDate} • Expected:{" "}
-                      {order.expectedDelivery}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(
-                      order.priority
-                    )}`}
-                  >
-                    {order.priority} priority
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                      order.status
-                    )}`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid lg:grid-cols-3 gap-6">
-                {/* Customer Information */}
-                <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <User size={16} />
-                    Customer Details
-                  </h4>
-                  <div className="space-y-1 text-sm">
-                    <p className="font-medium">{order.customer.name}</p>
-                    {order.customer.company && (
-                      <p className="text-gray-600">{order.customer.company}</p>
-                    )}
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Mail size={12} />
-                      {order.customer.email}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Phone size={12} />
-                      {order.customer.phone}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <MapPin size={12} />
-                      {order.customer.address}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Globe size={12} />
-                      {order.customer.country}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <Package size={16} />
-                    Order Items
-                  </h4>
-                  <div className="space-y-2">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{item.productName}</p>
-                            <p className="text-gray-600">
-                              {item.quantity} {item.unit} × LKR{" "}
-                              {item.unitPrice.toLocaleString()}
-                            </p>
-                            {item.specifications && (
-                              <p className="text-xs text-gray-500">
-                                {item.specifications}
-                              </p>
-                            )}
-                          </div>
-                          <p className="font-medium">
-                            LKR {item.totalPrice.toLocaleString()}
-                          </p>
-                        </div>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <User size={16} />
+                      Customer Details
+                    </h4>
+                    <div className="space-y-1 text-sm">
+                      <p className="font-medium">{order.customer.name}</p>
+                      {order.customer.company && (
+                        <p className="text-gray-600">{order.customer.company}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail size={12} />
+                        {order.customer.email}
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone size={12} />
+                        {order.customer.phone}
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin size={12} />
+                        {order.customer.address}
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Globe size={12} />
+                        {order.customer.country}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Payment & Shipping */}
-                <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <DollarSign size={16} />
-                    Payment & Shipping
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Amount:</span>
-                      <span className="font-bold text-lg">
-                        LKR {order.totalAmount.toLocaleString()}
-                      </span>
+                  {/* Order Items */}
+                  <div>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <Package size={16} />
+                      Order Items
+                    </h4>
+                    <div className="space-y-2">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{item.productName || item.name}</p>
+                              <p className="text-gray-600">
+                                {item.quantity} {item.unit} × LKR{" "}
+                                {item.unitPrice.toLocaleString()}
+                              </p>
+                              {item.specifications && (
+                                <p className="text-xs text-gray-500">
+                                  {item.specifications}
+                                </p>
+                              )}
+                              {item.notes && (
+                                <p className="text-xs text-gray-500">
+                                  {item.notes}
+                                </p>
+                              )}
+                            </div>
+                            <p className="font-medium">
+                              LKR {item.totalPrice.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Payment Status:</span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${getPaymentStatusColor(
-                          order.paymentStatus
-                        )}`}
-                      >
-                        {order.paymentStatus}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Payment Method:</span>
-                      <span className="capitalize">
-                        {order.paymentMethod.replace("-", " ")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping:</span>
-                      <span className="capitalize">{order.shippingMethod}</span>
-                    </div>
-                    {order.actualDelivery && (
+                  </div>
+
+                  {/* Payment & Shipping */}
+                  <div>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <DollarSign size={16} />
+                      Payment & Shipping
+                    </h4>
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Delivered:</span>
-                        <span className="text-green-600">
-                          {order.actualDelivery}
+                        <span className="text-gray-600">Total Amount:</span>
+                        <span className="font-bold text-lg">
+                          LKR {order.totalAmount.toLocaleString()}
                         </span>
                       </div>
-                    )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Payment Status:</span>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${getPaymentStatusColor(
+                            order.paymentStatus
+                          )}`}
+                        >
+                          {order.paymentStatus}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Payment Method:</span>
+                        <span className="capitalize">
+                          {order.paymentMethod?.replace("-", " ") || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Shipping:</span>
+                        <span className="capitalize">{order.shippingMethod || "N/A"}</span>
+                      </div>
+                      {order.actualDelivery && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Delivered:</span>
+                          <span className="text-green-600">
+                            {order.actualDelivery}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {order.notes && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Notes:</strong> {order.notes}
-                  </p>
-                </div>
-              )}
+                {order.notes && (
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Notes:</strong> {order.notes}
+                    </p>
+                  </div>
+                )}
 
-              <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock size={14} />
-                  Last updated: 2 hours ago
-                </div>
-                <div className="flex gap-2">
-                  <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1">
-                    <Eye size={14} />
-                    View
-                  </button>
-                  <button className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition flex items-center gap-1">
-                    <Edit size={14} />
-                    Edit
-                  </button>
-                  <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
-                    Process
-                  </button>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock size={14} />
+                    Last updated: {order.updatedAt ? new Date(order.updatedAt).toLocaleString() : "N/A"}
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1">
+                      <Eye size={14} />
+                      View
+                    </button>
+                    <button 
+                      onClick={() => handleEditOrder(order)}
+                      className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition flex items-center gap-1"
+                    >
+                      <Edit size={14} />
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteOrder(order._id || order.id!)}
+                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition flex items-center gap-1"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                    <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
+                      Process
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {filteredOrders.length === 0 && (
         <div className="bg-white rounded-lg shadow border p-8 text-center">

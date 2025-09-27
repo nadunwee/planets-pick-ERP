@@ -5,7 +5,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 // Routes
-// Routes
 const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
@@ -13,18 +12,9 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
-const customerRoutes = require("./routes/customer.js");
-const orderRoutes = require("./routes/order.js");
-const financeRoutes = require("./routes/finance.js");
-const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
-// ✅ Middleware
-app.use(express.json()); // Parse JSON request body
-app.use(cors()); // allow all origins for testing
-
-// ✅ Request logger (for debugging)
 // ✅ Middleware
 app.use(express.json()); // Parse JSON request body
 app.use(cors()); // allow all origins for testing
@@ -60,18 +50,17 @@ const startServer = async () => {
       serverSelectionTimeoutMS: 4000,
     });
     console.log("✅ Connected to MongoDB");
+    
     app.listen(process.env.PORT, () => {
       console.log(`✅ Server listening on port ${process.env.PORT}`);
     });
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
-    process.exit(1); // stop server
+    // Start server regardless of database connection
+    app.listen(process.env.PORT, () => {
+      console.log(`✅ Server listening on port ${process.env.PORT} (without DB)`);
+    });
   }
-
-  // Start server regardless of database connection
-  app.listen(process.env.PORT, () => {
-    console.log(`✅ Server listening on port ${process.env.PORT}`);
-  });
 };
 
 startServer();
