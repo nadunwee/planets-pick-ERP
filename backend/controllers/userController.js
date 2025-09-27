@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 const User = require("../models/userModel.js");
 const { log } = require("console");
@@ -36,10 +37,15 @@ async function getAllUsers(req, res) {
 
 async function editUserApproval(req, res) {
   const { id } = req.params;
-  const { approved } = req.body; // expected: true, false, or "rejected"
+  const { approved, level } = req.body; // get level as well
 
   try {
-    const user = await User.findByIdAndUpdate(id, { approved }, { new: true });
+    const updates = {
+      approved,
+      level: level || undefined, // undefined will not overwrite if not provided
+    };
+
+    const user = await User.findByIdAndUpdate(id, updates, { new: true });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -52,38 +58,64 @@ async function editUserApproval(req, res) {
   }
 }
 
-// const registerUser = async (req, res) => {
-//   const { name, email, password } = req.body;
-//   const date = await User.findOne({ email });
+const registerUser = async (req, res) => {
+  const { name, email, password, department, role } = req.body;
 
-//   try {
-//     const user = await User.register(name, email, password);
-//     // create a token
-//     const token = createToken(user._id);
-//     res.status(200).json({ name, email, token });
-//   } catch (error) {
-//     res.status(400).json({ error: error.message });
-//   }
-// };
+  try {
+    // register with extra fields
+    const user = await User.register({
+      name,
+      email,
+      password,
+      department,
+      role,
+      approved: false, // default
+      level: "", // leave blank
+    });
 
-// const deleteUser = async (req, res) => {
-//   const { id } = req.params;
+    // create a token
+    const token = createToken(user._id);
 
-//   if (!mongoose.Types.ObjectId.isValid(id)) {
-//     return res
-//       .status(400)
-//       .json({ error: "NO such a contact (mongoose ID is invalid)" });
-//   }
+    res.status(200).json({
+      name: user.name,
+      email: user.email,
+      department: user.department,
+      role: user.role,
+      approved: user.approved,
+      level: user.level,
+      token,
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
-//   const user = await User.findOneAndDelete({ _id: id });
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
 
-//   if (!user) {
-//     return res
-//       .status(400)
-//       .json({ error: "NO such a contact (contact ID is invalid)" });
-//   }
+  try {
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
 
-//   res.status(200).json(user);
-// };
+    const user = await User.findByIdAndDelete(id);
 
-module.exports = { loginUser, getAllUsers, editUserApproval };
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
+  }
+};
+
+module.exports = {
+  loginUser,
+  getAllUsers,
+  editUserApproval,
+  registerUser,
+  deleteUser,
+};

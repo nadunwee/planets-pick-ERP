@@ -79,10 +79,15 @@ const employeeSchema = new Schema(
       default: [],
     },
 
-    // Optional User Account (if "Create User" is checked)
+    // User Account Information
     hasUserAccount: {
       type: Boolean,
       default: false,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   { timestamps: true }
