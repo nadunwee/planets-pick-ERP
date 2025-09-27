@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 // Routes
+// Routes
 const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
@@ -12,9 +13,18 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
+const customerRoutes = require("./routes/customer.js");
+const orderRoutes = require("./routes/order.js");
+const financeRoutes = require("./routes/finance.js");
+const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
+// ✅ Middleware
+app.use(express.json()); // Parse JSON request body
+app.use(cors()); // allow all origins for testing
+
+// ✅ Request logger (for debugging)
 // ✅ Middleware
 app.use(express.json()); // Parse JSON request body
 app.use(cors()); // allow all origins for testing
@@ -35,14 +45,14 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 
 // Additional routes from ranudi branch
-// app.use("/api/reports", require("./routes/reportRoutes.js"));
-// app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
-// app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
+app.use("/api/reports", require("./routes/reportRoutes.js"));
+app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
+app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
 
 // Error handling middleware from ranudi branch
-// app.use(require("./middleware/errorHandler.js").notFound);
-// app.use(require("./middleware/errorHandler.js").errorHandler);
-//
+app.use(require("./middleware/errorHandler.js").notFound);
+app.use(require("./middleware/errorHandler.js").errorHandler);
+
 // ✅ Connect to MongoDB and start server
 const startServer = async () => {
   try {

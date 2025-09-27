@@ -22,9 +22,19 @@ const isDatabaseConnected = () => {
 // Get all transactions
 exports.getTransactions = async (req, res) => {
   try {
+    console.log("📋 Getting transactions...");
+    
+    if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, returning mock data");
+      return res.json(mockTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    }
+    
+    console.log("💾 Fetching from MongoDB...");
     const transactions = await Transaction.find().sort({ date: -1 });
+    console.log(`✅ Found ${transactions.length} transactions in MongoDB`);
     res.json(transactions);
   } catch (err) {
+    console.error("❌ Get transactions error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -35,10 +45,34 @@ exports.addTransaction = async (req, res) => {
     const { type, category, description, amount, account, reference, date } =
       req.body;
 
+    console.log("📝 Adding transaction:", { type, category, description, amount, account });
+
     if (!type || !category || !description || !amount || !account || !date) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, using mock data");
+      const mockTransaction = {
+        _id: (mockIdCounter++).toString(),
+        type,
+        category,
+        description,
+        amount: Number(amount),
+        account,
+        reference,
+        date: new Date(date).toISOString(),
+        status: "completed",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      mockTransactions.push(mockTransaction);
+      console.log("✅ Mock transaction created:", mockTransaction._id);
+      return res.status(201).json(mockTransaction);
+    }
+
+    console.log("💾 Saving to MongoDB...");
     const newTransaction = new Transaction({
       type,
       category,
@@ -51,6 +85,7 @@ exports.addTransaction = async (req, res) => {
     });
 
     await newTransaction.save();
+    console.log("✅ Transaction saved to MongoDB:", newTransaction._id);
     res.status(201).json(newTransaction);
   } catch (err) {
     console.error("❌ Add transaction error:", err);
