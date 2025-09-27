@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   TrendingUp,
@@ -6,7 +6,6 @@ import {
   FileText,
   Plus,
   X,
-  Download,
   Edit2,
   Trash2,
 } from "lucide-react";
@@ -79,6 +78,19 @@ interface AssetLiability {
   status: "active" | "sold" | "settled";
 }
 
+type UnifiedRow = {
+  _id: string;
+  source: "transaction" | "assetLiability";
+  date: string;
+  type: "income" | "expense" | "asset" | "liability";
+  description: string;
+  category: string;
+  account: string;
+  amount: number;
+  status: string;
+  raw: Transaction | AssetLiability;
+};
+
 // --- API ---
 const API = axios.create({
   baseURL: "http://localhost:4000/api/finance",
@@ -89,7 +101,9 @@ export default function Finance() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [assetsLiabilities, setAssetsLiabilities] = useState<AssetLiability[]>([]);
+  const [assetsLiabilities, setAssetsLiabilities] = useState<AssetLiability[]>(
+    []
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -105,7 +119,7 @@ export default function Finance() {
     useState<Transaction | null>(null);
 
   const [formData, setFormData] = useState({
-    type: "expense" as "income" | "expense" | "asset" | "liability",
+    type: "",
     subType: "current" as "current" | "non-current",
     category: "",
     description: "",
@@ -113,12 +127,11 @@ export default function Finance() {
     account: "",
     reference: "",
     date: new Date().toISOString().split("T")[0],
-    // For assets/liabilities
     name: "",
     value: "",
   });
 
-  const types = ["All", "income", "expense"];
+  const types = ["All", "income", "expense", "asset", "liability"];
   const categories = [
     "All",
     "Sales",
@@ -154,16 +167,59 @@ export default function Finance() {
     fetchData();
   }, []);
 
-  // --- FILTERED TRANSACTIONS ---
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesSearch =
-      t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === "All" || t.type === selectedType;
-    const matchesCategory =
-      selectedCategory === "All" || t.category === selectedCategory;
-    return matchesSearch && matchesType && matchesCategory;
-  });
+  // --- COMBINED ROWS (Transactions + Assets/Liabilities) ---
+  const combinedRows = useMemo<UnifiedRow[]>(() => {
+    const txRows: UnifiedRow[] = transactions.map((t) => ({
+      _id: t._id,
+      source: "transaction",
+      date: t.date,
+      type: t.type,
+      description: t.description,
+      category: t.category,
+      account: t.account,
+      amount: t.amount,
+      status: t.status,
+      raw: t,
+    }));
+
+    const alRows: UnifiedRow[] = assetsLiabilities.map((al) => ({
+      _id: al._id,
+      source: "assetLiability",
+      date: al.date,
+      type: al.type,
+      description: al.name,
+      // Use subtype as "category" so it fits the table. Could also map to "Assets"/"Liabilities".
+      category: al.subtype,
+      // No account for assets/liabilities in this model; display a dash
+      account: "-",
+      amount: al.value,
+      status: al.status,
+      raw: al,
+    }));
+
+    // Sort newest first by date
+    return [...txRows, ...alRows].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [transactions, assetsLiabilities]);
+
+  // --- FILTERED ROWS ---
+  const filteredRows = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return combinedRows.filter((r) => {
+      const matchesSearch =
+        !term ||
+        r.description.toLowerCase().includes(term) ||
+        (r.source === "transaction" &&
+          (r.raw as Transaction).reference?.toLowerCase().includes(term));
+
+      const matchesType = selectedType === "All" || r.type === selectedType;
+      const matchesCategory =
+        selectedCategory === "All" || r.category === selectedCategory;
+
+      return matchesSearch && matchesType && matchesCategory;
+    });
+  }, [combinedRows, searchTerm, selectedType, selectedCategory]);
 
   // --- CALCULATIONS ---
   const totalIncome = transactions
@@ -193,15 +249,11 @@ export default function Finance() {
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const currentAssetsData = {
-    labels: assets
-      .filter((a) => a.subtype === "current")
-      .map((a) => a.name),
+    labels: assets.filter((a) => a.subtype === "current").map((a) => a.name),
     datasets: [
       {
         label: "Current Assets",
-        data: assets
-          .filter((a) => a.subtype === "current")
-          .map((a) => a.value),
+        data: assets.filter((a) => a.subtype === "current").map((a) => a.value),
         backgroundColor: "rgba(59, 130, 246, 0.6)",
       },
     ],
@@ -293,7 +345,7 @@ export default function Finance() {
     });
   };
 
-  // --- CRUD HANDLERS ---
+  // --- CRUD HANDLERS (Transactions) ---
   const handleAddTransaction = async () => {
     if (
       !formData.category ||
@@ -328,6 +380,10 @@ export default function Finance() {
       account: t.account,
       reference: t.reference || "",
       date: t.date.split("T")[0],
+      // keep asset/liability fields intact but they won't be used here
+      name: "",
+      value: "",
+      subType: "current",
     });
     setShowEditModal(true);
   };
@@ -380,7 +436,12 @@ export default function Finance() {
 
   // --- ADD ASSET/LIABILITY HANDLER ---
   const handleAddAssetLiability = async () => {
-    if (!formData.type || !formData.subType || !formData.name || !formData.value) {
+    if (
+      !formData.type ||
+      !formData.subType ||
+      !formData.name ||
+      !formData.value
+    ) {
       alert("Please fill all required fields");
       return;
     }
@@ -701,7 +762,7 @@ export default function Finance() {
         </div>
       )}
 
-      {/* Transactions Table */}
+      {/* Transactions + Assets/Liabilities Table */}
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <div className="p-4 flex gap-2 flex-wrap items-center">
           <input
@@ -761,27 +822,27 @@ export default function Finance() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredTransactions.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-4 text-center text-gray-500">
-                  No transactions found.
+                  No records found.
                 </td>
               </tr>
             ) : (
-              filteredTransactions.map((t) => (
-                <tr key={t._id}>
+              filteredRows.map((r) => (
+                <tr key={`${r.source}-${r._id}`}>
                   <td className="px-4 py-2">
-                    {new Date(t.date).toLocaleDateString()}
+                    {new Date(r.date).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-2">{t.description}</td>
-                  <td className="px-4 py-2">{t.category}</td>
-                  <td className="px-4 py-2">{t.account}</td>
+                  <td className="px-4 py-2">{r.description}</td>
+                  <td className="px-4 py-2">{r.category}</td>
+                  <td className="px-4 py-2">{r.account}</td>
                   <td
                     className={`px-4 py-2 font-semibold ${getTypeColor(
-                      t.type
+                      r.type
                     )}`}
                   >
-                    {t.amount.toLocaleString("en-LK", {
+                    {r.amount.toLocaleString("en-LK", {
                       style: "currency",
                       currency: "LKR",
                     })}
@@ -789,25 +850,35 @@ export default function Finance() {
                   <td className="px-4 py-2">
                     <span
                       className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                        t.status
+                        r.status
                       )}`}
                     >
-                      {t.status}
+                      {r.status}
                     </span>
                   </td>
                   <td className="px-4 py-2 flex gap-2">
-                    <button
-                      onClick={() => handleEditTransaction(t)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition flex items-center gap-1"
-                    >
-                      <Edit2 size={16} /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTransaction(t)}
-                      className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"
-                    >
-                      <Trash2 size={16} /> Delete
-                    </button>
+                    {r.source === "transaction" ? (
+                      <>
+                        <button
+                          onClick={() =>
+                            handleEditTransaction(r.raw as Transaction)
+                          }
+                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition flex items-center gap-1"
+                        >
+                          <Edit2 size={16} /> Edit
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteTransaction(r.raw as Transaction)
+                          }
+                          className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition flex items-center gap-1"
+                        >
+                          <Trash2 size={16} /> Delete
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               ))
