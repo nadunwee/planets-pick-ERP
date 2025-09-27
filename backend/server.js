@@ -70,4 +70,3 @@ const startServer = async () => {
   });
 };
 
-startServer();
