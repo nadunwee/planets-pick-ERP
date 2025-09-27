@@ -80,3 +80,4 @@ const startServer = async () => {
   });
 };
 
+startServer();
