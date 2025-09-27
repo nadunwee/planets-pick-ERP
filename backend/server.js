@@ -35,14 +35,14 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 
 // Additional routes from ranudi branch
-app.use("/api/reports", require("./routes/reportRoutes.js"));
-app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
-app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
+// app.use("/api/reports", require("./routes/reportRoutes.js"));
+// app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
+// app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
 
 // Error handling middleware from ranudi branch
-app.use(require("./middleware/errorHandler.js").notFound);
-app.use(require("./middleware/errorHandler.js").errorHandler);
-
+// app.use(require("./middleware/errorHandler.js").notFound);
+// app.use(require("./middleware/errorHandler.js").errorHandler);
+//
 // ✅ Connect to MongoDB and start server
 const startServer = async () => {
   try {
