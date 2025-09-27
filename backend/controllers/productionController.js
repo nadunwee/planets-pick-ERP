@@ -23,7 +23,10 @@ const createBatch = async (req, res) => {
       targetYield
     } = req.body;
 
+    console.log("📝 Creating batch:", { batchName, product, quantity, operator });
+
     if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, using mock data");
       // Mock implementation for testing
       const mockBatch = {
         _id: (mockIdCounter++).toString(),
@@ -45,9 +48,11 @@ const createBatch = async (req, res) => {
       };
       
       mockBatches.push(mockBatch);
+      console.log("✅ Mock batch created:", mockBatch._id);
       return res.status(201).json(mockBatch);
     }
 
+    console.log("💾 Saving to MongoDB...");
     const batch = new Production({
       batchName,
       product,
@@ -60,8 +65,10 @@ const createBatch = async (req, res) => {
     });
 
     await batch.save();
+    console.log("✅ Batch saved to MongoDB:", batch._id);
     res.status(201).json(batch);
   } catch (error) {
+    console.error("❌ Create batch error:", error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -69,13 +76,19 @@ const createBatch = async (req, res) => {
 // ✅ Get all batches
 const getBatches = async (req, res) => {
   try {
+    console.log("📋 Getting batches...");
+    
     if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, returning mock data");
       return res.status(200).json(mockBatches);
     }
     
+    console.log("💾 Fetching from MongoDB...");
     const batches = await Production.find().sort({ createdAt: -1 });
+    console.log(`✅ Found ${batches.length} batches in MongoDB`);
     res.status(200).json(batches);
   } catch (error) {
+    console.error("❌ Get batches error:", error);
     res.status(500).json({ error: error.message });
   }
 };
