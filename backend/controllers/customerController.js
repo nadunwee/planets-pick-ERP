@@ -1,0 +1,70 @@
+const Customer = require("../models/customerModel.js");
+
+// Create a new customer
+const createCustomer = async (req, res) => {
+  try {
+    const customer = new Customer(req.body);
+    await customer.save();
+    res
+      .status(201)
+      .json({ message: "Customer created successfully", customer });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edit a customer by ID
+const editCustomer = async (req, res) => {
+  try {
+    const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+    res.json({ message: "Customer updated successfully", customer });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete a customer by ID
+const deleteCustomer = async (req, res) => {
+  try {
+    const customer = await Customer.findByIdAndDelete(req.params.id);
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+    res.json({ message: "Customer deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Optional: get all customers
+const getAllCustomers = async (req, res) => {
+  try {
+    const customers = await Customer.find();
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Optional: get single customer
+const getCustomerById = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+    res.json(customer);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = {
+  createCustomer,
+  editCustomer,
+  deleteCustomer,
+  getAllCustomers,
+  getCustomerById,
+};

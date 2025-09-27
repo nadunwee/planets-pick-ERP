@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
   Search,
@@ -19,7 +19,9 @@ import {
   Trash2,
 } from "lucide-react";
 
+// For employees already in system
 interface Employee {
+  _id?: string; // ✅ add this
   id: string;
   name: string;
   email: string;
@@ -31,6 +33,8 @@ interface Employee {
   salary: number;
   performance: number;
   attendance: number;
+  hasUserAccount?: boolean;
+  userId?: string;
   skills: string[];
   avatar?: string;
   shift: "morning" | "evening" | "night";
@@ -41,7 +45,7 @@ interface Employee {
   contractType: "full-time" | "part-time" | "contract" | "temporary";
   workLocation: string;
   workingHours: number;
-  overtimeEligible: boolean;
+  createUser: boolean;
   benefits: string[];
   certifications: string[];
   lastReviewDate?: string;
@@ -58,6 +62,26 @@ interface Employee {
   };
 }
 
+// For the Add Employee form (includes createUser checkbox)
+type NewEmployee = {
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  salary: string;
+  shift: "morning" | "evening" | "night";
+  emergencyContact: string;
+  address: string;
+  contractType: "full-time" | "part-time" | "contract" | "temporary";
+  workLocation: string;
+  workingHours: string;
+  overtimeEligible: boolean;
+  skills: string;
+  benefits: string;
+  certifications: string;
+  createUser: boolean; // 👈 only in form
+};
 interface Attendance {
   employeeId: string;
   date: string;
@@ -100,7 +124,6 @@ interface PayrollRecord {
   status: "pending" | "processed" | "paid";
   paymentDate?: string;
 }
-
 const initialEmployees: Employee[] = [
   {
     id: "1",
@@ -123,7 +146,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Main Factory",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: true,
     benefits: ["Health Insurance", "Provident Fund", "Annual Bonus"],
     certifications: ["Food Safety Level 3", "HACCP Certification"],
     lastReviewDate: "2023-12-01",
@@ -160,7 +183,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Quality Lab",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund"],
     certifications: ["Laboratory Safety", "ISO 22000"],
     lastReviewDate: "2023-11-15",
@@ -197,7 +220,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Production Floor",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund"],
     certifications: ["Machine Safety", "First Aid"],
     lastReviewDate: "2023-10-20",
@@ -233,7 +256,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Admin Office",
     workingHours: 40,
-    overtimeEligible: false,
+    createUser: false,
     benefits: [
       "Health Insurance",
       "Provident Fund",
@@ -279,7 +302,7 @@ const initialEmployees: Employee[] = [
     contractType: "full-time",
     workLocation: "Maintenance Workshop",
     workingHours: 40,
-    overtimeEligible: true,
+    createUser: false,
     benefits: ["Health Insurance", "Provident Fund", "Night Shift Allowance"],
     certifications: ["Electrical Safety", "Mechanical Engineering"],
     lastReviewDate: "2023-11-30",
@@ -438,27 +461,24 @@ export default function Employees() {
   const [reportEndDate, setReportEndDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [newEmployee, setNewEmployee] = useState({
+  const [newEmployee, setNewEmployee] = useState<NewEmployee>({
     name: "",
     email: "",
     phone: "",
     position: "",
     department: "Production",
     salary: "",
-    shift: "morning" as "morning" | "evening" | "night",
+    shift: "morning",
     emergencyContact: "",
     address: "",
-    contractType: "full-time" as
-      | "full-time"
-      | "part-time"
-      | "contract"
-      | "temporary",
+    contractType: "full-time",
     workLocation: "",
     workingHours: "40",
     overtimeEligible: true,
     skills: "",
     benefits: "",
     certifications: "",
+    createUser: false, // 👈 default unchecked
   });
 
   const departments = [
@@ -468,6 +488,22 @@ export default function Employees() {
     "Human Resources",
     "Maintenance",
   ];
+
+  // Fetch employees from backend on mount
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/employees");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch employees");
+        setEmployees(data);
+      } catch (error: any) {
+        console.error(error);
+        alert(error.message);
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch =
@@ -539,7 +575,7 @@ export default function Employees() {
         contractType: newEmployee.contractType,
         workLocation: newEmployee.workLocation,
         workingHours: parseInt(newEmployee.workingHours),
-        overtimeEligible: newEmployee.overtimeEligible,
+        createUser: newEmployee.createUser,
         benefits: newEmployee.benefits
           .split(",")
           .map((s) => s.trim())
@@ -563,6 +599,17 @@ export default function Employees() {
       // 1️⃣ Add locally for UI update
       setEmployees([...employees, newEmployeeData]);
 
+      const generatePassword = (length = 12) => {
+        const charset =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+        let password = "";
+        for (let i = 0; i < length; i++) {
+          const randomIndex = Math.floor(Math.random() * charset.length);
+          password += charset[randomIndex];
+        }
+        return password;
+      };
+
       // 2️⃣ Send POST request to backend to create employee
       const empRes = await fetch("http://localhost:4000/api/employees", {
         method: "POST",
@@ -574,16 +621,19 @@ export default function Employees() {
         throw new Error(empData.error || "Failed to add employee");
 
       // 3️⃣ If "Create User" is checked, create a system user
-      if (newEmployee.overtimeEligible) {
+      if (newEmployee.createUser) {
         // assuming checkbox now stored in overtimeEligible
         const userPayload = {
           name: newEmployee.name,
           email: newEmployee.email,
-          password: "Default@123", // default password
-          type: "employee",
+          password: generatePassword(),
+          department: newEmployee.department,
+          level: "",
+          role: newEmployee.position,
+          approved: "false",
         };
 
-        const userRes = await fetch("http://localhost:4000/api/user/register", {
+        const userRes = await fetch("http://localhost:4000/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(userPayload),
@@ -609,6 +659,7 @@ export default function Employees() {
         workLocation: "",
         workingHours: "40",
         overtimeEligible: true,
+        createUser: false, // ✅ added this
         skills: "",
         benefits: "",
         certifications: "",
@@ -620,36 +671,172 @@ export default function Employees() {
     }
   };
 
+  // --- State for checkbox ---
+  const [createUserChecked, setCreateUserChecked] = useState(false);
+  const [createUserDisabled, setCreateUserDisabled] = useState(false);
+
+  // --- Open Edit Modal ---
   const handleEditEmployee = (employee: Employee) => {
     setEditingEmployee(employee);
+
+    if (employee.userId) {
+      setCreateUserChecked(true);
+      setCreateUserDisabled(true); // already a user, cannot edit
+    } else {
+      setCreateUserChecked(false);
+      setCreateUserDisabled(false); // can tick/untick
+    }
+
     setShowEditModal(true);
   };
 
-  const handleUpdateEmployee = () => {
+  // --- Update Employee Handler ---
+  const handleUpdateEmployee = async () => {
+    const generatePassword = (length = 12) => {
+      const charset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+      let password = "";
+      for (let i = 0; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+      }
+      return password;
+    };
+
     if (!editingEmployee) return;
 
-    const updatedEmployees = employees.map((emp) =>
-      emp.id === editingEmployee.id ? editingEmployee : emp
-    );
-    setEmployees(updatedEmployees);
-    setShowEditModal(false);
-    setEditingEmployee(null);
+    try {
+      const employeeId = editingEmployee._id || editingEmployee.id;
+      if (!employeeId) {
+        alert("Employee ID is missing!");
+        return;
+      }
+
+      // 1️⃣ Update employee in backend
+      const response = await fetch(
+        `http://localhost:4000/api/employees/${employeeId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingEmployee),
+        }
+      );
+
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to update employee");
+      }
+
+      const updatedEmployee = data?.employee;
+
+      // 2️⃣ Handle "Create User" logic
+      // Use the checkbox state, not editingEmployee.hasUserAccount
+      if (createUserChecked && !updatedEmployee.userId) {
+        if (
+          !updatedEmployee.department ||
+          !updatedEmployee.position ||
+          !updatedEmployee.email
+        ) {
+          throw new Error(
+            "Employee must have department, position, and email to create a user"
+          );
+        }
+
+        const userPayload = {
+          name: updatedEmployee.name,
+          email: updatedEmployee.email,
+          password: generatePassword(),
+          department: updatedEmployee.department,
+          role: updatedEmployee.position,
+          level: "employee",
+          approved: "false",
+        };
+
+        const userRes = await fetch("http://localhost:4000/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(userPayload),
+        });
+
+        const userData = await userRes.json();
+        if (!userRes.ok)
+          throw new Error(userData.error || "Failed to create user");
+
+        // Update employee locally with new userId
+        updatedEmployee.userId = userData.user?._id || null;
+      }
+
+      // 3️⃣ Update local state
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          (emp._id || emp.id) === (updatedEmployee._id || updatedEmployee.id)
+            ? updatedEmployee
+            : emp
+        )
+      );
+
+      // Reset modal state
+      setShowEditModal(false);
+      setEditingEmployee(null);
+      setCreateUserChecked(false);
+      setCreateUserDisabled(false);
+    } catch (error: any) {
+      console.error("Error updating employee:", error.message);
+      alert("Failed to update employee: " + error.message);
+    }
   };
 
+  // --- Open Delete Modal ---
   const handleDeleteEmployee = (employee: Employee) => {
     setDeletingEmployee(employee);
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteEmployee = () => {
+  // --- Confirm Delete Employee ---
+  const confirmDeleteEmployee = async () => {
     if (!deletingEmployee) return;
 
-    const updatedEmployees = employees.filter(
-      (emp) => emp.id !== deletingEmployee.id
-    );
-    setEmployees(updatedEmployees);
-    setShowDeleteModal(false);
-    setDeletingEmployee(null);
+    try {
+      const employeeId = deletingEmployee._id || deletingEmployee.id;
+      if (!employeeId) {
+        alert("Employee ID is missing!");
+        return;
+      }
+
+      // Call backend DELETE API
+      const res = await fetch(
+        `http://localhost:4000/api/employees/${employeeId}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete employee");
+      }
+
+      // Remove from local state
+      setEmployees((prev) =>
+        prev.filter((emp) => (emp._id || emp.id) !== employeeId)
+      );
+
+      alert(data.message || "Employee deleted successfully");
+
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setDeletingEmployee(null);
+    } catch (error: any) {
+      console.error("Error deleting employee:", error);
+      alert("Failed to delete employee: " + error.message);
+    }
   };
 
   const handleAttendanceUpdate = (
@@ -765,7 +952,6 @@ export default function Employees() {
           </button>
         </div>
       </div>
-
       {/* AI HR Assistant */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-center gap-3">
@@ -785,7 +971,6 @@ export default function Employees() {
           </button>
         </div>
       </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
@@ -855,7 +1040,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow border">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -913,7 +1097,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Employees List */}
       {viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -959,36 +1142,7 @@ export default function Employees() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-gray-500">Performance</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${employee.performance}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium">
-                      {employee.performance}%
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Attendance</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${employee.attendance}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium">
-                      {employee.attendance}%
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4"></div>
 
               <div className="mb-4">
                 <p className="text-xs text-gray-500 mb-1">Skills</p>
@@ -1161,7 +1315,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {filteredEmployees.length === 0 && (
         <div className="bg-white rounded-lg shadow border p-8 text-center">
           <Users className="mx-auto text-gray-400 mb-4" size={48} />
@@ -1173,7 +1326,6 @@ export default function Employees() {
           </p>
         </div>
       )}
-
       {/* Leave Requests and Payroll Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow border p-4">
@@ -1241,7 +1393,6 @@ export default function Employees() {
           </div>
         </div>
       </div>
-
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1368,7 +1519,6 @@ export default function Employees() {
                 <h3 className="font-semibold text-gray-700 border-b pb-2">
                   Employment Details
                 </h3>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Shift *
@@ -1391,7 +1541,6 @@ export default function Employees() {
                     <option value="night">Night</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Contract Type *
@@ -1416,7 +1565,6 @@ export default function Employees() {
                     <option value="temporary">Temporary</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Work Location
@@ -1434,7 +1582,6 @@ export default function Employees() {
                     placeholder="Enter work location"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Working Hours
@@ -1452,15 +1599,14 @@ export default function Employees() {
                     placeholder="Hours per week"
                   />
                 </div>
-
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={newEmployee.overtimeEligible}
+                    checked={newEmployee.createUser} // tied to newEmployee.createUser
                     onChange={(e) =>
                       setNewEmployee({
                         ...newEmployee,
-                        overtimeEligible: e.target.checked,
+                        createUser: e.target.checked, // update state on toggle
                       })
                     }
                     className="mr-2"
@@ -1590,7 +1736,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Edit Employee Modal */}
       {showEditModal && editingEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1845,17 +1990,20 @@ export default function Employees() {
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={editingEmployee.overtimeEligible}
+                    checked={
+                      !!editingEmployee.userId || editingEmployee.hasUserAccount
+                    }
+                    disabled={!!editingEmployee.userId} // cannot uncheck if already a user
                     onChange={(e) =>
                       setEditingEmployee({
                         ...editingEmployee,
-                        overtimeEligible: e.target.checked,
+                        hasUserAccount: e.target.checked,
                       })
                     }
                     className="mr-2"
                   />
                   <label className="text-sm font-medium text-gray-700">
-                    Overtime Eligible
+                    Create User
                   </label>
                 </div>
 
@@ -2035,7 +2183,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Attendance Management Modal */}
       {showAttendanceModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2196,7 +2343,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
       {/* Reports Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -2295,8 +2441,6 @@ export default function Employees() {
           </div>
         </div>
       )}
-
-      {/* Delete Employee Confirmation Modal */}
       {showDeleteModal && deletingEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -2343,7 +2487,7 @@ export default function Employees() {
             </div>
           </div>
         </div>
-      )}
+      )}{" "}
     </div>
   );
 }

@@ -1,17 +1,28 @@
+// routes/user.js
 const express = require("express");
-
 const {
   loginUser,
   getAllUsers,
-  editUser,
   editUserApproval,
+  registerUser,
+  deleteUser,
 } = require("../controllers/userController.js");
 
 const router = express.Router();
 
+// User authentication
 router.post("/login", loginUser);
-router.get("/all_users", getAllUsers);
-// router.delete("/user/:id", deleteUser);
-router.patch("/edit_approval/:id", editUserApproval);
+
+// ✅ Create a new user (RESTful)
+router.post("/", registerUser);
+
+// List users
+router.get("/", getAllUsers);
+
+// Edit user approval
+router.patch("/:id", editUserApproval);
+
+// Delete user
+router.delete("/:id", deleteUser);
 
 module.exports = router;
