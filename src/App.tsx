@@ -65,6 +65,7 @@ function MainLayout() {
             <Route path="/orders-sales" element={<OrdersSales />} />
             <Route path="/delivery" element={<Delivery />} />
             <Route path="/finance" element={<Finance />} />
+            <Route path="/procurement" element={<Procurement />} /> {/* 👈 Route for Suppliers page */}
             <Route path="/administrator" element={<Administrator />} />
             <Route path="/warehouse" element={<Warehouse />} />
             <Route path="/wastage" element={<Wastage />} />
