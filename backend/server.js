@@ -12,6 +12,10 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
+// const customerRoutes = require("./routes/customer.js");
+// const orderRoutes = require("./routes/order.js");
+// const financeRoutes = require("./routes/finance.js");
+// const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
