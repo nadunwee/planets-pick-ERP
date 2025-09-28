@@ -15,14 +15,20 @@ import {
   MapPin,
   Phone,
   Mail,
-  Eye,
   Edit,
   Download,
   Trash2,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
-import { getAllOrders, deleteOrder, createOrder, type Order as OrderType, type OrderPayload } from "@/components/services/orderService";
+import {
+  getAllOrders,
+  deleteOrder,
+  createOrder,
+  updateOrder,
+  type Order as OrderType,
+  type OrderPayload,
+} from "@/components/services/orderService";
 
 export default function OrdersSales() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -34,6 +40,8 @@ export default function OrdersSales() {
   const [userLevel, setUserLevel] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
+  const department = localStorage.getItem("department");
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -74,9 +82,8 @@ export default function OrdersSales() {
           },
           items: [
             {
-              productName: "Sample Product", 
-              name: "Sample Product",
               productName: "Sample Product",
+              name: "Sample Product",
               quantity: 10,
               unit: "pieces",
               unitPrice: 100,
@@ -118,20 +125,26 @@ export default function OrdersSales() {
   };
 
   const handleEditOrder = (order: OrderType) => {
-    // For now, just log the order to be edited
-    // In a complete implementation, you would open an edit modal
-    console.log("Edit order:", order);
-    alert("Edit functionality would be implemented with a detailed form modal");
+    setEditingOrder(order);
+    setShowOrderModal(true);
   };
 
   const handleCreateOrder = async (data: OrderPayload) => {
     try {
-      const result = await createOrder(data);
-      console.log("✅ Order created:", result);
-      // Refresh the orders list after creation
+      if (editingOrder) {
+        // Update existing order
+        await updateOrder(editingOrder._id || editingOrder.id!, data);
+        console.log("✅ Order updated successfully");
+      } else {
+        // Create new order
+        await createOrder(data);
+        console.log("✅ Order created successfully");
+      }
+      // Refresh the orders list after creation/update
       fetchOrders();
+      setEditingOrder(null); // Reset editing state
     } catch (error) {
-      console.error("❌ Error creating order:", error);
+      console.error("❌ Error saving order:", error);
     }
   };
 
@@ -250,7 +263,10 @@ export default function OrdersSales() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowOrderModal(true)}
+            onClick={() => {
+              setEditingOrder(null);
+              setShowOrderModal(true);
+            }}
             className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
           >
             <Plus size={16} />
@@ -603,10 +619,6 @@ export default function OrdersSales() {
                       : "N/A"}
                   </div>
                   <div className="flex gap-2">
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1">
-                      <Eye size={14} />
-                      View
-                    </button>
                     <button
                       onClick={() => handleEditOrder(order)}
                       className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition flex items-center gap-1"
@@ -621,9 +633,11 @@ export default function OrdersSales() {
                       <Trash2 size={14} />
                       Delete
                     </button>
-                    <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
-                      Process
-                    </button>
+                    {department != "Inventory" && (
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
+                        Process
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -650,8 +664,13 @@ export default function OrdersSales() {
       />
       <OrderFormModal
         isOpen={showOrderModal}
-        onClose={() => setShowOrderModal(false)}
+        onClose={() => {
+          setShowOrderModal(false);
+          setEditingOrder(null);
+        }}
         onSubmit={handleCreateOrder}
+        isEdit={!!editingOrder}
+        initialOrder={editingOrder || undefined}
       />
     </div>
   );

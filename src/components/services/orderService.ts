@@ -33,12 +33,29 @@ export interface Order {
   expectedDelivery?: string;
   actualDelivery?: string;
   priority: "low" | "medium" | "high" | "urgent";
-  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   customer: OrderCustomer;
   items: OrderItem[];
   totalAmount: number;
-  paymentStatus: "pending" | "paid" | "partially-paid" | "overdue" | "unpaid" | "partial";
-  paymentMethod: "bank-transfer" | "credit-card" | "cash" | "cryptocurrency" | string;
+  paymentStatus:
+    | "pending"
+    | "paid"
+    | "partially-paid"
+    | "overdue"
+    | "unpaid"
+    | "partial";
+  paymentMethod:
+    | "bank-transfer"
+    | "credit-card"
+    | "cash"
+    | "cryptocurrency"
+    | string;
   shippingMethod: "standard" | "express" | "overnight" | "pickup" | string;
   notes?: string;
   createdAt?: string;
@@ -50,8 +67,14 @@ export interface OrderPayload {
   orderId: string;
   orderedOn: string;
   expectedDate?: string;
-  priority: "low" | "medium" | "high";
-  status: "pending" | "confirmed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   totalAmount: number;
   paymentStatus: "paid" | "unpaid" | "partial";
   paymentMethod?: string;
@@ -81,18 +104,29 @@ export const getOrderById = async (id: string): Promise<Order> => {
 
 // Create a new order
 export const createOrder = async (order: OrderPayload): Promise<Order> => {
-  const { data } = await api.post<{ message: string; order: Order }>("/orders/create", order);
+  const { data } = await api.post<{ message: string; order: Order }>(
+    "/orders/create",
+    order
+  );
   return data.order;
 };
 
 // Update an order
-export const updateOrder = async (id: string, updates: Partial<OrderPayload>): Promise<Order> => {
-  const { data } = await api.patch<{ message: string; order: Order }>(`/orders/edit/${id}`, updates);
+export const updateOrder = async (
+  id: string,
+  updates: Partial<OrderPayload>
+): Promise<Order> => {
+  const { data } = await api.patch<{ message: string; order: Order }>(
+    `/orders/edit/${id}`,
+    updates
+  );
   return data.order;
 };
 
 // Delete an order
 export const deleteOrder = async (id: string): Promise<{ message: string }> => {
-  const { data } = await api.delete<{ message: string }>(`/orders/delete/${id}`);
+  const { data } = await api.delete<{ message: string }>(
+    `/orders/delete/${id}`
+  );
   return data;
 };
