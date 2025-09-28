@@ -148,6 +148,33 @@ export default function OrdersSales() {
     }
   };
 
+  const handleProcessOrder = async (order: OrderType) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to process order ${
+          order.orderNumber || order.orderId
+        }?`
+      )
+    )
+      return;
+
+    try {
+      // Update the order status to "processing"
+      const updateData: Partial<OrderPayload> = {
+        status: "processing",
+      };
+
+      await updateOrder(order._id || order.id!, updateData);
+      console.log("✅ Order marked as processing");
+
+      // Refresh the orders list to show updated status
+      fetchOrders();
+    } catch (error) {
+      console.error("❌ Error processing order:", error);
+      alert("Failed to process order. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const level = localStorage.getItem("level") || "{}";
     setUserLevel(level);
@@ -633,11 +660,24 @@ export default function OrdersSales() {
                       <Trash2 size={14} />
                       Delete
                     </button>
-                    {department != "Inventory" && (
-                      <button className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
-                        Process
-                      </button>
-                    )}
+                    {department != "Inventory" &&
+                      order.status !== "processing" &&
+                      order.status !== "shipped" &&
+                      order.status !== "delivered" &&
+                      order.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleProcessOrder(order)}
+                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition"
+                        >
+                          Process
+                        </button>
+                      )}
+                    {department != "Inventory" &&
+                      order.status === "processing" && (
+                        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded text-sm">
+                          Processing...
+                        </span>
+                      )}
                   </div>
                 </div>
               </div>
