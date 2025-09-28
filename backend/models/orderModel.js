@@ -20,7 +20,6 @@ const orderSchema = new Schema(
     expectedDate: { type: Date },
     priority: {
       type: String,
-      enum: ["low", "medium", "high"],
       default: "medium",
     },
     status: {
