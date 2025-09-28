@@ -22,7 +22,11 @@ import {
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
-import { getAllOrders, deleteOrder, type Order as OrderType } from "@/components/services/orderService";
+import {
+  getAllOrders,
+  deleteOrder,
+  type Order as OrderType,
+} from "@/components/services/orderService";
 
 export default function OrdersSales() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -75,6 +79,7 @@ export default function OrdersSales() {
           items: [
             {
               name: "Sample Product",
+              productName: "Sample Product",
               quantity: 10,
               unit: "pieces",
               unitPrice: 100,
@@ -179,6 +184,8 @@ export default function OrdersSales() {
       selectedPriority === "All" || order.priority === selectedPriority;
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  console.log(filteredOrders);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -429,7 +436,10 @@ export default function OrdersSales() {
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => (
-            <div key={order.id || order._id} className="bg-white rounded-lg shadow border">
+            <div
+              key={order.id || order._id}
+              className="bg-white rounded-lg shadow border"
+            >
               <div className="p-4">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-4">
@@ -438,8 +448,8 @@ export default function OrdersSales() {
                         {order.orderNumber || order.orderId}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        Ordered on {order.orderDate || order.orderedOn} • Expected:{" "}
-                        {order.expectedDelivery || order.expectedDate}
+                        Ordered on {order.orderDate || order.orderedOn} •
+                        Expected: {order.expectedDelivery || order.expectedDate}
                       </p>
                     </div>
                   </div>
@@ -469,25 +479,29 @@ export default function OrdersSales() {
                       Customer Details
                     </h4>
                     <div className="space-y-1 text-sm">
-                      <p className="font-medium">{order.customer.name}</p>
-                      {order.customer.company && (
-                        <p className="text-gray-600">{order.customer.company}</p>
+                      <p className="font-medium">
+                        {order.customer?.name || "N/A"}
+                      </p>
+                      {order.customer?.company && (
+                        <p className="text-gray-600">
+                          {order.customer?.company || "N/A"}
+                        </p>
                       )}
                       <div className="flex items-center gap-2 text-gray-600">
                         <Mail size={12} />
-                        {order.customer.email}
+                        {order.customer?.email || "N/A"}
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Phone size={12} />
-                        {order.customer.phone}
+                        {order.customer?.phone || "N/A"}
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin size={12} />
-                        {order.customer.address}
+                        {order.customer?.address || "N/A"}
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Globe size={12} />
-                        {order.customer.country}
+                        {order.customer?.country || "N/A"}
                       </div>
                     </div>
                   </div>
@@ -500,10 +514,15 @@ export default function OrdersSales() {
                     </h4>
                     <div className="space-y-2">
                       {order.items.map((item, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
+                        <div
+                          key={idx}
+                          className="bg-gray-50 rounded p-2 text-sm"
+                        >
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="font-medium">{item.productName || item.name}</p>
+                              <p className="font-medium">
+                                {item.productName || item.name}
+                              </p>
                               <p className="text-gray-600">
                                 {item.quantity} {item.unit} × LKR{" "}
                                 {item.unitPrice.toLocaleString()}
@@ -559,7 +578,9 @@ export default function OrdersSales() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Shipping:</span>
-                        <span className="capitalize">{order.shippingMethod || "N/A"}</span>
+                        <span className="capitalize">
+                          {order.shippingMethod || "N/A"}
+                        </span>
                       </div>
                       {order.actualDelivery && (
                         <div className="flex justify-between">
@@ -584,21 +605,24 @@ export default function OrdersSales() {
                 <div className="flex justify-between items-center mt-4 pt-4 border-t">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock size={14} />
-                    Last updated: {order.updatedAt ? new Date(order.updatedAt).toLocaleString() : "N/A"}
+                    Last updated:{" "}
+                    {order.updatedAt
+                      ? new Date(order.updatedAt).toLocaleString()
+                      : "N/A"}
                   </div>
                   <div className="flex gap-2">
                     <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition flex items-center gap-1">
                       <Eye size={14} />
                       View
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleEditOrder(order)}
                       className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition flex items-center gap-1"
                     >
                       <Edit size={14} />
                       Edit
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteOrder(order._id || order.id!)}
                       className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition flex items-center gap-1"
                     >
