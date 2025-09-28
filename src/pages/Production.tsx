@@ -440,6 +440,7 @@ export default function Production() {
 
       if (editingBatch) {
         // Update existing batch
+        console.log("✏️ Updating existing batch:", editingBatch);
         const updates = {
           batchName: batchFormData.batchNo,
           product: batchFormData.batchItem,
@@ -447,8 +448,12 @@ export default function Production() {
           operator: batchFormData.operatorName,
           estimatedTime: "1 hour",
           startTime: `${batchFormData.date} ${batchFormData.time}`,
-          quality: (batchFormData.qualityChecked ? "excellent" : "good") as "excellent" | "good",
+          quality: (batchFormData.qualityChecked ? "excellent" : "good") as
+            | "excellent"
+            | "good",
         };
+
+        console.log("📤 Sending updates:", updates);
 
         const updatedBatch = await productionService.updateBatch(
           editingBatch,
@@ -472,7 +477,9 @@ export default function Production() {
           operator: batchFormData.operatorName || "Current User",
           estimatedTime: "1 hour",
           startTime: `${batchFormData.date} ${batchFormData.time}`,
-          quality: (batchFormData.qualityChecked ? "excellent" : "good") as "excellent" | "good",
+          quality: (batchFormData.qualityChecked ? "excellent" : "good") as
+            | "excellent"
+            | "good",
         };
 
         const createdBatch = await productionService.createBatch(newBatchData);
@@ -522,6 +529,7 @@ export default function Production() {
   };
 
   const handleEditBatch = (batch: FrontendProductionBatch) => {
+    console.log("🔧 Edit button clicked for batch:", batch);
     setEditingBatch(batch.id);
 
     // Parse the startTime properly
@@ -571,7 +579,9 @@ export default function Production() {
       operatorName: batch.operator,
     };
 
+    console.log("📝 Setting form data:", formData);
     setBatchFormData(formData);
+    console.log("🎯 Opening modal...");
     setShowBatchForm(true);
   };
 
@@ -2027,10 +2037,11 @@ export default function Production() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              console.log("🎯 Edit button clicked!");
                               handleEditBatch(batch);
                             }}
                             className="bg-purple-600 text-white py-1 px-3 rounded text-sm hover:bg-purple-700 transition"
-                            disabled={batch.status === "completed"}
+                            disabled={false}
                           >
                             Edit
                           </button>
