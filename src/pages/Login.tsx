@@ -44,6 +44,10 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Notify parent
       onLogin(data.token);
+      if (data.department === "Inventory") {
+        navigate("/inventory");
+        return;
+      }
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message);

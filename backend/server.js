@@ -12,6 +12,10 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
+const customerRoutes = require("./routes/customer.js");
+const orderRoutes = require("./routes/order.js");
+const financeRoutes = require("./routes/finance.js");
+const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
@@ -50,7 +54,7 @@ const startServer = async () => {
       serverSelectionTimeoutMS: 4000,
     });
     console.log("✅ Connected to MongoDB");
-    
+
     app.listen(process.env.PORT, () => {
       console.log(`✅ Server listening on port ${process.env.PORT}`);
     });
@@ -58,7 +62,9 @@ const startServer = async () => {
     console.error("❌ Database connection error:", error.message);
     // Start server regardless of database connection
     app.listen(process.env.PORT, () => {
-      console.log(`✅ Server listening on port ${process.env.PORT} (without DB)`);
+      console.log(
+        `✅ Server listening on port ${process.env.PORT} (without DB)`
+      );
     });
   }
 };
