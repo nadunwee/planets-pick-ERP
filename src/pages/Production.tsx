@@ -444,6 +444,7 @@ export default function Production() {
         const updates = {
           batchName: batchFormData.batchNo,
           product: batchFormData.batchItem,
+          quantity: batchFormData.qty,
           targetYield: batchFormData.qty,
           operator: batchFormData.operatorName,
           estimatedTime: "1 hour",
@@ -562,7 +563,7 @@ export default function Production() {
             hour: "2-digit",
             minute: "2-digit",
           });
-        } catch (e) {
+        } catch {
           console.warn("Could not parse startTime:", batch.startTime);
         }
       }
