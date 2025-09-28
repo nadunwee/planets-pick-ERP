@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
-import { getAllOrders, deleteOrder, type Order as OrderType } from "@/components/services/orderService";
+import { getAllOrders, deleteOrder, createOrder, type Order as OrderType, type OrderPayload } from "@/components/services/orderService";
 
 export default function OrdersSales() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -74,6 +74,7 @@ export default function OrdersSales() {
           },
           items: [
             {
+              productName: "Sample Product", 
               name: "Sample Product",
               quantity: 10,
               unit: "pieces",
@@ -122,14 +123,9 @@ export default function OrdersSales() {
     alert("Edit functionality would be implemented with a detailed form modal");
   };
 
-  const handleCreateOrder = async (data: any) => {
+  const handleCreateOrder = async (data: OrderPayload) => {
     try {
-      const res = await fetch("http://localhost:4000/api/orders/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
+      const result = await createOrder(data);
       console.log("✅ Order created:", result);
       // Refresh the orders list after creation
       fetchOrders();
