@@ -21,7 +21,7 @@ export default function Login({ onLogin }: LoginProps) {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:4000/api/user/login", {
+      const response = await fetch("http://localhost:4000/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: username, password }), // backend expects email
@@ -44,6 +44,10 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Notify parent
       onLogin(data.token);
+      if (data.department === "Inventory") {
+        navigate("/inventory");
+        return;
+      }
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message);

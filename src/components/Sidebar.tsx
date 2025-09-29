@@ -30,6 +30,7 @@ const menuItems: {
   { name: "Orders & Sales", path: "/orders-sales", icon: ShoppingCart },
   { name: "Delivery", path: "/delivery", icon: Truck },
   { name: "Finance", path: "/finance", icon: DollarSign },
+  { name: "Procurement", path: "/procurement", icon: ShoppingCart },
   { name: "Administrator", path: "/administrator", icon: Shield },
   { name: "Warehouse", path: "/warehouse", icon: Warehouse },
   { name: "Wastage", path: "/wastage", icon: AlertTriangle },
@@ -73,6 +74,7 @@ export function Sidebar() {
     "Warehouse",
     "Wastage",
     "Settings",
+    "Procurement",
   ];
 
   const productionMan = [

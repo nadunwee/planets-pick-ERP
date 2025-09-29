@@ -19,6 +19,7 @@ interface User {
   department: string;
   level: string;
   approved: string;
+  createdAt?: string;
 }
 
 export default function Administrator() {
@@ -142,14 +143,22 @@ export default function Administrator() {
           </div>
         </div>
 
-        {/* Active Users */}
-        <div className="bg-gradient-to-br from-green-100 to-green-50 p-5 rounded-xl shadow-lg border border-green-200 hover:scale-105 transform transition">
+        {/* Pending Approvals */}
+        <div className="bg-gradient-to-br from-orange-100 to-orange-50 p-5 rounded-xl shadow-lg border border-orange-200 hover:scale-105 transform transition">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-600 font-medium">Active Users</p>
-              <p className="text-3xl font-bold text-green-700">22</p>
+              <p className="text-sm text-orange-600 font-medium">
+                Pending Approvals
+              </p>
+              <p className="text-3xl font-bold text-orange-700">
+                {users.length}
+              </p>
+              <p className="text-xs text-orange-500 flex items-center gap-1 mt-1">
+                <UserCheck size={14} />
+                Awaiting approval
+              </p>
             </div>
-            <UserCheck className="text-green-600" size={28} />
+            <UserCheck className="text-orange-600" size={28} />
           </div>
         </div>
 
@@ -254,64 +263,106 @@ export default function Administrator() {
               ) : filteredUsers.length === 0 ? (
                 <p className="text-gray-600">No pending users found.</p>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border-b px-4 py-2">Name</th>
-                      <th className="border-b px-4 py-2">Email</th>
-                      <th className="border-b px-4 py-2">Role</th>
-                      <th className="border-b px-4 py-2">Status</th>
-                      {/* <th className="border-b px-4 py-2">Actions</th> */}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user._id}>
-                        <td className="border-b px-4 py-2">{user.name}</td>
-                        <td className="border-b px-4 py-2">{user.email}</td>
-                        <td className="border-b px-4 py-2">{user.role}</td>
-                        {/* <td className="border-b px-4 py-2">{user.approved}</td> */}
-                        <td className="border-b px-4 py-2 flex items-center gap-2">
-                          <select
-                            value={userLevels[user._id] || "L1"} // default to L1
-                            onChange={(e) =>
-                              setUserLevels((prev) => ({
-                                ...prev,
-                                [user._id]: e.target.value,
-                              }))
-                            }
-                            className="border rounded px-2 py-1 text-sm"
-                          >
-                            {["L1", "L2", "L3", "L4", "L5"].map((level) => (
-                              <option key={level} value={level}>
-                                {level}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            onClick={() =>
-                              handleApproval(
-                                user._id,
-                                true,
-                                userLevels[user._id] || "L1"
-                              )
-                            }
-                            className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleDelete(user._id)}
-                            className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                          >
-                            Reject
-                          </button>
-                        </td>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Pending User Account Approvals ({filteredUsers.length})
+                  </h3>
+                  <table className="w-full text-left border-collapse bg-white rounded-lg overflow-hidden shadow-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Employee
+                        </th>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Department
+                        </th>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Role
+                        </th>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Request Date
+                        </th>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Access Level
+                        </th>
+                        <th className="border-b px-4 py-3 font-medium text-gray-700">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((user) => (
+                        <tr key={user._id} className="hover:bg-gray-50">
+                          <td className="border-b px-4 py-3">
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {user.name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {user.email}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="border-b px-4 py-3 text-gray-700">
+                            {user.department}
+                          </td>
+                          <td className="border-b px-4 py-3">
+                            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="border-b px-4 py-3 text-sm text-gray-600">
+                            {user.createdAt
+                              ? new Date(user.createdAt).toLocaleDateString()
+                              : "N/A"}
+                          </td>
+                          <td className="border-b px-4 py-3">
+                            <select
+                              value={userLevels[user._id] || "L1"}
+                              onChange={(e) =>
+                                setUserLevels((prev) => ({
+                                  ...prev,
+                                  [user._id]: e.target.value,
+                                }))
+                              }
+                              className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              {["L1", "L2", "L3", "L4", "L5"].map((level) => (
+                                <option key={level} value={level}>
+                                  Level {level}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="border-b px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  handleApproval(
+                                    user._id,
+                                    true,
+                                    userLevels[user._id] || "L1"
+                                  )
+                                }
+                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors flex items-center gap-1"
+                              >
+                                <UserCheck size={14} />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleDelete(user._id)}
+                                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors flex items-center gap-1"
+                              >
+                                <UserX size={14} />
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>
