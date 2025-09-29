@@ -552,22 +552,13 @@ export default function Employees() {
   const handleAddEmployee = async () => {
     try {
       const employeeId = `EMP${String(employees.length + 1).padStart(3, "0")}`;
-      const newEmployeeData: Employee = {
-        id: String(employees.length + 1),
+      const newEmployeeData = {
         name: newEmployee.name,
         email: newEmployee.email,
         phone: newEmployee.phone,
         position: newEmployee.position,
         department: newEmployee.department,
-        status: "active",
-        joinDate: new Date().toISOString().split("T")[0],
         salary: parseFloat(newEmployee.salary),
-        performance: 85,
-        attendance: 95,
-        skills: newEmployee.skills
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
         shift: newEmployee.shift,
         emergencyContact: newEmployee.emergencyContact,
         address: newEmployee.address,
@@ -575,75 +566,30 @@ export default function Employees() {
         contractType: newEmployee.contractType,
         workLocation: newEmployee.workLocation,
         workingHours: parseInt(newEmployee.workingHours),
-        createUser: newEmployee.createUser,
-        benefits: newEmployee.benefits
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
-        certifications: newEmployee.certifications
-          .split(",")
-          .map((s) => s.trim())
-          .filter((s) => s),
-        leaveBalance: {
-          annual: 20,
-          sick: 10,
-          personal: 5,
-        },
-        payrollInfo: {
-          bankName: "Commercial Bank",
-          accountNumber: "1234567890",
-          taxId: "TAX123456789",
-        },
+        overtimeEligible: newEmployee.overtimeEligible,
+        skills: newEmployee.skills,
+        benefits: newEmployee.benefits,
+        certifications: newEmployee.certifications,
+        createUser: newEmployee.createUser, // This will be handled by backend
       };
 
-      // 1️⃣ Add locally for UI update
-      setEmployees([...employees, newEmployeeData]);
-
-      const generatePassword = (length = 12) => {
-        const charset =
-          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
-        let password = "";
-        for (let i = 0; i < length; i++) {
-          const randomIndex = Math.floor(Math.random() * charset.length);
-          password += charset[randomIndex];
-        }
-        return password;
-      };
-
-      // 2️⃣ Send POST request to backend to create employee
+      // Send POST request to backend to create employee
       const empRes = await fetch("http://localhost:4000/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newEmployeeData),
       });
+      
       const empData = await empRes.json();
       if (!empRes.ok)
         throw new Error(empData.error || "Failed to add employee");
 
-      // 3️⃣ If "Create User" is checked, create a system user
-      if (newEmployee.createUser) {
-        // assuming checkbox now stored in overtimeEligible
-        const userPayload = {
-          name: newEmployee.name,
-          email: newEmployee.email,
-          password: generatePassword(),
-          department: newEmployee.department,
-          level: "",
-          role: newEmployee.position,
-          approved: "false",
-        };
+      // Update local state with the employee from backend
+      setEmployees((prev) => [...prev, empData.employee]);
 
-        const userRes = await fetch("http://localhost:4000/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userPayload),
-        });
-        const userData = await userRes.json();
-        if (!userRes.ok)
-          throw new Error(userData.error || "Failed to create user");
-      }
+      alert(empData.message || "Employee added successfully!");
 
-      // 4️⃣ Reset form and close modal
+      // Reset form and close modal
       setShowAddModal(false);
       setNewEmployee({
         name: "",
@@ -659,15 +605,14 @@ export default function Employees() {
         workLocation: "",
         workingHours: "40",
         overtimeEligible: true,
-        createUser: false, // ✅ added this
+        createUser: false,
         skills: "",
         benefits: "",
         certifications: "",
       });
-
-      alert("Employee added successfully!");
     } catch (error: any) {
-      alert(error.message);
+      console.error("Error adding employee:", error);
+      alert("Failed to add employee: " + error.message);
     }
   };
 
@@ -679,12 +624,15 @@ export default function Employees() {
   const handleEditEmployee = (employee: Employee) => {
     setEditingEmployee(employee);
 
-    if (employee.userId) {
+    // Check if employee already has a user account
+    const hasExistingUser = employee.userId && employee.hasUserAccount;
+
+    if (hasExistingUser) {
       setCreateUserChecked(true);
-      setCreateUserDisabled(true); // already a user, cannot edit
+      setCreateUserDisabled(true); // Cannot change if already a user
     } else {
       setCreateUserChecked(false);
-      setCreateUserDisabled(false); // can tick/untick
+      setCreateUserDisabled(false); // Can tick/untick for new user request
     }
 
     setShowEditModal(true);
@@ -692,16 +640,6 @@ export default function Employees() {
 
   // --- Update Employee Handler ---
   const handleUpdateEmployee = async () => {
-    const generatePassword = (length = 12) => {
-      const charset =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
-      let password = "";
-      for (let i = 0; i < length; i++) {
-        password += charset[Math.floor(Math.random() * charset.length)];
-      }
-      return password;
-    };
-
     if (!editingEmployee) return;
 
     try {
@@ -711,13 +649,19 @@ export default function Employees() {
         return;
       }
 
+      // Prepare update data
+      const updateData = {
+        ...editingEmployee,
+        createUser: createUserChecked && !createUserDisabled, // Only send if new request
+      };
+
       // 1️⃣ Update employee in backend
       const response = await fetch(
         `http://localhost:4000/api/employees/${employeeId}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editingEmployee),
+          body: JSON.stringify(updateData),
         }
       );
 
@@ -734,43 +678,6 @@ export default function Employees() {
 
       const updatedEmployee = data?.employee;
 
-      // 2️⃣ Handle "Create User" logic
-      // Use the checkbox state, not editingEmployee.hasUserAccount
-      if (createUserChecked && !updatedEmployee.userId) {
-        if (
-          !updatedEmployee.department ||
-          !updatedEmployee.position ||
-          !updatedEmployee.email
-        ) {
-          throw new Error(
-            "Employee must have department, position, and email to create a user"
-          );
-        }
-
-        const userPayload = {
-          name: updatedEmployee.name,
-          email: updatedEmployee.email,
-          password: generatePassword(),
-          department: updatedEmployee.department,
-          role: updatedEmployee.position,
-          level: "employee",
-          approved: "false",
-        };
-
-        const userRes = await fetch("http://localhost:4000/api/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(userPayload),
-        });
-
-        const userData = await userRes.json();
-        if (!userRes.ok)
-          throw new Error(userData.error || "Failed to create user");
-
-        // Update employee locally with new userId
-        updatedEmployee.userId = userData.user?._id || null;
-      }
-
       // 3️⃣ Update local state
       setEmployees((prev) =>
         prev.map((emp) =>
@@ -779,6 +686,8 @@ export default function Employees() {
             : emp
         )
       );
+
+      alert(data?.message || "Employee updated successfully!");
 
       // Reset modal state
       setShowEditModal(false);
@@ -861,7 +770,7 @@ export default function Employees() {
   };
 
   const generateAttendanceReport = () => {
-    // This would generate a comprehensive report
+    // Generate the report data and show summary
     const reportData = {
       startDate: reportStartDate,
       endDate: reportEndDate,
@@ -883,10 +792,11 @@ export default function Employees() {
       })),
     };
 
-    // In a real app, this would export to PDF/Excel
+    // Show summary in console for debugging
     console.log("Attendance Report:", reportData);
+    
     alert(
-      "Report generated! Check console for details. In production, this would export to PDF/Excel."
+      "Attendance report generated successfully! You can now export it to PDF using the 'Export to PDF' button."
     );
   };
 
@@ -906,10 +816,373 @@ export default function Employees() {
       Attendance: emp.attendance,
     }));
 
-    console.log("Excel Export Data:", excelData);
-    alert(
-      "Excel export ready! Check console for details. In production, this would download an Excel file."
-    );
+    // Convert to CSV format
+    const csvHeaders = Object.keys(excelData[0]).join(",");
+    const csvRows = excelData.map(row => Object.values(row).join(","));
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `employee_list_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    alert("Employee data exported to CSV successfully!");
+  };
+
+  const exportEmployeeListToPDF = () => {
+    // Create HTML content for PDF generation
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Employee List Report</title>
+      <style>
+        @page { margin: 0.5in; size: A4; }
+        body { 
+          font-family: 'Times New Roman', serif; 
+          margin: 0; 
+          padding: 0;
+          font-size: 12px;
+          line-height: 1.4;
+          color: #333;
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 30px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 20px;
+        }
+        .company-name { 
+          font-size: 24px; 
+          font-weight: bold; 
+          margin-bottom: 5px;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+        }
+        .report-title { 
+          font-size: 18px; 
+          margin-bottom: 5px;
+          text-transform: uppercase;
+          font-weight: bold;
+        }
+        .report-info {
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #f8f9fa;
+          border: 1px solid #ddd;
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-bottom: 20px;
+          font-size: 10px;
+        }
+        th, td { 
+          border: 1px solid #ddd; 
+          padding: 6px; 
+          text-align: left;
+        }
+        th { 
+          background-color: #f2f2f2; 
+          font-weight: bold;
+          text-align: center;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #ccc;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+        .status-active { color: #16a34a; font-weight: bold; }
+        .status-inactive { color: #dc2626; font-weight: bold; }
+        .status-on-leave { color: #ca8a04; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-name">Planets Pick ERP System</div>
+        <div class="report-title">Employee Directory Report</div>
+        <div>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+      </div>
+
+      <div class="report-info">
+        <strong>Report Summary:</strong><br>
+        Total Employees: ${employees.length}<br>
+        Active Employees: ${employees.filter(emp => emp.status === 'active').length}<br>
+        Inactive Employees: ${employees.filter(emp => emp.status === 'inactive').length}<br>
+        On Leave: ${employees.filter(emp => emp.status === 'on-leave').length}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Department</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Join Date</th>
+            <th>Salary (Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${employees.map(emp => `
+            <tr>
+              <td>${emp.employeeId || 'N/A'}</td>
+              <td>${emp.name}</td>
+              <td>${emp.position}</td>
+              <td>${emp.department}</td>
+              <td>${emp.email}</td>
+              <td>${emp.phone}</td>
+              <td class="status-${emp.status}">${emp.status.toUpperCase()}</td>
+              <td>${emp.joinDate || 'N/A'}</td>
+              <td style="text-align: right;">${emp.salary ? emp.salary.toLocaleString() : 'N/A'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>This report was generated by Planets Pick ERP System</p>
+        <p>For questions regarding this report, please contact the Human Resources Department</p>
+        <p>Report ID: EMP-${new Date().getTime()}</p>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Create and download HTML file for PDF conversion
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `employee_directory_${new Date().toISOString().split("T")[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    // Show instructions for PDF conversion
+    setTimeout(() => {
+      alert(
+        'Employee directory downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save'
+      );
+    }, 100);
+  };
+
+  const exportAttendanceReportToPDF = () => {
+    // Generate comprehensive attendance report data
+    const reportData = {
+      startDate: reportStartDate,
+      endDate: reportEndDate,
+      totalEmployees: employees.length,
+      attendanceSummary: employees.map((emp) => ({
+        name: emp.name,
+        department: emp.department,
+        attendance: todayAttendance.filter((a) => a.employeeId === emp.id)
+          .length,
+        present: todayAttendance.filter(
+          (a) => a.employeeId === emp.id && a.status === "present"
+        ).length,
+        absent: todayAttendance.filter(
+          (a) => a.employeeId === emp.id && a.status === "absent"
+        ).length,
+        late: todayAttendance.filter(
+          (a) => a.employeeId === emp.id && a.status === "late"
+        ).length,
+      })),
+    };
+
+    // Create HTML content for PDF generation
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Employee Attendance Report</title>
+      <style>
+        @page { margin: 0.5in; size: A4; }
+        body { 
+          font-family: 'Times New Roman', serif; 
+          margin: 0; 
+          padding: 0;
+          font-size: 12px;
+          line-height: 1.4;
+          color: #333;
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 30px;
+          border-bottom: 2px solid #000;
+          padding-bottom: 20px;
+        }
+        .company-name { 
+          font-size: 24px; 
+          font-weight: bold; 
+          margin-bottom: 5px;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+        }
+        .report-title { 
+          font-size: 18px; 
+          margin-bottom: 5px;
+          text-transform: uppercase;
+          font-weight: bold;
+        }
+        .date-range { 
+          font-size: 14px; 
+          color: #666;
+          margin-bottom: 10px;
+        }
+        .report-info {
+          margin-bottom: 20px;
+          padding: 10px;
+          background-color: #f8f9fa;
+          border: 1px solid #ddd;
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-bottom: 20px;
+        }
+        th, td { 
+          border: 1px solid #ddd; 
+          padding: 8px; 
+          text-align: left;
+        }
+        th { 
+          background-color: #f2f2f2; 
+          font-weight: bold;
+          text-align: center;
+        }
+        .summary-stats {
+          display: flex;
+          justify-content: space-around;
+          margin-bottom: 20px;
+          background-color: #f8f9fa;
+          padding: 15px;
+          border: 1px solid #ddd;
+        }
+        .stat-item {
+          text-align: center;
+        }
+        .stat-number {
+          font-size: 24px;
+          font-weight: bold;
+          color: #2563eb;
+        }
+        .stat-label {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+        }
+        .footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 1px solid #ccc;
+          text-align: center;
+          font-size: 10px;
+          color: #666;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-name">Planets Pick ERP System</div>
+        <div class="report-title">Employee Attendance Report</div>
+        <div class="date-range">Period: ${new Date(reportStartDate).toLocaleDateString()} to ${new Date(reportEndDate).toLocaleDateString()}</div>
+        <div>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</div>
+      </div>
+
+      <div class="report-info">
+        <strong>Report Summary:</strong><br>
+        Total Employees: ${reportData.totalEmployees}<br>
+        Report Period: ${reportData.startDate} to ${reportData.endDate}
+      </div>
+
+      <div class="summary-stats">
+        <div class="stat-item">
+          <div class="stat-number">${reportData.totalEmployees}</div>
+          <div class="stat-label">Total Employees</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${reportData.attendanceSummary.reduce((sum, emp) => sum + emp.present, 0)}</div>
+          <div class="stat-label">Total Present</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${reportData.attendanceSummary.reduce((sum, emp) => sum + emp.absent, 0)}</div>
+          <div class="stat-label">Total Absent</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${reportData.attendanceSummary.reduce((sum, emp) => sum + emp.late, 0)}</div>
+          <div class="stat-label">Total Late</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Employee Name</th>
+            <th>Department</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Late</th>
+            <th>Attendance Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${reportData.attendanceSummary.map(emp => {
+            const total = emp.present + emp.absent + emp.late;
+            const rate = total > 0 ? ((emp.present / total) * 100).toFixed(1) : '0.0';
+            return `
+            <tr>
+              <td>${emp.name}</td>
+              <td>${emp.department}</td>
+              <td style="text-align: center;">${emp.present}</td>
+              <td style="text-align: center;">${emp.absent}</td>
+              <td style="text-align: center;">${emp.late}</td>
+              <td style="text-align: center;">${rate}%</td>
+            </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>This report was generated by Planets Pick ERP System</p>
+        <p>For questions regarding this report, please contact the Human Resources Department</p>
+        <p>Report ID: ATT-${new Date().getTime()}</p>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Create and download HTML file for PDF conversion
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance_report_${reportStartDate}_to_${reportEndDate}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    // Show instructions for PDF conversion
+    setTimeout(() => {
+      alert(
+        'Attendance report downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save'
+      );
+    }, 100);
   };
 
   return (
@@ -1987,24 +2260,34 @@ export default function Employees() {
                   />
                 </div>
 
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={
-                      !!editingEmployee.userId || editingEmployee.hasUserAccount
-                    }
-                    disabled={!!editingEmployee.userId} // cannot uncheck if already a user
-                    onChange={(e) =>
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        hasUserAccount: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <label className="text-sm font-medium text-gray-700">
-                    Create User
-                  </label>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="createUserEdit"
+                      checked={createUserChecked}
+                      disabled={createUserDisabled}
+                      onChange={(e) => {
+                        if (!createUserDisabled) {
+                          setCreateUserChecked(e.target.checked);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label
+                      htmlFor="createUserEdit"
+                      className="ml-2 text-sm text-gray-700"
+                    >
+                      Create User Account{" "}
+                      {createUserDisabled && "(Already has account)"}
+                    </label>
+                  </div>
+                  {createUserChecked && !createUserDisabled && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      A user account request will be sent to the admin for
+                      approval
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -2364,14 +2647,22 @@ export default function Employees() {
                   Employee List Export
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Export complete employee data to Excel format
+                  Export complete employee data in your preferred format
                 </p>
-                <button
-                  onClick={exportToExcel}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  Export to Excel
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={exportToExcel}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  >
+                    Export to CSV
+                  </button>
+                  <button
+                    onClick={exportEmployeeListToPDF}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  >
+                    Export to PDF
+                  </button>
+                </div>
               </div>
 
               {/* Attendance Report */}
@@ -2416,11 +2707,7 @@ export default function Employees() {
                     Generate Report
                   </button>
                   <button
-                    onClick={() => {
-                      alert(
-                        "PDF export ready! In production, this would download a PDF file."
-                      );
-                    }}
+                    onClick={exportAttendanceReportToPDF}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
                   >
                     Export to PDF
