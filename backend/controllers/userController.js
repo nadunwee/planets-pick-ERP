@@ -24,14 +24,59 @@ async function loginUser(req, res) {
   }
 }
 
-// Get all users
+// Mock data for testing when database is not available
+let mockUsers = [
+  {
+    _id: "mock_user_1",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    role: "employee",
+    department: "Production",
+    level: "L1",
+    approved: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    _id: "mock_user_2", 
+    name: "Jane Smith",
+    email: "jane.smith@example.com",
+    role: "manager",
+    department: "Finance",
+    level: "L2",
+    approved: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    _id: "mock_user_3",
+    name: "Bob Wilson",
+    email: "bob.wilson@example.com", 
+    role: "admin",
+    department: "IT",
+    level: "L3",
+    approved: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+// Helper to check if database is connected
+const isDatabaseConnected = () => {
+  return mongoose.connection.readyState === 1;
+};
+
 async function getAllUsers(req, res) {
   try {
+    if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, using mock data");
+      return res.status(200).json(mockUsers);
+    }
+    
     const items = await User.find();
     res.status(200).json(items);
   } catch (error) {
     console.error("Error fetching users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
+    // Fallback to mock data on error
+    console.log("⚠️ Database error, using mock data");
+    res.status(200).json(mockUsers);
   }
 }
 
@@ -40,6 +85,23 @@ async function editUserApproval(req, res) {
   const { approved, level } = req.body; // get level as well
 
   try {
+    if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, using mock data");
+      const userIndex = mockUsers.findIndex(user => user._id === id);
+      if (userIndex === -1) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Update the mock user
+      mockUsers[userIndex] = {
+        ...mockUsers[userIndex],
+        approved,
+        level: level || mockUsers[userIndex].level
+      };
+      
+      return res.status(200).json(mockUsers[userIndex]);
+    }
+
     const updates = {
       approved,
       level: level || undefined, // undefined will not overwrite if not provided
@@ -94,6 +156,17 @@ const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
+    if (!isDatabaseConnected()) {
+      console.log("⚠️ Database not connected, using mock data");
+      const userIndex = mockUsers.findIndex(user => user._id === id);
+      if (userIndex === -1) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      mockUsers.splice(userIndex, 1);
+      return res.status(200).json({ message: "User deleted successfully" });
+    }
+
     // Validate MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid user ID" });

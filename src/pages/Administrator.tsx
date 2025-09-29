@@ -18,7 +18,7 @@ interface User {
   role: string;
   department: string;
   level: string;
-  approved: string;
+  approved: boolean;
   createdAt?: string;
 }
 
@@ -43,7 +43,7 @@ export default function Administrator() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:4000/api/user/all_users");
+      const res = await fetch("http://localhost:4000/api/users");
       if (!res.ok) throw new Error("Failed to fetch users");
       const data: User[] = await res.json();
       setAllUsers(data);
@@ -75,7 +75,7 @@ export default function Administrator() {
   ) {
     try {
       const res = await fetch(
-        `http://localhost:4000/api/user/edit_approval/${userId}`,
+        `http://localhost:4000/api/users/${userId}`,
         {
           method: "PATCH",
           headers: {
@@ -98,7 +98,7 @@ export default function Administrator() {
 
   async function handleDelete(userId: string) {
     try {
-      const res = await fetch(`http://localhost:4000/api/user/${userId}`, {
+      const res = await fetch(`http://localhost:4000/api/users/${userId}`, {
         method: "DELETE",
       });
 
