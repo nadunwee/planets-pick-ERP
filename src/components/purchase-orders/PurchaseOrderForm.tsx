@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Modal, Form, Input, Select, Button, Space, InputNumber, Divider, Alert, message } from "antd";
+import { Modal, Form, Input, Select, Space, InputNumber, Divider, Alert, message } from "antd";
 // import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { PurchaseOrder, Supplier } from "../../types";
 import { listSuppliersLite } from "../services/supplierService";
@@ -168,7 +168,7 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
             }
           }]}
         >
-          {(fields, { add, remove }, { errors }) => (
+          {(fields, _, { errors }) => (
             <>
               {fields.map((field) => (
                 <Space key={field.key} align="baseline" className="w-full mb-2">
@@ -178,17 +178,25 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
                     fieldKey={[field.fieldKey!, "material"]} 
                     rules={[
                       { required: true, message: "Material required" },
+                      { min: 2, message: "Material name must be at least 2 characters" },
+                      { max: 100, message: "Material name must not exceed 100 characters" },
                       {
                         validator: (_, value) => {
                           if (!value || value.trim() === '') {
                             return Promise.reject(new Error('Material name is required'));
+                          }
+                          if (value.trim().length < 2) {
+                            return Promise.reject(new Error('Material name must be at least 2 characters'));
+                          }
+                          if (value.length > 100) {
+                            return Promise.reject(new Error('Material name must not exceed 100 characters'));
                           }
                           return Promise.resolve();
                         }
                       }
                     ]}
                   >
-                    <Input placeholder="Material" />
+                    <Input placeholder="Material name" />
                   </Form.Item>
                   <Form.Item 
                     {...field} 
@@ -196,22 +204,31 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
                     fieldKey={[field.fieldKey!, "quantity"]} 
                     rules={[
                       { required: true, message: "Qty required" },
-                      { type: 'number', min: 1, message: 'Quantity must be at least 1' },
+                      { type: 'number', min: 1, max: 999999, message: 'Quantity must be between 1-999999' },
                       {
                         validator: (_, value) => {
                           if (value === undefined || value === null || value === '') {
                             return Promise.reject(new Error('Quantity is required'));
                           }
                           const num = Number(value);
-                          if (isNaN(num) || num <= 0) {
+                          if (isNaN(num)) {
+                            return Promise.reject(new Error('Quantity must be a valid number'));
+                          }
+                          if (num <= 0) {
                             return Promise.reject(new Error('Quantity must be a positive number'));
+                          }
+                          if (num > 999999) {
+                            return Promise.reject(new Error('Quantity must not exceed 999999'));
+                          }
+                          if (!Number.isInteger(num)) {
+                            return Promise.reject(new Error('Quantity must be a whole number'));
                           }
                           return Promise.resolve();
                         }
                       }
                     ]}
                   >
-                    <InputNumber min={1} placeholder="Qty" />
+                    <InputNumber min={1} max={999999} placeholder="Qty" />
                   </Form.Item>
                   <Form.Item 
                     {...field} 
@@ -219,22 +236,32 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
                     fieldKey={[field.fieldKey!, "price"]} 
                     rules={[
                       { required: true, message: "Price required" },
-                      { type: 'number', min: 0, message: 'Price must be at least 0' },
+                      { type: 'number', min: 0, max: 999999.99, message: 'Price must be between 0-999999.99' },
                       {
                         validator: (_, value) => {
                           if (value === undefined || value === null || value === '') {
                             return Promise.reject(new Error('Price is required'));
                           }
                           const num = Number(value);
-                          if (isNaN(num) || num < 0) {
+                          if (isNaN(num)) {
+                            return Promise.reject(new Error('Price must be a valid number'));
+                          }
+                          if (num < 0) {
                             return Promise.reject(new Error('Price must be a non-negative number'));
+                          }
+                          if (num > 999999.99) {
+                            return Promise.reject(new Error('Price must not exceed 999999.99'));
+                          }
+                          // Check for reasonable decimal places (max 2)
+                          if (num.toString().includes('.') && num.toString().split('.')[1].length > 2) {
+                            return Promise.reject(new Error('Price can have maximum 2 decimal places'));
                           }
                           return Promise.resolve();
                         }
                       }
                     ]}
                   >
-                    <InputNumber min={0} step={0.01} placeholder="Price" />
+                    <InputNumber min={0} max={999999.99} step={0.01} placeholder="Price" />
                   </Form.Item>
                   {/* <MinusCircleOutlined onClick={() => remove(field.name)} /> */}
                 </Space>
@@ -271,7 +298,22 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
           ]} />
         </Form.Item>
 
-        <Form.Item name="notes" label="Notes" initialValue="">
+        <Form.Item 
+          name="notes" 
+          label="Notes" 
+          initialValue=""
+          rules={[
+            { max: 1000, message: "Notes must not exceed 1000 characters" },
+            {
+              validator: (_, value) => {
+                if (value && value.length > 1000) {
+                  return Promise.reject(new Error('Notes must not exceed 1000 characters'));
+                }
+                return Promise.resolve();
+              }
+            }
+          ]}
+        >
           <Input.TextArea rows={3} placeholder="Optional notes" />
         </Form.Item>
         

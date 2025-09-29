@@ -10,6 +10,9 @@ const createValidation = [
   body('email').optional().isEmail().withMessage('Invalid email'),
   body('onTimeDeliveryRate').optional().isFloat({ min: 0, max: 100 }),
   body('qualityScore').optional().isFloat({ min: 0, max: 100 }),
+  body('responsivenessScore').optional().isFloat({ min: 0, max: 100 }),
+  body('totalSpend').optional().isFloat({ min: 0 }),
+  body('ordersCount').optional().isInt({ min: 0 }),
 ];
 
 const updateValidation = [
@@ -17,6 +20,9 @@ const updateValidation = [
   body('email').optional().isEmail().withMessage('Invalid email'),
   body('onTimeDeliveryRate').optional().isFloat({ min: 0, max: 100 }),
   body('qualityScore').optional().isFloat({ min: 0, max: 100 }),
+  body('responsivenessScore').optional().isFloat({ min: 0, max: 100 }),
+  body('totalSpend').optional().isFloat({ min: 0 }),
+  body('ordersCount').optional().isInt({ min: 0 }),
 ];
 
 router.post('/', createValidation, supplierController.createSupplier);

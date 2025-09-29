@@ -13,10 +13,7 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
-const customerRoutes = require("./routes/customer.js");
-const orderRoutes = require("./routes/order.js");
-const financeRoutes = require("./routes/finance.js");
-const productionRoutes = require("./routes/production.js");
+
 
 const app = express();
 
@@ -48,6 +45,9 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/reports", require("./routes/reportRoutes.js"));
 app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
 app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
+
+// Procurement Reports routes
+app.use("/api/procurement-reports", require("./routes/procurementReportsRoutes.js"));
 
 // Error handling middleware from ranudi branch
 app.use(require("./middleware/errorHandler.js").notFound);
