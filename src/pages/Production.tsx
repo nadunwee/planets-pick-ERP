@@ -455,17 +455,28 @@ export default function Production() {
 
         console.log("📤 Sending updates:", updates);
 
-        const updatedBatch = await productionService.updateBatch(
-          editingBatch,
-          updates
-        );
-        const transformedBatch = transformBackendBatch(updatedBatch);
+        try {
+          const updatedBatch = await productionService.updateBatch(
+            editingBatch,
+            updates
+          );
+          console.log("✅ Update response received:", updatedBatch);
+          
+          const transformedBatch = transformBackendBatch(updatedBatch);
+          console.log("🔄 Transformed batch:", transformedBatch);
 
-        setProductionBatches((prev) =>
-          prev.map((batch) =>
-            batch.id === editingBatch ? transformedBatch : batch
-          )
-        );
+          setProductionBatches((prev) =>
+            prev.map((batch) =>
+              batch.id === editingBatch ? transformedBatch : batch
+            )
+          );
+          console.log("✅ Batch updated in state successfully");
+        } catch (updateError) {
+          console.error("❌ Failed to update batch:", updateError);
+          setError(`Failed to update batch: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+          return; // Don't reset form and close modal on error
+        }
+        
         setEditingBatch(null);
       } else {
         // Create new batch
