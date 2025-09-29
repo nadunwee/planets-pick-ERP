@@ -79,6 +79,13 @@ const employeeSchema = new Schema(
       default: [],
     },
 
+    // Status Information
+    status: {
+      type: String,
+      enum: ["active", "inactive", "on-leave"],
+      default: "active",
+    },
+
     // User Account Information
     hasUserAccount: {
       type: Boolean,
