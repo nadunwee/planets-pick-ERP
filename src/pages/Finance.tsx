@@ -6,6 +6,7 @@ import {
   FileText,
   Plus,
   X,
+  Download,
   Edit2,
   Trash2,
   BookOpen,
