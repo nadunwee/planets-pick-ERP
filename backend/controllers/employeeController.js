@@ -111,6 +111,32 @@ async function updateEmployee(req, res) {
       }
     }
 
+    // If employee has existing user account, sync the updates to user table
+    if (hasExistingUser && employee.userId) {
+      try {
+        const user = await User.findById(employee.userId);
+        if (user) {
+          // Update user fields that correspond to employee fields
+          user.name = employee.name;
+          user.email = employee.email;
+          user.department = employee.department || user.department;
+          user.role = employee.position || user.role;
+          await user.save();
+          
+          return res.status(200).json({
+            employee,
+            message: "Employee and user account updated successfully",
+          });
+        }
+      } catch (userError) {
+        console.error("User update failed:", userError);
+        return res.status(200).json({
+          employee,
+          warning: "Employee updated but user account sync failed.",
+        });
+      }
+    }
+
     return res.status(200).json({ employee });
   } catch (error) {
     console.error("Update employee error:", error);
