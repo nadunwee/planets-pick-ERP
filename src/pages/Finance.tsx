@@ -2147,190 +2147,194 @@ ${"=".repeat(80)}
                 ))}
               </select>
             </div>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Account
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredRows.length === 0 ? (
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="px-4 py-8 text-center text-gray-500"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <FileText className="text-gray-400" size={48} />
-                        <span className="text-lg">No records found</span>
-                        <span className="text-sm">
-                          Try adjusting your search or filters
-                        </span>
-                      </div>
-                    </td>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Account
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  filteredRows.map((r) => (
-                    <tr
-                      key={`${r.source}-${r._id}`}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {new Date(r.date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            r.type === "income" || r.type === "asset"
-                              ? "bg-green-100 text-green-800"
-                              : r.type === "expense" || r.type === "liability"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {r.source === "assetLiability" ? (
-                            <>
-                              {r.type === "asset" ? "📈" : "📉"} {r.type}
-                            </>
-                          ) : (
-                            <>
-                              {r.type === "income" ? "💰" : "💸"} {r.type}
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                        {r.description}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                          {r.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {r.account === "-" ? (
-                          <span className="text-gray-400 italic">N/A</span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
-                            {r.account}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredRows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-4 py-8 text-center text-gray-500"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText className="text-gray-400" size={48} />
+                          <span className="text-lg">No records found</span>
+                          <span className="text-sm">
+                            Try adjusting your search or filters
                           </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-semibold">
-                        <span
-                          className={`${
-                            r.type === "income" || r.type === "asset"
-                              ? "text-green-600"
-                              : r.type === "expense" || r.type === "liability"
-                              ? "text-red-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {r.amount.toLocaleString("en-LK", {
-                            style: "currency",
-                            currency: "LKR",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            r.status
-                          )}`}
-                        >
-                          {r.status === "completed" && "✅"}
-                          {r.status === "pending" && "⏳"}
-                          {r.status === "failed" && "❌"}
-                          {r.status === "active" && "✅"}
-                          {r.status === "sold" && "🏷️"}
-                          {r.status === "settled" && "✅"} {r.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1">
-                          {r.source === "transaction" ? (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleEditTransaction(r.raw as Transaction)
-                                }
-                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-                                title="Edit transaction"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteTransaction(r.raw as Transaction)
-                                }
-                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                                title="Delete transaction"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </>
-                          ) : r.source === "assetLiability" ? (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleEditAssetLiability(
-                                    r.raw as AssetLiability
-                                  )
-                                }
-                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-                                title="Edit asset/liability"
-                              >
-                                <Edit2 size={12} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteAssetLiability(
-                                    r.raw as AssetLiability
-                                  )
-                                }
-                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                                title="Delete asset/liability"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-gray-400 text-xs">—</span>
-                          )}
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredRows.map((r) => (
+                      <tr
+                        key={`${r.source}-${r._id}`}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {new Date(r.date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              r.type === "income" || r.type === "asset"
+                                ? "bg-green-100 text-green-800"
+                                : r.type === "expense" || r.type === "liability"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {r.source === "assetLiability" ? (
+                              <>
+                                {r.type === "asset" ? "📈" : "📉"} {r.type}
+                              </>
+                            ) : (
+                              <>
+                                {r.type === "income" ? "💰" : "💸"} {r.type}
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                          {r.description}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                            {r.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {r.account === "-" ? (
+                            <span className="text-gray-400 italic">N/A</span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
+                              {r.account}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold">
+                          <span
+                            className={`${
+                              r.type === "income" || r.type === "asset"
+                                ? "text-green-600"
+                                : r.type === "expense" || r.type === "liability"
+                                ? "text-red-600"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {r.amount.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                              r.status
+                            )}`}
+                          >
+                            {r.status === "completed" && "✅"}
+                            {r.status === "pending" && "⏳"}
+                            {r.status === "failed" && "❌"}
+                            {r.status === "active" && "✅"}
+                            {r.status === "sold" && "🏷️"}
+                            {r.status === "settled" && "✅"} {r.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1">
+                            {r.source === "transaction" ? (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleEditTransaction(r.raw as Transaction)
+                                  }
+                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                                  title="Edit transaction"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteTransaction(
+                                      r.raw as Transaction
+                                    )
+                                  }
+                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                  title="Delete transaction"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </>
+                            ) : r.source === "assetLiability" ? (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleEditAssetLiability(
+                                      r.raw as AssetLiability
+                                    )
+                                  }
+                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                                  title="Edit asset/liability"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteAssetLiability(
+                                      r.raw as AssetLiability
+                                    )
+                                  }
+                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                  title="Delete asset/liability"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Charts Section */}
