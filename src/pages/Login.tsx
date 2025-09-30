@@ -57,6 +57,10 @@ export default function Login({ onLogin }: LoginProps) {
         return;
       }
 
+      if (data.department === "Human Resources") {
+        navigate("/employees");
+        return;
+      }
       // Default redirect
       navigate("/dashboard");
     } catch (err: any) {
