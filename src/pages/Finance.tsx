@@ -865,17 +865,11 @@ export default function Finance() {
   };
 
   // --- SCROLL TO TOP BUTTON STATE ---
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 1); // show button after 300px scroll
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const [showScrollTop, setShowScrollTop] = useState(true);
 
   const scrollToTop = () => {
+    console.log("Scrolling to top");
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1060,6 +1054,16 @@ export default function Finance() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   };
+
+  // Scroll handler (already declared above)
+  // const [showScrollTop, setShowScrollTop] = useState(false); // REMOVE this duplicate
+  // useEffect(() => {
+  //   const handleScroll = () => setShowScrollTop(window.scrollY > 300);
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, []);
+
+  // const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" }); // Already declared above
 
   const downloadExcelReport = (
     reportType: string,
@@ -1670,6 +1674,15 @@ ${"=".repeat(80)}
   // --- RENDER ---
   return (
     <div className="p-4 space-y-6">
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg z-50 hover:bg-indigo-700 transition"
+        >
+          ↑ Top
+        </button>
+      )}
+
       {/* Header + Add Buttons */}
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div>
