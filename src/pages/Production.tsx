@@ -434,6 +434,16 @@ export default function Production() {
 
   const handleSubmitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    const handleSubmitBatch = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!batchFormData.qualityChecked) {
+    setError("Please verify and check the Quality Checked box before submitting.");
+    return;
+  }
+
+  try {
+    setError(null);
 
     try {
       setError(null);
