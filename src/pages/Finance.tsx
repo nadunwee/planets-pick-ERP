@@ -28,26 +28,7 @@ import {
   Legend,
 } from "chart.js";
 
-function PageWithScrollTop() {
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      // show button after scrolling 300px down
-      setShowScrollTop(window.scrollY > 300);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth", // smooth scroll animation
-    });
-  };
-}
 
 // --- Register ChartJS components ---
 ChartJS.register(
@@ -181,6 +162,9 @@ export default function Finance() {
     "transactions"
   );
 
+  // --- SCROLL TO TOP STATE ---
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   // --- STATES ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -276,6 +260,25 @@ export default function Finance() {
       resetAssetForm();
     }
   }, [showAddAssetModal]);
+
+  // --- SCROLL TO TOP EFFECT ---
+  useEffect(() => {
+    const handleScroll = () => {
+      // Find the scrollable container instead of using window
+      const scrollContainer = document.querySelector('.h-screen.overflow-y-auto');
+      if (scrollContainer) {
+        // Show button after scrolling 300px down in the container
+        setShowScrollTop(scrollContainer.scrollTop > 300);
+      }
+    };
+
+    // Listen to scroll events on the scrollable container instead of window
+    const scrollContainer = document.querySelector('.h-screen.overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleScroll);
+      return () => scrollContainer.removeEventListener("scroll", handleScroll);
+    }
+  }, []);
 
   // --- GENERATE LEDGER ACCOUNTS FROM TRANSACTIONS ---
   const generateLedgerAccounts = useMemo(() => {
@@ -885,7 +888,16 @@ export default function Finance() {
     }
   };
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollToTop = () => {
+    // Find the scrollable container and scroll it to top
+    const scrollContainer = document.querySelector('.h-screen.overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      // Fallback to window scroll if container not found
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const downloadPDFReport = (
     reportType: string,
@@ -1068,16 +1080,6 @@ export default function Finance() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   };
-
-  // Scroll handler (already declared above)
-  // const [showScrollTop, setShowScrollTop] = useState(false); // REMOVE this duplicate
-  // useEffect(() => {
-  //   const handleScroll = () => setShowScrollTop(window.scrollY > 300);
-  //   window.addEventListener("scroll", handleScroll);
-  //   return () => window.removeEventListener("scroll", handleScroll);
-  // }, []);
-
-  // const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" }); // Already declared above
 
   const downloadExcelReport = (
     reportType: string,
@@ -2489,13 +2491,6 @@ ${"=".repeat(80)}
                 </div>
               </div>
             </div>
-
-            <button
-              onClick={scrollToTop}
-              className="fixed bottom-8 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg z-50 hover:bg-indigo-700 transition"
-            >
-              ↑ Top
-            </button>
           </div>
         </>
       )}
@@ -2972,6 +2967,17 @@ ${"=".repeat(80)}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg z-50 hover:bg-indigo-700 transition-all duration-300 animate-in slide-in-from-bottom-2"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={16} />
+        </button>
       )}
     </div>
   );
