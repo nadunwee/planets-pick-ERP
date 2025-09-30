@@ -176,8 +176,8 @@ export default function OrdersSales() {
   };
 
   useEffect(() => {
-    const level = localStorage.getItem("level") || "{}";
-    setUserLevel(level);
+    const department = localStorage.getItem("department") || "{}";
+    setUserLevel(department);
   }, []);
 
   const handleCreateCustomer = async (data: any) => {
@@ -299,7 +299,7 @@ export default function OrdersSales() {
             <Plus size={16} />
             New Order
           </button>
-          {userLevel === "L1" && (
+          {userLevel === "admin" && (
             <button
               onClick={() => setShowCustomerModal(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
