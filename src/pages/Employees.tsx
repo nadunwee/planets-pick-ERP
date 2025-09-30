@@ -495,6 +495,8 @@ export default function Employees() {
     "Quality Assurance",
     "Human Resources",
     "Maintenance",
+    "Procurement",
+    "Inventory",
   ];
 
   // Reset pagination when search or filter changes
@@ -1627,6 +1629,8 @@ export default function Employees() {
                     <option value="Quality Assurance">Quality Assurance</option>
                     <option value="Human Resources">Human Resources</option>
                     <option value="Maintenance">Maintenance</option>
+                    <option value="Procurement">Procurement</option>
+                    <option value="Inventory">Inventory</option>
                   </select>
                 </div>
 
@@ -1984,6 +1988,8 @@ export default function Employees() {
                     <option value="Quality Assurance">Quality Assurance</option>
                     <option value="Human Resources">Human Resources</option>
                     <option value="Maintenance">Maintenance</option>
+                    <option value="Procurement">Procurement</option>
+                    <option value="Inventory">Inventory</option>
                   </select>
                 </div>
 
@@ -2281,7 +2287,8 @@ export default function Employees() {
                     className="ml-2 text-sm text-gray-700"
                   >
                     Create User Account{" "}
-                    {createUserDisabled && "(Already has account)"}
+                    {createUserDisabled &&
+                      "(Already has an account or account creation request has been sent)"}
                   </label>
                 </div>
                 {createUserChecked && !createUserDisabled && (

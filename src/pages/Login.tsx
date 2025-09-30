@@ -52,11 +52,15 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       // Redirect based on department
-      if (data.department === "Inventory") {
+      if (data.department === "Production") {
         navigate("/inventory");
         return;
       }
 
+      if (data.department === "Human Resources") {
+        navigate("/employees");
+        return;
+      }
       // Default redirect
       navigate("/dashboard");
     } catch (err: any) {
