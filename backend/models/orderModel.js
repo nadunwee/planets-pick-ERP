@@ -24,7 +24,6 @@ const orderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["confirmed", "pending", "cancelled"],
       default: "pending",
     },
     customer: { type: Schema.Types.ObjectId, ref: "Customer", required: true },
@@ -32,7 +31,6 @@ const orderSchema = new Schema(
     totalAmount: { type: Number, required: true },
     paymentStatus: {
       type: String,
-      enum: ["paid", "unpaid", "partial"],
       default: "unpaid",
     },
     paymentMethod: { type: String },
