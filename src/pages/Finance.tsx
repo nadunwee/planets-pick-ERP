@@ -864,14 +864,7 @@ export default function Finance() {
     }
   };
 
-  // --- SCROLL TO TOP BUTTON STATE ---
-  const [showScrollTop, setShowScrollTop] = useState(true);
-
-  const scrollToTop = () => {
-    console.log("Scrolling to top");
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   const downloadPDFReport = (
     reportType: string,
@@ -1674,15 +1667,6 @@ ${"=".repeat(80)}
   // --- RENDER ---
   return (
     <div className="p-4 space-y-6">
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg z-50 hover:bg-indigo-700 transition"
-        >
-          ↑ Top
-        </button>
-      )}
-
       {/* Header + Add Buttons */}
       <div className="flex justify-between items-start flex-wrap gap-2">
         <div>
@@ -2485,14 +2469,12 @@ ${"=".repeat(80)}
               </div>
             </div>
 
-            {showScrollTop && (
-              <button
-                onClick={scrollToTop}
-                className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition"
-              >
-                <ArrowUp className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={scrollToTop}
+              className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
           </div>
         </>
       )}
