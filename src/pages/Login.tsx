@@ -52,7 +52,7 @@ export default function Login({ onLogin }: LoginProps) {
       }
 
       // Redirect based on department
-      if (data.department === "Inventory") {
+      if (data.department === "Production") {
         navigate("/inventory");
         return;
       }

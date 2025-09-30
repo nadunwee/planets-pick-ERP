@@ -79,6 +79,7 @@ export function Sidebar() {
 
   const productionMan = [
     "Dashboard",
+    "Procurement",
     "Employees",
     "Delivery",
     "Finance",
@@ -110,7 +111,7 @@ export function Sidebar() {
     );
   }
 
-  if (userDepartment === "production") {
+  if (userDepartment === "Production") {
     filteredMenuItems = menuItems.filter(
       (item) => !productionMan.includes(item.name)
     );
