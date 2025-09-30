@@ -2281,7 +2281,8 @@ export default function Employees() {
                     className="ml-2 text-sm text-gray-700"
                   >
                     Create User Account{" "}
-                    {createUserDisabled && "(Already has account)"}
+                    {createUserDisabled &&
+                      "(Already has an account or account creation request has been sent)"}
                   </label>
                 </div>
                 {createUserChecked && !createUserDisabled && (
