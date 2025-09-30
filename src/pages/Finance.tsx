@@ -863,6 +863,21 @@ export default function Finance() {
     }
   };
 
+  // --- SCROLL TO TOP BUTTON STATE ---
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300); // show button after 300px scroll
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const downloadPDFReport = (
     reportType: string,
     reports: FinancialReport,
@@ -2447,7 +2462,7 @@ ${"=".repeat(80)}
                       maximumFractionDigits: 0,
                     })}
                   </p>
-                  <p className="text-xs text-gray-500">Net Worth</p>
+                  <p className="text-xs text-gray-500">Net Worthy</p>
                 </div>
               </div>
             </div>
