@@ -4,6 +4,8 @@ const {
   editInventoryItem,
   updateStock,
   getAllInventory,
+  getInventoryItem,
+  deleteInventoryItem,
 } = require("../controllers/inventoryController");
 
 const router = express.Router();
@@ -19,5 +21,11 @@ router.put("/update_stock/:id", updateStock);
 
 // Get all inventory items
 router.get("/all_inventory", getAllInventory);
+
+// Get single inventory item
+router.get("/:id", getInventoryItem);
+
+// Delete inventory item
+router.delete("/:id", deleteInventoryItem);
 
 module.exports = router;

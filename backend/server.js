@@ -12,10 +12,7 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
-// const customerRoutes = require("./routes/customer.js");
-// const orderRoutes = require("./routes/order.js");
-// const financeRoutes = require("./routes/finance.js");
-// const productionRoutes = require("./routes/production.js");
+const warehouseRoutes = require("./routes/warehouse.js");
 
 const app = express();
 
@@ -37,6 +34,7 @@ app.use("/api/inventory", inventoryRoutes); // Inventory endpoints
 app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/warehouse", warehouseRoutes); // Warehouse endpoints
 
 // Additional routes from ranudi branch
 app.use("/api/reports", require("./routes/reportRoutes.js"));
