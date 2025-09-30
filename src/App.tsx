@@ -17,6 +17,7 @@ import Wastage from "@/pages/Wastage";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Warehouse from "@/pages/Warehouse";
+import WarehouseTest from "@/pages/WarehouseTest";
 import Login from "@/pages/Login";
 import Procurement from "@/pages/Suppliers"; // 👈 import Suppliers page
 
@@ -68,6 +69,7 @@ function MainLayout() {
             <Route path="/procurement" element={<Procurement />} /> {/* 👈 Route for Suppliers page */}
             <Route path="/administrator" element={<Administrator />} />
             <Route path="/warehouse" element={<Warehouse />} />
+            <Route path="/warehouse-test" element={<WarehouseTest />} />
             <Route path="/wastage" element={<Wastage />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />

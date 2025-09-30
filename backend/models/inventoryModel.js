@@ -123,7 +123,6 @@ inventorySchema.pre("save", function (next) {
 });
 
 // Index for better query performance
-inventorySchema.index({ sku: 1 });
 inventorySchema.index({ zone: 1 });
 inventorySchema.index({ status: 1 });
 inventorySchema.index({ category: 1 });
