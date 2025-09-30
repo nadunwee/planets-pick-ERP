@@ -43,7 +43,7 @@ export default function Administrator() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:4000/api/user/all_users");
+      const res = await fetch("http://localhost:4000/api/users/");
       if (!res.ok) throw new Error("Failed to fetch users");
       const data: User[] = await res.json();
       setAllUsers(data);
@@ -75,7 +75,7 @@ export default function Administrator() {
   ) {
     try {
       const res = await fetch(
-        `http://localhost:4000/api/user/edit_approval/${userId}`,
+        `http://localhost:4000/api/users/edit_approval/${userId}`,
         {
           method: "PATCH",
           headers: {
