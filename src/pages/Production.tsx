@@ -434,16 +434,6 @@ export default function Production() {
 
   const handleSubmitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const handleSubmitBatch = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!batchFormData.qualityChecked) {
-    setError("Please verify and check the Quality Checked box before submitting.");
-    return;
-  }
-
-  try {
-    setError(null);
 
     try {
       setError(null);
@@ -1542,9 +1532,7 @@ export default function Production() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">Select batch item</option>
-                  <option value="Virgin Coconut Oil">
-                    Virgin Coconut BABY
-                  </option>
+                  <option value="Virgin Coconut Oil">Virgin Coconut Oil</option>
                   <option value="Dried Jackfruit">Dried Jackfruit</option>
                   <option value="Coconut Flour">Coconut Flour</option>
                   <option value="Coconut Milk">Coconut Milk</option>
