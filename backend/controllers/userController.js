@@ -112,10 +112,41 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// ✅ Approve/Reject User
+async function approveUser(req, res) {
+  const { id } = req.params;
+  const { approved, level } = req.body;
+
+  try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    // Prepare updates
+    const updates = {
+      approved: approved, // true, false, or "rejected"
+      ...(level && { level }), // only update if level is passed
+    };
+
+    const user = await User.findByIdAndUpdate(id, updates, { new: true });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Error approving user:", errorj);
+    res.status(500).json({ error: "Failed to approve user" });
+  }
+}
+
 module.exports = {
   loginUser,
   getAllUsers,
   editUserApproval,
   registerUser,
   deleteUser,
+  approveUser,
 };

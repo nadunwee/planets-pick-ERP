@@ -6,6 +6,7 @@ const {
   editUserApproval,
   registerUser,
   deleteUser,
+  approveUser,
 } = require("../controllers/userController.js");
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.patch("/:id", editUserApproval);
 
 // Delete user
 router.delete("/:id", deleteUser);
+
+// Approve user
+router.patch("/approve/:id", approveUser);
 
 module.exports = router;

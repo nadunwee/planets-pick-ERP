@@ -75,7 +75,7 @@ export default function Administrator() {
   ) {
     try {
       const res = await fetch(
-        `http://localhost:4000/api/users/edit_approval/${userId}`,
+        `http://localhost:4000/api/users/approve/${userId}`,
         {
           method: "PATCH",
           headers: {

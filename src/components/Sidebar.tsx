@@ -88,6 +88,20 @@ export function Sidebar() {
     "Settings",
   ];
 
+  const HR = [
+    "Dashboard",
+    "Inventory",
+    "Production",
+    "Orders & Sales",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Warehouse",
+    "Wastage",
+    "Settings",
+    "Procurement",
+  ];
+
   let filteredMenuItems = menuItems;
 
   if (userDepartment === "Inventory") {
@@ -100,6 +114,10 @@ export function Sidebar() {
     filteredMenuItems = menuItems.filter(
       (item) => !productionMan.includes(item.name)
     );
+  }
+
+  if (userDepartment === "HR") {
+    filteredMenuItems = menuItems.filter((item) => !HR.includes(item.name));
   }
 
   // Logout handler
