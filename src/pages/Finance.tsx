@@ -885,8 +885,6 @@ export default function Finance() {
     }
   };
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
   const downloadPDFReport = (
     reportType: string,
     reports: FinancialReport,
@@ -1077,7 +1075,92 @@ export default function Finance() {
   //   return () => window.removeEventListener("scroll", handleScroll);
   // }, []);
 
-  // const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" }); // Already declared above
+  // inside component:
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Find the scrolling container (the main content area)
+  useEffect(() => {
+    // The scrolling happens in the main content div with overflow-y-auto
+    const scrollContainer = document.querySelector(
+      ".h-screen.overflow-y-auto"
+    ) as HTMLElement;
+
+    if (scrollContainer) {
+      const onScroll = () => {
+        const scrollTop = scrollContainer.scrollTop;
+        console.log("Scroll container scrollTop:", scrollTop);
+        setShowScrollTop(scrollTop > 300);
+      };
+
+      scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+      return () => scrollContainer.removeEventListener("scroll", onScroll);
+    } else {
+      console.log("Scroll container not found, falling back to window");
+      const onScroll = () => {
+        const y =
+          window.scrollY ||
+          document.documentElement.scrollTop ||
+          document.body.scrollTop;
+        console.log("Window scrollY:", y);
+        setShowScrollTop(y > 300);
+      };
+
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return () => window.removeEventListener("scroll", onScroll);
+    }
+  }, []);
+
+  const scrollToTop = () => {
+    console.log("Scroll to top clicked!");
+
+    // Find the scrolling container (the main content area)
+    const scrollContainer = document.querySelector(
+      ".h-screen.overflow-y-auto"
+    ) as HTMLElement;
+
+    if (scrollContainer) {
+      console.log(
+        "Current scroll container position:",
+        scrollContainer.scrollTop
+      );
+
+      // Scroll the container to top
+      scrollContainer.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth",
+      });
+
+      // Fallback for immediate scroll if smooth doesn't work
+      setTimeout(() => {
+        if (scrollContainer.scrollTop > 100) {
+          console.log(
+            "Smooth scroll failed, using instant scroll on container"
+          );
+          scrollContainer.scrollTop = 0;
+        }
+      }, 100);
+    } else {
+      console.log("Container not found, trying window scroll");
+      console.log("Current window scroll position:", window.scrollY);
+
+      // Fallback to window scroll
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth",
+      });
+
+      setTimeout(() => {
+        if (window.scrollY > 100) {
+          console.log("Smooth scroll might have failed, using instant scroll");
+          window.scrollTo(0, 0);
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+        }
+      }, 100);
+    }
+  };
 
   const downloadExcelReport = (
     reportType: string,
@@ -2492,9 +2575,9 @@ ${"=".repeat(80)}
 
             <button
               onClick={scrollToTop}
-              className="fixed bottom-8 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-lg z-50 hover:bg-indigo-700 transition"
+              className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition"
             >
-              ↑ Top
+              <ArrowUp className="w-5 h-5" />
             </button>
           </div>
         </>
