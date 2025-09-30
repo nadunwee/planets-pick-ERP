@@ -471,7 +471,7 @@ export default function Production() {
             updates
           );
           console.log("✅ Update response received:", updatedBatch);
-          
+
           const transformedBatch = transformBackendBatch(updatedBatch);
           console.log("🔄 Transformed batch:", transformedBatch);
 
@@ -483,10 +483,16 @@ export default function Production() {
           console.log("✅ Batch updated in state successfully");
         } catch (updateError) {
           console.error("❌ Failed to update batch:", updateError);
-          setError(`Failed to update batch: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+          setError(
+            `Failed to update batch: ${
+              updateError instanceof Error
+                ? updateError.message
+                : "Unknown error"
+            }`
+          );
           return; // Don't reset form and close modal on error
         }
-        
+
         setEditingBatch(null);
       } else {
         // Create new batch
@@ -1536,7 +1542,9 @@ export default function Production() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="">Select batch item</option>
-                  <option value="Virgin Coconut Oil">Virgin Coconut Oil</option>
+                  <option value="Virgin Coconut Oil">
+                    Virgin Coconut BABY
+                  </option>
                   <option value="Dried Jackfruit">Dried Jackfruit</option>
                   <option value="Coconut Flour">Coconut Flour</option>
                   <option value="Coconut Milk">Coconut Milk</option>
