@@ -1802,7 +1802,6 @@ ${"=".repeat(80)}
           </button>
         </div>
       </div>
-
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
@@ -1830,7 +1829,6 @@ ${"=".repeat(80)}
           </button>
         </nav>
       </div>
-
       {/* Tab Content */}
       {activeTab === "transactions" && (
         <>
@@ -2582,7 +2580,6 @@ ${"=".repeat(80)}
           </div>
         </>
       )}
-
       {/* Ledgers Tab Content */}
       {activeTab === "ledgers" && (
         <div className="space-y-6">
@@ -2884,7 +2881,6 @@ ${"=".repeat(80)}
           </div>
         </div>
       )}
-
       {/* Reports Modal */}
       {showReportsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -3055,7 +3051,13 @@ ${"=".repeat(80)}
             </div>
           </div>
         </div>
-      )}
+      )}{" "}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition"
+      >
+        <ArrowUp className="w-5 h-5" />
+      </button>
     </div>
   );
 }
