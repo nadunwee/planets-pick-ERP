@@ -75,6 +75,7 @@ export function Sidebar() {
     "Wastage",
     "Settings",
     "Procurement",
+    "Reports",
   ];
 
   const productionMan = [
@@ -88,6 +89,7 @@ export function Sidebar() {
     "Warehouse",
     "Wastage",
     "Settings",
+    "Reports",
   ];
 
   const HR = [
@@ -98,10 +100,10 @@ export function Sidebar() {
     "Delivery",
     "Finance",
     "Administrator",
-    "Warehouse",
     "Wastage",
     "Settings",
     "Procurement",
+    "Reports",
   ];
 
   let filteredMenuItems = menuItems;
