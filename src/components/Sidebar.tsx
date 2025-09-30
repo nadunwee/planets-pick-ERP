@@ -116,7 +116,7 @@ export function Sidebar() {
     );
   }
 
-  if (userDepartment === "HR") {
+  if (userDepartment === "Human Resources") {
     filteredMenuItems = menuItems.filter((item) => !HR.includes(item.name));
   }
 
