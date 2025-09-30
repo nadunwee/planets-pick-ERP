@@ -12,6 +12,7 @@ import {
   BookOpen,
   Calculator,
   BarChart3,
+  ArrowUp,
 } from "lucide-react";
 
 import { Bar, Line } from "react-chartjs-2";
@@ -868,7 +869,7 @@ export default function Finance() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300); // show button after 300px scroll
+      setShowScrollTop(window.scrollY > 1); // show button after 300px scroll
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -2470,6 +2471,15 @@ ${"=".repeat(80)}
                 </div>
               </div>
             </div>
+
+            {showScrollTop && (
+              <button
+                onClick={scrollToTop}
+                className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition"
+              >
+                <ArrowUp className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </>
       )}
