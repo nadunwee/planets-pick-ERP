@@ -12,6 +12,7 @@ import {
   BookOpen,
   Calculator,
   BarChart3,
+  ChevronUp,
 } from "lucide-react";
 
 import { Bar, Line } from "react-chartjs-2";
@@ -2942,6 +2943,17 @@ ${"=".repeat(80)}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 z-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          aria-label="Scroll to top"
+        >
+          <ChevronUp size={24} />
+        </button>
       )}
     </div>
   );
