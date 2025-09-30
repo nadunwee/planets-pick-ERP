@@ -6,10 +6,10 @@ import {
   FileText,
   Plus,
   X,
+  Download,
   Edit2,
   Trash2,
   BookOpen,
-  Download,
   Calculator,
   BarChart3,
 } from "lucide-react";
@@ -155,7 +155,9 @@ const API = axios.create({
 
 export default function Finance() {
   // --- TAB STATE ---
-  const [activeTab, setActiveTab] = useState<"transactions" | "ledgers">("transactions");
+  const [activeTab, setActiveTab] = useState<"transactions" | "ledgers">(
+    "transactions"
+  );
 
   // --- STATES ---
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -171,7 +173,8 @@ export default function Finance() {
   // --- LEDGER STATES ---
   const [ledgerAccounts, setLedgerAccounts] = useState<LedgerAccount[]>([]);
   const [trialBalance, setTrialBalance] = useState<TrialBalanceEntry[]>([]);
-  const [selectedLedgerAccount, setSelectedLedgerAccount] = useState<string>("");
+  const [selectedLedgerAccount, setSelectedLedgerAccount] =
+    useState<string>("");
   const [showReportsModal, setShowReportsModal] = useState(false);
 
   // --- Modals ---
@@ -186,7 +189,9 @@ export default function Finance() {
   const [transactionToDelete, setTransactionToDelete] =
     useState<Transaction | null>(null);
   const [assetToEdit, setAssetToEdit] = useState<AssetLiability | null>(null);
-  const [assetToDelete, setAssetToDelete] = useState<AssetLiability | null>(null);
+  const [assetToDelete, setAssetToDelete] = useState<AssetLiability | null>(
+    null
+  );
 
   const [formData, setFormData] = useState({
     type: "expense",
@@ -253,9 +258,9 @@ export default function Finance() {
   // --- GENERATE LEDGER ACCOUNTS FROM TRANSACTIONS ---
   const generateLedgerAccounts = useMemo(() => {
     const accountsMap = new Map<string, LedgerAccount>();
-    
+
     // Process transactions with proper double-entry
-    transactions.forEach(transaction => {
+    transactions.forEach((transaction) => {
       const accountName = transaction.account;
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
@@ -266,10 +271,10 @@ export default function Finance() {
           debitTotal: 0,
           creditTotal: 0,
           balance: 0,
-          entries: []
+          entries: [],
         });
       }
-      
+
       const account = accountsMap.get(accountName)!;
       const entry: LedgerEntry = {
         _id: `entry-${transaction._id}`,
@@ -280,54 +285,69 @@ export default function Finance() {
         debit: transaction.type === "expense" ? transaction.amount : 0,
         credit: transaction.type === "income" ? transaction.amount : 0,
         balance: 0,
-        transactionId: transaction._id
+        transactionId: transaction._id,
       };
-      
+
       account.entries.push(entry);
       account.debitTotal += entry.debit;
       account.creditTotal += entry.credit;
     });
 
     // Process assets/liabilities with proper double-entry
-    assetsLiabilities.forEach(item => {
-      const accountName = `${item.type === "asset" ? "Assets" : "Liabilities"} - ${item.name}`;
+    assetsLiabilities.forEach((item) => {
+      const accountName = `${
+        item.type === "asset" ? "Assets" : "Liabilities"
+      } - ${item.name}`;
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
           _id: `ledger-${accountName}`,
-          accountCode: item.type === "asset" ? `AST-${item.name.slice(0, 3).toUpperCase()}` : `LBL-${item.name.slice(0, 3).toUpperCase()}`,
+          accountCode:
+            item.type === "asset"
+              ? `AST-${item.name.slice(0, 3).toUpperCase()}`
+              : `LBL-${item.name.slice(0, 3).toUpperCase()}`,
           accountName,
           accountType: item.type,
           debitTotal: 0,
           creditTotal: 0,
           balance: 0,
-          entries: []
+          entries: [],
         });
       }
-      
+
       const account = accountsMap.get(accountName)!;
       const entry: LedgerEntry = {
         _id: `entry-${item._id}`,
         accountName,
         date: item.date,
-        description: `${item.type === "asset" ? "Asset" : "Liability"} - ${item.name}`,
+        description: `${item.type === "asset" ? "Asset" : "Liability"} - ${
+          item.name
+        }`,
         reference: `AST-${item._id.slice(-6)}`,
         debit: item.type === "asset" ? item.value : 0,
         credit: item.type === "liability" ? item.value : 0,
         balance: 0,
-        transactionId: item._id
+        transactionId: item._id,
       };
-      
+
       account.entries.push(entry);
       account.debitTotal += entry.debit;
       account.creditTotal += entry.credit;
     });
 
     // Add Cash account for proper double-entry (every transaction affects cash)
-    const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-    const totalAssets = assetsLiabilities.filter(al => al.type === "asset").reduce((sum, al) => sum + al.value, 0);
-    const totalLiabilities = assetsLiabilities.filter(al => al.type === "liability").reduce((sum, al) => sum + al.value, 0);
-    
+    const totalIncome = transactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalAssets = assetsLiabilities
+      .filter((al) => al.type === "asset")
+      .reduce((sum, al) => sum + al.value, 0);
+    const totalLiabilities = assetsLiabilities
+      .filter((al) => al.type === "liability")
+      .reduce((sum, al) => sum + al.value, 0);
+
     // Cash account (debit for income and assets, credit for expenses and liabilities)
     if (!accountsMap.has("Cash")) {
       accountsMap.set("Cash", {
@@ -338,15 +358,15 @@ export default function Finance() {
         debitTotal: 0,
         creditTotal: 0,
         balance: 0,
-        entries: []
+        entries: [],
       });
     }
-    
+
     const cashAccount = accountsMap.get("Cash")!;
     // Cash increases with income and assets, decreases with expenses and liabilities
     const cashIncrease = totalIncome + totalAssets;
     const cashDecrease = totalExpenses + totalLiabilities;
-    
+
     if (cashIncrease > 0) {
       cashAccount.entries.push({
         _id: "cash-income-assets",
@@ -357,11 +377,11 @@ export default function Finance() {
         debit: cashIncrease,
         credit: 0,
         balance: 0,
-        transactionId: "cash-entry"
+        transactionId: "cash-entry",
       });
       cashAccount.debitTotal += cashIncrease;
     }
-    
+
     if (cashDecrease > 0) {
       cashAccount.entries.push({
         _id: "cash-expenses-liabilities",
@@ -372,88 +392,128 @@ export default function Finance() {
         debit: 0,
         credit: cashDecrease,
         balance: 0,
-        transactionId: "cash-entry"
+        transactionId: "cash-entry",
       });
       cashAccount.creditTotal += cashDecrease;
     }
 
-    return Array.from(accountsMap.values()).sort((a, b) => a.accountName.localeCompare(b.accountName));
+    return Array.from(accountsMap.values()).sort((a, b) =>
+      a.accountName.localeCompare(b.accountName)
+    );
   }, [transactions, assetsLiabilities]);
 
   // --- GENERATE TRIAL BALANCE ---
   const generateTrialBalance = useMemo(() => {
     const trialBalanceEntries: TrialBalanceEntry[] = [];
-    
-    generateLedgerAccounts.forEach(account => {
+
+    generateLedgerAccounts.forEach((account) => {
       let debitBalance = 0;
       let creditBalance = 0;
-      
+
       // Proper accounting balance rules
-      if (account.accountType === "asset" || account.accountType === "expense") {
+      if (
+        account.accountType === "asset" ||
+        account.accountType === "expense"
+      ) {
         // Assets and Expenses have normal debit balances
         debitBalance = Math.max(0, account.debitTotal - account.creditTotal);
         creditBalance = Math.max(0, account.creditTotal - account.debitTotal);
-      } else if (account.accountType === "liability" || account.accountType === "equity" || account.accountType === "income") {
+      } else if (
+        account.accountType === "liability" ||
+        account.accountType === "equity" ||
+        account.accountType === "income"
+      ) {
         // Liabilities, Equity, and Income have normal credit balances
         creditBalance = Math.max(0, account.creditTotal - account.debitTotal);
         debitBalance = Math.max(0, account.debitTotal - account.creditTotal);
       }
-      
+
       // Only include accounts with balances
       if (debitBalance > 0 || creditBalance > 0) {
         trialBalanceEntries.push({
           accountName: account.accountName,
           accountType: account.accountType,
           debitBalance: debitBalance,
-          creditBalance: creditBalance
+          creditBalance: creditBalance,
         });
       }
     });
-    
+
     return trialBalanceEntries;
   }, [generateLedgerAccounts]);
 
   // --- GENERATE FINANCIAL REPORTS ---
   const generateFinancialReports = useMemo((): FinancialReport => {
-    const assets = generateLedgerAccounts.filter(acc => acc.accountType === "asset");
-    const liabilities = generateLedgerAccounts.filter(acc => acc.accountType === "liability");
-    const income = generateLedgerAccounts.filter(acc => acc.accountType === "income");
-    const expenses = generateLedgerAccounts.filter(acc => acc.accountType === "expense");
-    
-    const currentAssets = assets.filter(acc => acc.accountName.includes("Current") || acc.accountName.includes("Cash"));
-    const nonCurrentAssets = assets.filter(acc => !acc.accountName.includes("Current") && !acc.accountName.includes("Cash"));
-    
-    const currentLiabilities = liabilities.filter(acc => acc.accountName.includes("Current"));
-    const nonCurrentLiabilities = liabilities.filter(acc => !acc.accountName.includes("Current"));
-    
+    const assets = generateLedgerAccounts.filter(
+      (acc) => acc.accountType === "asset"
+    );
+    const liabilities = generateLedgerAccounts.filter(
+      (acc) => acc.accountType === "liability"
+    );
+    const income = generateLedgerAccounts.filter(
+      (acc) => acc.accountType === "income"
+    );
+    const expenses = generateLedgerAccounts.filter(
+      (acc) => acc.accountType === "expense"
+    );
+
+    const currentAssets = assets.filter(
+      (acc) =>
+        acc.accountName.includes("Current") || acc.accountName.includes("Cash")
+    );
+    const nonCurrentAssets = assets.filter(
+      (acc) =>
+        !acc.accountName.includes("Current") &&
+        !acc.accountName.includes("Cash")
+    );
+
+    const currentLiabilities = liabilities.filter((acc) =>
+      acc.accountName.includes("Current")
+    );
+    const nonCurrentLiabilities = liabilities.filter(
+      (acc) => !acc.accountName.includes("Current")
+    );
+
     const totalRevenue = income.reduce((sum, acc) => sum + acc.creditTotal, 0);
-    const totalExpenses = expenses.reduce((sum, acc) => sum + acc.debitTotal, 0);
-    
+    const totalExpenses = expenses.reduce(
+      (sum, acc) => sum + acc.debitTotal,
+      0
+    );
+
     return {
       balanceSheet: {
         assets: {
           current: currentAssets.reduce((sum, acc) => sum + acc.balance, 0),
-          nonCurrent: nonCurrentAssets.reduce((sum, acc) => sum + acc.balance, 0),
-          total: assets.reduce((sum, acc) => sum + acc.balance, 0)
+          nonCurrent: nonCurrentAssets.reduce(
+            (sum, acc) => sum + acc.balance,
+            0
+          ),
+          total: assets.reduce((sum, acc) => sum + acc.balance, 0),
         },
         liabilities: {
-          current: currentLiabilities.reduce((sum, acc) => sum + acc.balance, 0),
-          nonCurrent: nonCurrentLiabilities.reduce((sum, acc) => sum + acc.balance, 0),
-          total: liabilities.reduce((sum, acc) => sum + acc.balance, 0)
+          current: currentLiabilities.reduce(
+            (sum, acc) => sum + acc.balance,
+            0
+          ),
+          nonCurrent: nonCurrentLiabilities.reduce(
+            (sum, acc) => sum + acc.balance,
+            0
+          ),
+          total: liabilities.reduce((sum, acc) => sum + acc.balance, 0),
         },
-        equity: totalRevenue - totalExpenses
+        equity: totalRevenue - totalExpenses,
       },
       profitLoss: {
         revenue: totalRevenue,
         expenses: totalExpenses,
-        netIncome: totalRevenue - totalExpenses
+        netIncome: totalRevenue - totalExpenses,
       },
       cashFlow: {
         operating: totalRevenue - totalExpenses,
         investing: 0, // Would need more detailed transaction categorization
         financing: 0, // Would need more detailed transaction categorization
-        netChange: totalRevenue - totalExpenses
-      }
+        netChange: totalRevenue - totalExpenses,
+      },
     };
   }, [generateLedgerAccounts]);
 
@@ -533,13 +593,13 @@ export default function Finance() {
   const generateTimeBasedData = (items: AssetLiability[], type: string) => {
     const sortedItems = items
       .filter((item) => item.type === type)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (sortedItems.length === 0) {
       return {
         labels: ["No Data"],
-    datasets: [
-      {
+        datasets: [
+          {
             label: `${type} - Current`,
             data: [0],
             borderColor: "rgba(59, 130, 246, 1)",
@@ -552,24 +612,27 @@ export default function Finance() {
             borderColor: "rgba(16, 185, 129, 1)",
             backgroundColor: "rgba(16, 185, 129, 0.1)",
             tension: 0.4,
-      },
-    ],
-  };
+          },
+        ],
+      };
     }
 
     // Group by month for better visualization
-    const monthlyData = new Map<string, { current: number; nonCurrent: number }>();
-    
+    const monthlyData = new Map<
+      string,
+      { current: number; nonCurrent: number }
+    >();
+
     sortedItems.forEach((item) => {
       const monthKey = new Date(item.date).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
       });
-      
+
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, { current: 0, nonCurrent: 0 });
       }
-      
+
       const data = monthlyData.get(monthKey)!;
       if (item.subtype === "current") {
         data.current += item.value;
@@ -579,13 +642,15 @@ export default function Finance() {
     });
 
     const labels = Array.from(monthlyData.keys());
-    const currentData = labels.map(label => monthlyData.get(label)!.current);
-    const nonCurrentData = labels.map(label => monthlyData.get(label)!.nonCurrent);
+    const currentData = labels.map((label) => monthlyData.get(label)!.current);
+    const nonCurrentData = labels.map(
+      (label) => monthlyData.get(label)!.nonCurrent
+    );
 
     return {
       labels,
-    datasets: [
-      {
+      datasets: [
+        {
           label: `${type} - Current`,
           data: currentData,
           borderColor: "rgba(59, 130, 246, 1)",
@@ -606,7 +671,10 @@ export default function Finance() {
   };
 
   const assetsChartData = generateTimeBasedData(assetsLiabilities, "asset");
-  const liabilitiesChartData = generateTimeBasedData(assetsLiabilities, "liability");
+  const liabilitiesChartData = generateTimeBasedData(
+    assetsLiabilities,
+    "liability"
+  );
 
   // --- UTILS ---
   const getStatusColor = (status: string) => {
@@ -671,12 +739,13 @@ export default function Finance() {
     if (!formData.type) errors.push("Transaction type is required");
     if (!formData.category) errors.push("Category is required");
     if (!formData.description?.trim()) errors.push("Description is required");
-    if (!formData.amount || Number(formData.amount) <= 0) errors.push("Valid amount is required");
+    if (!formData.amount || Number(formData.amount) <= 0)
+      errors.push("Valid amount is required");
     if (!formData.account?.trim()) errors.push("Account is required");
     if (!formData.date) errors.push("Date is required");
 
     if (errors.length > 0) {
-      alert(`Please fix the following errors:\n• ${errors.join('\n• ')}`);
+      alert(`Please fix the following errors:\n• ${errors.join("\n• ")}`);
       return;
     }
 
@@ -715,18 +784,19 @@ export default function Finance() {
 
   const handleUpdateTransaction = async () => {
     if (!transactionToEdit) return;
-    
+
     // Enhanced validation
     const errors = [];
     if (!formData.type) errors.push("Transaction type is required");
     if (!formData.category) errors.push("Category is required");
     if (!formData.description?.trim()) errors.push("Description is required");
-    if (!formData.amount || Number(formData.amount) <= 0) errors.push("Valid amount is required");
+    if (!formData.amount || Number(formData.amount) <= 0)
+      errors.push("Valid amount is required");
     if (!formData.account?.trim()) errors.push("Account is required");
     if (!formData.date) errors.push("Date is required");
 
     if (errors.length > 0) {
-      alert(`Please fix the following errors:\n• ${errors.join('\n• ')}`);
+      alert(`Please fix the following errors:\n• ${errors.join("\n• ")}`);
       return;
     }
 
@@ -746,7 +816,8 @@ export default function Finance() {
       resetForm();
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      const errorMsg = err.response?.data?.error || "Failed to update transaction";
+      const errorMsg =
+        err.response?.data?.error || "Failed to update transaction";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -767,7 +838,8 @@ export default function Finance() {
       setTransactionToDelete(null);
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      const errorMsg = err.response?.data?.error || "Failed to delete transaction";
+      const errorMsg =
+        err.response?.data?.error || "Failed to delete transaction";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -777,26 +849,39 @@ export default function Finance() {
   };
 
   // --- DOWNLOAD REPORTS ---
-  const downloadReport = (reportType: string, format: 'pdf' | 'excel' = 'pdf') => {
+  const downloadReport = (
+    reportType: string,
+    format: "pdf" | "excel" = "pdf"
+  ) => {
     const reports = generateFinancialReports;
-    const date = new Date().toISOString().split('T')[0];
-    
-    if (format === 'pdf') {
+    const date = new Date().toISOString().split("T")[0];
+
+    if (format === "pdf") {
       downloadPDFReport(reportType, reports, date);
     } else {
       downloadExcelReport(reportType, reports, date);
     }
   };
 
-  const downloadPDFReport = (reportType: string, reports: FinancialReport, date: string) => {
+  const downloadPDFReport = (
+    reportType: string,
+    reports: FinancialReport,
+    date: string
+  ) => {
     // Create professional HTML content for PDF generation
     let htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${reportType === 'balanceSheet' ? 'Balance Sheet' : 
-                reportType === 'profitLoss' ? 'Profit & Loss Statement' :
-                reportType === 'cashFlow' ? 'Cash Flow Statement' : 'Trial Balance'}</title>
+      <title>${
+        reportType === "balanceSheet"
+          ? "Balance Sheet"
+          : reportType === "profitLoss"
+          ? "Profit & Loss Statement"
+          : reportType === "cashFlow"
+          ? "Cash Flow Statement"
+          : "Trial Balance"
+      }</title>
       <style>
         @page { margin: 0.5in; }
         body { 
@@ -895,9 +980,15 @@ export default function Finance() {
       
       <div class="header">
         <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-        <div class="report-title">${reportType === 'balanceSheet' ? 'BALANCE SHEET' : 
-                                   reportType === 'profitLoss' ? 'PROFIT & LOSS STATEMENT' :
-                                   reportType === 'cashFlow' ? 'CASH FLOW STATEMENT' : 'TRIAL BALANCE'}</div>
+        <div class="report-title">${
+          reportType === "balanceSheet"
+            ? "BALANCE SHEET"
+            : reportType === "profitLoss"
+            ? "PROFIT & LOSS STATEMENT"
+            : reportType === "cashFlow"
+            ? "CASH FLOW STATEMENT"
+            : "TRIAL BALANCE"
+        }</div>
         <div class="date">As of ${new Date().toLocaleDateString()}</div>
       </div>
     `;
@@ -927,28 +1018,40 @@ export default function Finance() {
     `;
 
     // Create and download HTML file with instructions for PDF conversion
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blob = new Blob([htmlContent], { type: "text/html" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${reportType === 'balanceSheet' ? 'Balance_Sheet' : 
-                  reportType === 'profitLoss' ? 'Profit_Loss_Statement' :
-                  reportType === 'cashFlow' ? 'Cash_Flow_Statement' : 'Trial_Balance'}_${date}.html`;
-    
+    a.download = `${
+      reportType === "balanceSheet"
+        ? "Balance_Sheet"
+        : reportType === "profitLoss"
+        ? "Profit_Loss_Statement"
+        : reportType === "cashFlow"
+        ? "Cash_Flow_Statement"
+        : "Trial_Balance"
+    }_${date}.html`;
+
     // Add instructions for PDF conversion
     setTimeout(() => {
-      alert('File downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save');
+      alert(
+        'File downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save'
+      );
     }, 100);
-    
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   };
 
-  const downloadExcelReport = (reportType: string, reports: FinancialReport, date: string) => {
+  const downloadExcelReport = (
+    reportType: string,
+    reports: FinancialReport,
+    date: string
+  ) => {
     let csvContent = "";
-    
+
     switch (reportType) {
       case "balanceSheet":
         csvContent = generateBalanceSheetCSV(reports.balanceSheet);
@@ -963,14 +1066,20 @@ export default function Finance() {
         csvContent = generateTrialBalanceCSV(generateTrialBalance);
         break;
     }
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${reportType === 'balanceSheet' ? 'Balance_Sheet' : 
-                  reportType === 'profitLoss' ? 'Profit_Loss_Statement' :
-                  reportType === 'cashFlow' ? 'Cash_Flow_Statement' : 'Trial_Balance'}_${date}.csv`;
+    a.download = `${
+      reportType === "balanceSheet"
+        ? "Balance_Sheet"
+        : reportType === "profitLoss"
+        ? "Profit_Loss_Statement"
+        : reportType === "cashFlow"
+        ? "Cash_Flow_Statement"
+        : "Trial_Balance"
+    }_${date}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -978,7 +1087,9 @@ export default function Finance() {
   };
 
   // --- HTML REPORT GENERATORS ---
-  const generateBalanceSheetHTML = (balanceSheet: FinancialReport['balanceSheet']) => {
+  const generateBalanceSheetHTML = (
+    balanceSheet: FinancialReport["balanceSheet"]
+  ) => {
     return `
       <div class="section">
         <div class="section-title">ASSETS</div>
@@ -1027,14 +1138,18 @@ export default function Finance() {
           </tr>
           <tr class="total">
             <td><strong>TOTAL LIABILITIES & EQUITY</strong></td>
-            <td class="amount currency"><strong>${(balanceSheet.liabilities.total + balanceSheet.equity).toLocaleString()}</strong></td>
+            <td class="amount currency"><strong>${(
+              balanceSheet.liabilities.total + balanceSheet.equity
+            ).toLocaleString()}</strong></td>
           </tr>
         </table>
       </div>
     `;
   };
 
-  const generateProfitLossHTML = (profitLoss: FinancialReport['profitLoss']) => {
+  const generateProfitLossHTML = (
+    profitLoss: FinancialReport["profitLoss"]
+  ) => {
     return `
       <div class="section">
         <div class="section-title">REVENUE</div>
@@ -1083,7 +1198,7 @@ export default function Finance() {
     `;
   };
 
-  const generateCashFlowHTML = (cashFlow: FinancialReport['cashFlow']) => {
+  const generateCashFlowHTML = (cashFlow: FinancialReport["cashFlow"]) => {
     return `
       <div class="section">
         <div class="section-title">CASH FLOWS FROM OPERATING ACTIVITIES</div>
@@ -1161,21 +1276,31 @@ export default function Finance() {
             <th class="amount" style="width: 17.5%;">Credit (LKR)</th>
           </tr>
     `;
-    
-    trialBalance.forEach(entry => {
+
+    trialBalance.forEach((entry) => {
       html += `
         <tr>
           <td style="padding-left: 10px;">${entry.accountName}</td>
           <td style="text-align: center;">${entry.accountType.toUpperCase()}</td>
-          <td class="amount currency">${entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : '-'}</td>
-          <td class="amount currency">${entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : '-'}</td>
+          <td class="amount currency">${
+            entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : "-"
+          }</td>
+          <td class="amount currency">${
+            entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : "-"
+          }</td>
         </tr>
       `;
     });
-    
-    const totalDebits = trialBalance.reduce((sum, entry) => sum + entry.debitBalance, 0);
-    const totalCredits = trialBalance.reduce((sum, entry) => sum + entry.creditBalance, 0);
-    
+
+    const totalDebits = trialBalance.reduce(
+      (sum, entry) => sum + entry.debitBalance,
+      0
+    );
+    const totalCredits = trialBalance.reduce(
+      (sum, entry) => sum + entry.creditBalance,
+      0
+    );
+
     html += `
           <tr class="total">
             <td><strong>TOTALS</strong></td>
@@ -1188,17 +1313,29 @@ export default function Finance() {
       
       <div class="section">
         <div style="text-align: center; margin: 20px 0;">
-          <strong>Trial Balance is ${Math.abs(totalDebits - totalCredits) < 0.01 ? 'BALANCED' : 'OUT OF BALANCE'}</strong>
-          ${Math.abs(totalDebits - totalCredits) >= 0.01 ? `<br><span style="color: red;">Difference: ${(totalDebits - totalCredits).toLocaleString()} LKR</span>` : ''}
+          <strong>Trial Balance is ${
+            Math.abs(totalDebits - totalCredits) < 0.01
+              ? "BALANCED"
+              : "OUT OF BALANCE"
+          }</strong>
+          ${
+            Math.abs(totalDebits - totalCredits) >= 0.01
+              ? `<br><span style="color: red;">Difference: ${(
+                  totalDebits - totalCredits
+                ).toLocaleString()} LKR</span>`
+              : ""
+          }
         </div>
       </div>
     `;
-    
+
     return html;
   };
 
   // --- CSV REPORT GENERATORS ---
-  const generateBalanceSheetCSV = (balanceSheet: FinancialReport['balanceSheet']) => {
+  const generateBalanceSheetCSV = (
+    balanceSheet: FinancialReport["balanceSheet"]
+  ) => {
     return `PLANETS PICK ERP SYSTEM - BALANCE SHEET
 Generated: ${new Date().toLocaleString()}
 As of: ${new Date().toLocaleDateString()}
@@ -1215,10 +1352,12 @@ Current Liabilities,${balanceSheet.liabilities.current.toLocaleString()}
 Non-Current Liabilities,${balanceSheet.liabilities.nonCurrent.toLocaleString()}
 Total Liabilities,${balanceSheet.liabilities.total.toLocaleString()}
 Retained Earnings,${balanceSheet.equity.toLocaleString()}
-TOTAL LIABILITIES & EQUITY,${(balanceSheet.liabilities.total + balanceSheet.equity).toLocaleString()}`;
+TOTAL LIABILITIES & EQUITY,${(
+      balanceSheet.liabilities.total + balanceSheet.equity
+    ).toLocaleString()}`;
   };
 
-  const generateProfitLossCSV = (profitLoss: FinancialReport['profitLoss']) => {
+  const generateProfitLossCSV = (profitLoss: FinancialReport["profitLoss"]) => {
     return `PLANETS PICK ERP SYSTEM - PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleString()}
 Period: ${new Date().toLocaleDateString()}
@@ -1236,7 +1375,7 @@ TOTAL EXPENSES,${profitLoss.expenses.toLocaleString()}
 NET INCOME (LOSS),${profitLoss.netIncome.toLocaleString()}`;
   };
 
-  const generateCashFlowCSV = (cashFlow: FinancialReport['cashFlow']) => {
+  const generateCashFlowCSV = (cashFlow: FinancialReport["cashFlow"]) => {
     return `PLANETS PICK ERP SYSTEM - CASH FLOW STATEMENT
 Generated: ${new Date().toLocaleString()}
 Period: ${new Date().toLocaleDateString()}
@@ -1260,56 +1399,97 @@ NET INCREASE (DECREASE) IN CASH,${cashFlow.netChange.toLocaleString()}`;
   };
 
   const generateTrialBalanceCSV = (trialBalance: TrialBalanceEntry[]) => {
-    const totalDebits = trialBalance.reduce((sum, entry) => sum + entry.debitBalance, 0);
-    const totalCredits = trialBalance.reduce((sum, entry) => sum + entry.creditBalance, 0);
-    
+    const totalDebits = trialBalance.reduce(
+      (sum, entry) => sum + entry.debitBalance,
+      0
+    );
+    const totalCredits = trialBalance.reduce(
+      (sum, entry) => sum + entry.creditBalance,
+      0
+    );
+
     let csv = `PLANETS PICK ERP SYSTEM - TRIAL BALANCE
 Generated: ${new Date().toLocaleString()}
 As of: ${new Date().toLocaleDateString()}
 
 Account Name,Type,Debit (LKR),Credit (LKR)\n`;
-    
-    trialBalance.forEach(entry => {
-      csv += `${entry.accountName},${entry.accountType.toUpperCase()},${entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : ''},${entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : ''}\n`;
+
+    trialBalance.forEach((entry) => {
+      csv += `${entry.accountName},${entry.accountType.toUpperCase()},${
+        entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : ""
+      },${
+        entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : ""
+      }\n`;
     });
-    
+
     csv += `TOTALS,,${totalDebits.toLocaleString()},${totalCredits.toLocaleString()}
-Trial Balance Status,${Math.abs(totalDebits - totalCredits) < 0.01 ? 'BALANCED' : 'OUT OF BALANCE'}
-${Math.abs(totalDebits - totalCredits) >= 0.01 ? `Difference,${(totalDebits - totalCredits).toLocaleString()},` : ''}`;
-    
+Trial Balance Status,${
+      Math.abs(totalDebits - totalCredits) < 0.01
+        ? "BALANCED"
+        : "OUT OF BALANCE"
+    }
+${
+  Math.abs(totalDebits - totalCredits) >= 0.01
+    ? `Difference,${(totalDebits - totalCredits).toLocaleString()},`
+    : ""
+}`;
+
     return csv;
   };
 
-  const generateProfitLossReport = (profitLoss: FinancialReport['profitLoss']) => {
+  const generateProfitLossReport = (
+    profitLoss: FinancialReport["profitLoss"]
+  ) => {
     return `
 PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleDateString()}
 
 REVENUE:
-  Total Revenue: ${profitLoss.revenue.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+  Total Revenue: ${profitLoss.revenue.toLocaleString("en-LK", {
+    style: "currency",
+    currency: "LKR",
+  })}
 
 EXPENSES:
-  Total Expenses: ${profitLoss.expenses.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+  Total Expenses: ${profitLoss.expenses.toLocaleString("en-LK", {
+    style: "currency",
+    currency: "LKR",
+  })}
 
-NET INCOME: ${profitLoss.netIncome.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+NET INCOME: ${profitLoss.netIncome.toLocaleString("en-LK", {
+      style: "currency",
+      currency: "LKR",
+    })}
 `;
   };
 
-  const generateCashFlowReport = (cashFlow: FinancialReport['cashFlow']) => {
+  const generateCashFlowReport = (cashFlow: FinancialReport["cashFlow"]) => {
     return `
 CASH FLOW STATEMENT
 Generated: ${new Date().toLocaleDateString()}
 
 OPERATING ACTIVITIES:
-  Net Cash from Operations: ${cashFlow.operating.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+  Net Cash from Operations: ${cashFlow.operating.toLocaleString("en-LK", {
+    style: "currency",
+    currency: "LKR",
+  })}
 
 INVESTING ACTIVITIES:
-  Net Cash from Investing: ${cashFlow.investing.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+  Net Cash from Investing: ${cashFlow.investing.toLocaleString("en-LK", {
+    style: "currency",
+    currency: "LKR",
+  })}
 
 FINANCING ACTIVITIES:
-  Net Cash from Financing: ${cashFlow.financing.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+  Net Cash from Financing: ${cashFlow.financing.toLocaleString("en-LK", {
+    style: "currency",
+    currency: "LKR",
+  })}
 
-NET CHANGE IN CASH: ${cashFlow.netChange.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}
+NET CHANGE IN CASH: ${cashFlow.netChange.toLocaleString("en-LK", {
+      style: "currency",
+      currency: "LKR",
+    })}
 `;
   };
 
@@ -1319,21 +1499,35 @@ TRIAL BALANCE
 Generated: ${new Date().toLocaleDateString()}
 
 Account Name\t\t\t\tDebit\t\tCredit
-${'='.repeat(80)}
+${"=".repeat(80)}
 `;
-    
+
     let totalDebits = 0;
     let totalCredits = 0;
-    
-    trialBalance.forEach(entry => {
-      content += `${entry.accountName}\t\t\t\t${entry.debitBalance.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}\t\t${entry.creditBalance.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}\n`;
+
+    trialBalance.forEach((entry) => {
+      content += `${
+        entry.accountName
+      }\t\t\t\t${entry.debitBalance.toLocaleString("en-LK", {
+        style: "currency",
+        currency: "LKR",
+      })}\t\t${entry.creditBalance.toLocaleString("en-LK", {
+        style: "currency",
+        currency: "LKR",
+      })}\n`;
       totalDebits += entry.debitBalance;
       totalCredits += entry.creditBalance;
     });
-    
-    content += `${'='.repeat(80)}\n`;
-    content += `TOTALS\t\t\t\t${totalDebits.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}\t\t${totalCredits.toLocaleString('en-LK', { style: 'currency', currency: 'LKR' })}\n`;
-    
+
+    content += `${"=".repeat(80)}\n`;
+    content += `TOTALS\t\t\t\t${totalDebits.toLocaleString("en-LK", {
+      style: "currency",
+      currency: "LKR",
+    })}\t\t${totalCredits.toLocaleString("en-LK", {
+      style: "currency",
+      currency: "LKR",
+    })}\n`;
+
     return content;
   };
 
@@ -1342,13 +1536,15 @@ ${'='.repeat(80)}
     // Enhanced validation
     const errors = [];
     if (!formData.type) errors.push("Type (Asset/Liability) is required");
-    if (!formData.subType) errors.push("Subtype (Current/Non-current) is required");
+    if (!formData.subType)
+      errors.push("Subtype (Current/Non-current) is required");
     if (!formData.name?.trim()) errors.push("Name is required");
-    if (!formData.value || Number(formData.value) <= 0) errors.push("Valid value is required");
+    if (!formData.value || Number(formData.value) <= 0)
+      errors.push("Valid value is required");
     if (!formData.date) errors.push("Date is required");
 
     if (errors.length > 0) {
-      alert(`Please fix the following errors:\n• ${errors.join('\n• ')}`);
+      alert(`Please fix the following errors:\n• ${errors.join("\n• ")}`);
       return;
     }
 
@@ -1365,7 +1561,8 @@ ${'='.repeat(80)}
       resetAssetForm();
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      const errorMsg = err.response?.data?.error || "Failed to add asset/liability";
+      const errorMsg =
+        err.response?.data?.error || "Failed to add asset/liability";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -1391,17 +1588,19 @@ ${'='.repeat(80)}
 
   const handleUpdateAssetLiability = async () => {
     if (!assetToEdit) return;
-    
+
     // Enhanced validation
     const errors = [];
     if (!formData.type) errors.push("Type (Asset/Liability) is required");
-    if (!formData.subType) errors.push("Subtype (Current/Non-current) is required");
+    if (!formData.subType)
+      errors.push("Subtype (Current/Non-current) is required");
     if (!formData.name?.trim()) errors.push("Name is required");
-    if (!formData.value || Number(formData.value) <= 0) errors.push("Valid value is required");
+    if (!formData.value || Number(formData.value) <= 0)
+      errors.push("Valid value is required");
     if (!formData.date) errors.push("Date is required");
 
     if (errors.length > 0) {
-      alert(`Please fix the following errors:\n• ${errors.join('\n• ')}`);
+      alert(`Please fix the following errors:\n• ${errors.join("\n• ")}`);
       return;
     }
 
@@ -1424,7 +1623,8 @@ ${'='.repeat(80)}
       resetAssetForm();
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      const errorMsg = err.response?.data?.error || "Failed to update asset/liability";
+      const errorMsg =
+        err.response?.data?.error || "Failed to update asset/liability";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -1445,7 +1645,8 @@ ${'='.repeat(80)}
       setAssetToDelete(null);
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      const errorMsg = err.response?.data?.error || "Failed to delete asset/liability";
+      const errorMsg =
+        err.response?.data?.error || "Failed to delete asset/liability";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -1516,716 +1717,741 @@ ${'='.repeat(80)}
       {/* Tab Content */}
       {activeTab === "transactions" && (
         <>
-      {/* Summary Blocks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-green-50 p-4 rounded-lg shadow min-h-[100px]">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Total Income</h3>
-          <p className="text-lg font-bold text-green-700 break-words overflow-hidden">
-            {totalIncome.toLocaleString("en-LK", {
-              style: "currency",
-              currency: "LKR",
-            })}
-          </p>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg shadow min-h-[100px]">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Total Expenses</h3>
-          <p className="text-lg font-bold text-red-700 break-words overflow-hidden">
-            {totalExpenses.toLocaleString("en-LK", {
-              style: "currency",
-              currency: "LKR",
-            })}
-          </p>
-        </div>
-        <div className="bg-blue-50 p-4 rounded-lg shadow min-h-[100px]">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Total Assets</h3>
-          <p className="text-lg font-bold text-blue-700 break-words overflow-hidden">
-            {totalAssets.toLocaleString("en-LK", {
-              style: "currency",
-              currency: "LKR",
-            })}
-          </p>
-        </div>
-        <div className="bg-yellow-50 p-4 rounded-lg shadow min-h-[100px]">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">
-            Total Liabilities
-          </h3>
-          <p className="text-lg font-bold text-yellow-700 break-words overflow-hidden">
-            {totalLiabilities.toLocaleString("en-LK", {
-              style: "currency",
-              currency: "LKR",
-            })}
-          </p>
-        </div>
-        <div className="bg-indigo-50 p-4 rounded-lg shadow min-h-[100px]">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Net Worth</h3>
-          <p className="text-lg font-bold text-indigo-700 break-words overflow-hidden">
-            {netWorth.toLocaleString("en-LK", {
-              style: "currency",
-              currency: "LKR",
-            })}
-          </p>
-        </div>
-      </div>
-
-      {/* ASSET/LIABILITY MODAL */}
-      {showAddAssetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
-            <button
-              onClick={() => {
-                setShowAddAssetModal(false);
-                resetAssetForm();
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-semibold mb-4">
-              Add Asset / Liability
-            </h2>
-            <form className="space-y-4">
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              >
-                <option value="asset">Asset</option>
-                <option value="liability">Liability</option>
-              </select>
-              <select
-                name="subType"
-                value={formData.subType}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              >
-                <option value="current">Current</option>
-                <option value="non-current">Non-current</option>
-              </select>
-              <input
-                type="text"
-                name="name"
-                placeholder="Asset/Liability Name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <input
-                type="number"
-                name="value"
-                placeholder="Value"
-                value={formData.value}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <button
-                type="button"
-                onClick={handleAddAssetLiability}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
-              >
-                Add
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ADD / EDIT MODAL */}
-      {(showAddModal || showEditModal) && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
-            <button
-              onClick={() => {
-                setShowAddModal(false);
-                setShowEditModal(false);
-              resetForm();
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
-            >
-              <X size={24} />
-            </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div
-                className={`p-3 rounded-full ${
-                  formData.type === "income"
-                    ? "bg-green-100 text-green-600"
-                    : "bg-red-100 text-red-600"
-                }`}
-              >
-                {formData.type === "income" ? (
-                  <TrendingUp size={20} />
-                ) : (
-                  <TrendingDown size={20} />
-                )}
-              </div>
-              <h2 className="text-2xl font-semibold text-gray-900">
-                {showAddModal ? "Add" : "Edit"} Transaction
-              </h2>
-            </div>
-            <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                >
-                  <option value="income">Income</option>
-                  <option value="expense">Expense</option>
-                </select>
-                <input
-                  type="text"
-                  name="category"
-                  placeholder="Category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                />
-              </div>
-              <input
-                type="text"
-                name="description"
-                placeholder="Description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  name="amount"
-                  placeholder="Amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                />
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="account"
-                  placeholder="Account"
-                  value={formData.account}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                />
-                <input
-                  type="text"
-                  name="reference"
-                  placeholder="Reference"
-                  value={formData.reference}
-                  onChange={handleInputChange}
-                  className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={
-                  showAddModal ? handleAddTransaction : handleUpdateTransaction
-                }
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold hover:from-indigo-600 hover:to-purple-600 transition"
-              >
-                {showAddModal ? "Add Transaction" : "Update Transaction"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* EDIT ASSET/LIABILITY MODAL */}
-      {showEditAssetModal && assetToEdit && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
-            <button
-              onClick={() => {
-                setShowEditAssetModal(false);
-                setAssetToEdit(null);
-              }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-semibold mb-4">
-              Edit {assetToEdit.type === "asset" ? "Asset" : "Liability"}
-            </h2>
-            <form className="space-y-4">
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              >
-                <option value="asset">Asset</option>
-                <option value="liability">Liability</option>
-              </select>
-              <select
-                name="subType"
-                value={formData.subType}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              >
-                <option value="current">Current</option>
-                <option value="non-current">Non-current</option>
-              </select>
-              <input
-                type="text"
-                name="name"
-                placeholder="Asset/Liability Name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <input
-                type="number"
-                name="value"
-                placeholder="Value"
-                value={formData.value}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg p-2 w-full"
-              />
-              <button
-                type="button"
-                onClick={handleUpdateAssetLiability}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
-              >
-                Update
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE TRANSACTION MODAL */}
-      {showDeleteModal && transactionToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative">
-            <button
-              onClick={() => setShowDeleteModal(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-            >
-              <X size={20} />
-            </button>
-            <h2 className="text-xl font-semibold mb-4">Confirm Delete</h2>
-            <p>
-              Are you sure you want to delete transaction{" "}
-              <span className="font-bold">
-                {transactionToDelete.description}
-              </span>
-              ?
-            </p>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteTransaction}
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE ASSET/LIABILITY MODAL */}
-      {showDeleteAssetModal && assetToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative">
-            <button
-              onClick={() => setShowDeleteAssetModal(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-            >
-              <X size={20} />
-            </button>
-            <h2 className="text-xl font-semibold mb-4">Confirm Delete</h2>
-            <p>
-              Are you sure you want to delete{" "}
-              <span className="font-bold">
-                {assetToDelete.type} - {assetToDelete.name}
-              </span>
-              ?
-            </p>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowDeleteAssetModal(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteAssetLiability}
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Transactions + Assets/Liabilities Table */}
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <div className="p-4 flex gap-2 flex-wrap items-center">
-          <input
-            type="text"
-            placeholder="Search transactions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded p-2 flex-1 min-w-[200px]"
-          />
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="border rounded p-2"
-          >
-            {types.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border rounded p-2"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Account
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredRows.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <FileText className="text-gray-400" size={48} />
-                    <span className="text-lg">No records found</span>
-                    <span className="text-sm">Try adjusting your search or filters</span>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              filteredRows.map((r) => (
-                <tr key={`${r.source}-${r._id}`} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {new Date(r.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        r.type === "income" || r.type === "asset"
-                          ? "bg-green-100 text-green-800"
-                          : r.type === "expense" || r.type === "liability"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {r.source === "assetLiability" ? (
-                        <>
-                          {r.type === "asset" ? "📈" : "📉"} {r.type}
-                        </>
-                      ) : (
-                        <>
-                          {r.type === "income" ? "💰" : "💸"} {r.type}
-                        </>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                    {r.description}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                      {r.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {r.account === "-" ? (
-                      <span className="text-gray-400 italic">N/A</span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
-                        {r.account}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold">
-                    <span
-                      className={`${
-                        r.type === "income" || r.type === "asset"
-                          ? "text-green-600"
-                          : r.type === "expense" || r.type === "liability"
-                          ? "text-red-600"
-                          : "text-gray-600"
-                      }`}
-                  >
-                    {r.amount.toLocaleString("en-LK", {
-                      style: "currency",
-                      currency: "LKR",
-                    })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        r.status
-                      )}`}
-                    >
-                      {r.status === "completed" && "✅"}
-                      {r.status === "pending" && "⏳"}
-                      {r.status === "failed" && "❌"}
-                      {r.status === "active" && "✅"}
-                      {r.status === "sold" && "🏷️"}
-                      {r.status === "settled" && "✅"}
-                      {" "}{r.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {r.source === "transaction" ? (
-                      <>
-                        <button
-                          onClick={() =>
-                            handleEditTransaction(r.raw as Transaction)
-                          }
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-                            title="Edit transaction"
-                        >
-                            <Edit2 size={12} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleDeleteTransaction(r.raw as Transaction)
-                          }
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                            title="Delete transaction"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </>
-                      ) : r.source === "assetLiability" ? (
-                        <>
-                          <button
-                            onClick={() =>
-                              handleEditAssetLiability(r.raw as AssetLiability)
-                            }
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-                            title="Edit asset/liability"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteAssetLiability(r.raw as AssetLiability)
-                            }
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                            title="Delete asset/liability"
-                          >
-                            <Trash2 size={12} />
-                        </button>
-                      </>
-                    ) : (
-                        <span className="text-gray-400 text-xs">—</span>
-                    )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-            <TrendingUp className="text-blue-600" size={16} />
-            Assets Trend
-          </h3>
-          <div className="h-32">
-            <Line 
-              data={assetsChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false,
-                  },
-                  title: {
-                    display: false,
-                  },
-                },
-                scales: {
-                  x: {
-                    display: false,
-                  },
-                  y: {
-                    display: false,
-                    beginAtZero: true,
-                  },
-                },
-                interaction: {
-                  intersect: false,
-                },
-                elements: {
-                  point: {
-                    radius: 2,
-                  },
-                  line: {
-                    tension: 0.4,
-                  },
-                },
-              }}
-            />
-        </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-            <TrendingDown className="text-red-600" size={16} />
-            Liabilities Trend
-          </h3>
-          <div className="h-32">
-            <Line 
-              data={liabilitiesChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    display: false,
-                  },
-                  title: {
-                    display: false,
-                  },
-                },
-                scales: {
-                  x: {
-                    display: false,
-                  },
-                  y: {
-                    display: false,
-                    beginAtZero: true,
-                  },
-                },
-                interaction: {
-                  intersect: false,
-                },
-                elements: {
-                  point: {
-                    radius: 2,
-                  },
-                  line: {
-                    tension: 0.4,
-                  },
-                },
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-            <BarChart3 className="text-green-600" size={16} />
-            Income Trend
-          </h3>
-          <div className="h-32 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">
+          {/* Summary Blocks */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="bg-green-50 p-4 rounded-lg shadow min-h-[100px]">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Income
+              </h3>
+              <p className="text-lg font-bold text-green-700 break-words overflow-hidden">
                 {totalIncome.toLocaleString("en-LK", {
                   style: "currency",
                   currency: "LKR",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
                 })}
               </p>
-              <p className="text-xs text-gray-500">Total Income</p>
-        </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-            <Calculator className="text-purple-600" size={16} />
-            Net Worth
-          </h3>
-          <div className="h-32 flex items-center justify-center">
-            <div className="text-center">
-              <p className={`text-2xl font-bold ${netWorth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg shadow min-h-[100px]">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Expenses
+              </h3>
+              <p className="text-lg font-bold text-red-700 break-words overflow-hidden">
+                {totalExpenses.toLocaleString("en-LK", {
+                  style: "currency",
+                  currency: "LKR",
+                })}
+              </p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg shadow min-h-[100px]">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Assets
+              </h3>
+              <p className="text-lg font-bold text-blue-700 break-words overflow-hidden">
+                {totalAssets.toLocaleString("en-LK", {
+                  style: "currency",
+                  currency: "LKR",
+                })}
+              </p>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg shadow min-h-[100px]">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Liabilities
+              </h3>
+              <p className="text-lg font-bold text-yellow-700 break-words overflow-hidden">
+                {totalLiabilities.toLocaleString("en-LK", {
+                  style: "currency",
+                  currency: "LKR",
+                })}
+              </p>
+            </div>
+            <div className="bg-indigo-50 p-4 rounded-lg shadow min-h-[100px]">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Net Worth
+              </h3>
+              <p className="text-lg font-bold text-indigo-700 break-words overflow-hidden">
                 {netWorth.toLocaleString("en-LK", {
                   style: "currency",
                   currency: "LKR",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
                 })}
               </p>
-              <p className="text-xs text-gray-500">Net Worth</p>
-        </div>
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* ASSET/LIABILITY MODAL */}
+          {showAddAssetModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+                <button
+                  onClick={() => {
+                    setShowAddAssetModal(false);
+                    resetAssetForm();
+                  }}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+                >
+                  <X size={24} />
+                </button>
+                <h2 className="text-2xl font-semibold mb-4">
+                  Add Asset / Liability
+                </h2>
+                <form className="space-y-4">
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  >
+                    <option value="asset">Asset</option>
+                    <option value="liability">Liability</option>
+                  </select>
+                  <select
+                    name="subType"
+                    value={formData.subType}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  >
+                    <option value="current">Current</option>
+                    <option value="non-current">Non-current</option>
+                  </select>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Asset/Liability Name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <input
+                    type="number"
+                    name="value"
+                    placeholder="Value"
+                    value={formData.value}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddAssetLiability}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ADD / EDIT MODAL */}
+          {(showAddModal || showEditModal) && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setShowEditModal(false);
+                    resetForm();
+                  }}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+                >
+                  <X size={24} />
+                </button>
+                <div className="flex items-center gap-3 mb-6">
+                  <div
+                    className={`p-3 rounded-full ${
+                      formData.type === "income"
+                        ? "bg-green-100 text-green-600"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {formData.type === "income" ? (
+                      <TrendingUp size={20} />
+                    ) : (
+                      <TrendingDown size={20} />
+                    )}
+                  </div>
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    {showAddModal ? "Add" : "Edit"} Transaction
+                  </h2>
+                </div>
+                <form className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    >
+                      <option value="income">Income</option>
+                      <option value="expense">Expense</option>
+                    </select>
+                    <input
+                      type="text"
+                      name="category"
+                      placeholder="Category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    name="description"
+                    placeholder="Description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="number"
+                      name="amount"
+                      placeholder="Amount"
+                      value={formData.amount}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    />
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      name="account"
+                      placeholder="Account"
+                      value={formData.account}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    />
+                    <input
+                      type="text"
+                      name="reference"
+                      placeholder="Reference"
+                      value={formData.reference}
+                      onChange={handleInputChange}
+                      className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={
+                      showAddModal
+                        ? handleAddTransaction
+                        : handleUpdateTransaction
+                    }
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold hover:from-indigo-600 hover:to-purple-600 transition"
+                  >
+                    {showAddModal ? "Add Transaction" : "Update Transaction"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT ASSET/LIABILITY MODAL */}
+          {showEditAssetModal && assetToEdit && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-2xl w-full max-w-md relative p-6">
+                <button
+                  onClick={() => {
+                    setShowEditAssetModal(false);
+                    setAssetToEdit(null);
+                  }}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+                >
+                  <X size={24} />
+                </button>
+                <h2 className="text-2xl font-semibold mb-4">
+                  Edit {assetToEdit.type === "asset" ? "Asset" : "Liability"}
+                </h2>
+                <form className="space-y-4">
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  >
+                    <option value="asset">Asset</option>
+                    <option value="liability">Liability</option>
+                  </select>
+                  <select
+                    name="subType"
+                    value={formData.subType}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  >
+                    <option value="current">Current</option>
+                    <option value="non-current">Non-current</option>
+                  </select>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Asset/Liability Name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <input
+                    type="number"
+                    name="value"
+                    placeholder="Value"
+                    value={formData.value}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 rounded-lg p-2 w-full"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUpdateAssetLiability}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition"
+                  >
+                    Update
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* DELETE TRANSACTION MODAL */}
+          {showDeleteModal && transactionToDelete && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
+                >
+                  <X size={20} />
+                </button>
+                <h2 className="text-xl font-semibold mb-4">Confirm Delete</h2>
+                <p>
+                  Are you sure you want to delete transaction{" "}
+                  <span className="font-bold">
+                    {transactionToDelete.description}
+                  </span>
+                  ?
+                </p>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteTransaction}
+                    className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DELETE ASSET/LIABILITY MODAL */}
+          {showDeleteAssetModal && assetToDelete && (
+            <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 relative">
+                <button
+                  onClick={() => setShowDeleteAssetModal(false)}
+                  className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
+                >
+                  <X size={20} />
+                </button>
+                <h2 className="text-xl font-semibold mb-4">Confirm Delete</h2>
+                <p>
+                  Are you sure you want to delete{" "}
+                  <span className="font-bold">
+                    {assetToDelete.type} - {assetToDelete.name}
+                  </span>
+                  ?
+                </p>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    onClick={() => setShowDeleteAssetModal(false)}
+                    className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteAssetLiability}
+                    className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Transactions + Assets/Liabilities Table */}
+          <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="p-4 flex gap-2 flex-wrap items-center">
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border rounded p-2 flex-1 min-w-[200px]"
+              />
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="border rounded p-2"
+              >
+                {types.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="border rounded p-2"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Account
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <FileText className="text-gray-400" size={48} />
+                        <span className="text-lg">No records found</span>
+                        <span className="text-sm">
+                          Try adjusting your search or filters
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map((r) => (
+                    <tr
+                      key={`${r.source}-${r._id}`}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {new Date(r.date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            r.type === "income" || r.type === "asset"
+                              ? "bg-green-100 text-green-800"
+                              : r.type === "expense" || r.type === "liability"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {r.source === "assetLiability" ? (
+                            <>
+                              {r.type === "asset" ? "📈" : "📉"} {r.type}
+                            </>
+                          ) : (
+                            <>
+                              {r.type === "income" ? "💰" : "💸"} {r.type}
+                            </>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                        {r.description}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                          {r.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {r.account === "-" ? (
+                          <span className="text-gray-400 italic">N/A</span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
+                            {r.account}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold">
+                        <span
+                          className={`${
+                            r.type === "income" || r.type === "asset"
+                              ? "text-green-600"
+                              : r.type === "expense" || r.type === "liability"
+                              ? "text-red-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {r.amount.toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                          })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            r.status
+                          )}`}
+                        >
+                          {r.status === "completed" && "✅"}
+                          {r.status === "pending" && "⏳"}
+                          {r.status === "failed" && "❌"}
+                          {r.status === "active" && "✅"}
+                          {r.status === "sold" && "🏷️"}
+                          {r.status === "settled" && "✅"} {r.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          {r.source === "transaction" ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleEditTransaction(r.raw as Transaction)
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                                title="Edit transaction"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteTransaction(r.raw as Transaction)
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                title="Delete transaction"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          ) : r.source === "assetLiability" ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleEditAssetLiability(
+                                    r.raw as AssetLiability
+                                  )
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
+                                title="Edit asset/liability"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDeleteAssetLiability(
+                                    r.raw as AssetLiability
+                                  )
+                                }
+                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                title="Delete asset/liability"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <TrendingUp className="text-blue-600" size={16} />
+                Assets Trend
+              </h3>
+              <div className="h-32">
+                <Line
+                  data={assetsChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false,
+                      },
+                      title: {
+                        display: false,
+                      },
+                    },
+                    scales: {
+                      x: {
+                        display: false,
+                      },
+                      y: {
+                        display: false,
+                        beginAtZero: true,
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                    },
+                    elements: {
+                      point: {
+                        radius: 2,
+                      },
+                      line: {
+                        tension: 0.4,
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <TrendingDown className="text-red-600" size={16} />
+                Liabilities Trend
+              </h3>
+              <div className="h-32">
+                <Line
+                  data={liabilitiesChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false,
+                      },
+                      title: {
+                        display: false,
+                      },
+                    },
+                    scales: {
+                      x: {
+                        display: false,
+                      },
+                      y: {
+                        display: false,
+                        beginAtZero: true,
+                      },
+                    },
+                    interaction: {
+                      intersect: false,
+                    },
+                    elements: {
+                      point: {
+                        radius: 2,
+                      },
+                      line: {
+                        tension: 0.4,
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <BarChart3 className="text-green-600" size={16} />
+                Income Trend
+              </h3>
+              <div className="h-32 flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">
+                    {totalIncome.toLocaleString("en-LK", {
+                      style: "currency",
+                      currency: "LKR",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                  <p className="text-xs text-gray-500">Total Income</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <Calculator className="text-purple-600" size={16} />
+                Net Worth
+              </h3>
+              <div className="h-32 flex items-center justify-center">
+                <div className="text-center">
+                  <p
+                    className={`text-2xl font-bold ${
+                      netWorth >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {netWorth.toLocaleString("en-LK", {
+                      style: "currency",
+                      currency: "LKR",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                  <p className="text-xs text-gray-500">Net Worth</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -2235,34 +2461,54 @@ ${'='.repeat(80)}
           {/* Ledger Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-600">Total Accounts</h3>
+              <h3 className="text-sm font-medium text-gray-600">
+                Total Accounts
+              </h3>
               <p className="text-2xl font-bold text-blue-700">
                 {generateLedgerAccounts.length}
               </p>
             </div>
             <div className="bg-green-50 p-4 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-600">Total Debits</h3>
+              <h3 className="text-sm font-medium text-gray-600">
+                Total Debits
+              </h3>
               <p className="text-2xl font-bold text-green-700">
-                {generateTrialBalance.reduce((sum, entry) => sum + entry.debitBalance, 0).toLocaleString("en-LK", {
-                  style: "currency",
-                  currency: "LKR",
-                })}
+                {generateTrialBalance
+                  .reduce((sum, entry) => sum + entry.debitBalance, 0)
+                  .toLocaleString("en-LK", {
+                    style: "currency",
+                    currency: "LKR",
+                  })}
               </p>
             </div>
             <div className="bg-red-50 p-4 rounded-lg shadow">
-              <h3 className="text-sm font-medium text-gray-600">Total Credits</h3>
+              <h3 className="text-sm font-medium text-gray-600">
+                Total Credits
+              </h3>
               <p className="text-2xl font-bold text-red-700">
-                {generateTrialBalance.reduce((sum, entry) => sum + entry.creditBalance, 0).toLocaleString("en-LK", {
-                  style: "currency",
-                  currency: "LKR",
-                })}
+                {generateTrialBalance
+                  .reduce((sum, entry) => sum + entry.creditBalance, 0)
+                  .toLocaleString("en-LK", {
+                    style: "currency",
+                    currency: "LKR",
+                  })}
               </p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg shadow">
               <h3 className="text-sm font-medium text-gray-600">Balanced</h3>
               <p className="text-2xl font-bold text-purple-700">
-                {Math.abs(generateTrialBalance.reduce((sum, entry) => sum + entry.debitBalance, 0) - 
-                          generateTrialBalance.reduce((sum, entry) => sum + entry.creditBalance, 0)) < 0.01 ? "✅ Yes" : "❌ No"}
+                {Math.abs(
+                  generateTrialBalance.reduce(
+                    (sum, entry) => sum + entry.debitBalance,
+                    0
+                  ) -
+                    generateTrialBalance.reduce(
+                      (sum, entry) => sum + entry.creditBalance,
+                      0
+                    )
+                ) < 0.01
+                  ? "✅ Yes"
+                  : "❌ No"}
               </p>
             </div>
           </div>
@@ -2270,7 +2516,9 @@ ${'='.repeat(80)}
           {/* Ledger Accounts Selection */}
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Ledger Accounts</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Ledger Accounts
+              </h3>
               <select
                 value={selectedLedgerAccount}
                 onChange={(e) => setSelectedLedgerAccount(e.target.value)}
@@ -2315,46 +2563,62 @@ ${'='.repeat(80)}
                           {entry.accountName}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            entry.accountType === "asset" ? "bg-blue-100 text-blue-800" :
-                            entry.accountType === "liability" ? "bg-red-100 text-red-800" :
-                            entry.accountType === "equity" ? "bg-purple-100 text-purple-800" :
-                            entry.accountType === "income" ? "bg-green-100 text-green-800" :
-                            "bg-yellow-100 text-yellow-800"
-                          }`}>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              entry.accountType === "asset"
+                                ? "bg-blue-100 text-blue-800"
+                                : entry.accountType === "liability"
+                                ? "bg-red-100 text-red-800"
+                                : entry.accountType === "equity"
+                                ? "bg-purple-100 text-purple-800"
+                                : entry.accountType === "income"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
                             {entry.accountType}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {entry.debitBalance > 0 ? entry.debitBalance.toLocaleString("en-LK", {
-                            style: "currency",
-                            currency: "LKR",
-                          }) : "-"}
+                          {entry.debitBalance > 0
+                            ? entry.debitBalance.toLocaleString("en-LK", {
+                                style: "currency",
+                                currency: "LKR",
+                              })
+                            : "-"}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {entry.creditBalance > 0 ? entry.creditBalance.toLocaleString("en-LK", {
-                            style: "currency",
-                            currency: "LKR",
-                          }) : "-"}
+                          {entry.creditBalance > 0
+                            ? entry.creditBalance.toLocaleString("en-LK", {
+                                style: "currency",
+                                currency: "LKR",
+                              })
+                            : "-"}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-50">
                     <tr className="font-semibold">
-                      <td className="px-4 py-3 text-sm text-gray-900">TOTALS</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        TOTALS
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-900"></td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {generateTrialBalance.reduce((sum, entry) => sum + entry.debitBalance, 0).toLocaleString("en-LK", {
-                          style: "currency",
-                          currency: "LKR",
-                        })}
+                        {generateTrialBalance
+                          .reduce((sum, entry) => sum + entry.debitBalance, 0)
+                          .toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                          })}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {generateTrialBalance.reduce((sum, entry) => sum + entry.creditBalance, 0).toLocaleString("en-LK", {
-                          style: "currency",
-                          currency: "LKR",
-                        })}
+                        {generateTrialBalance
+                          .reduce((sum, entry) => sum + entry.creditBalance, 0)
+                          .toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                          })}
                       </td>
                     </tr>
                   </tfoot>
@@ -2366,9 +2630,11 @@ ${'='.repeat(80)}
             {selectedLedgerAccount && (
               <div className="mt-6">
                 {(() => {
-                  const account = generateLedgerAccounts.find(acc => acc._id === selectedLedgerAccount);
+                  const account = generateLedgerAccounts.find(
+                    (acc) => acc._id === selectedLedgerAccount
+                  );
                   if (!account) return null;
-                  
+
                   return (
                     <div>
                       <h4 className="text-md font-semibold text-gray-800 mb-3">
@@ -2377,30 +2643,46 @@ ${'='.repeat(80)}
                       <div className="bg-gray-50 p-4 rounded-lg mb-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="font-medium text-gray-600">Account Code:</span>
-                            <p className="text-gray-900">{account.accountCode}</p>
+                            <span className="font-medium text-gray-600">
+                              Account Code:
+                            </span>
+                            <p className="text-gray-900">
+                              {account.accountCode}
+                            </p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-600">Type:</span>
-                            <p className="text-gray-900 capitalize">{account.accountType}</p>
+                            <span className="font-medium text-gray-600">
+                              Type:
+                            </span>
+                            <p className="text-gray-900 capitalize">
+                              {account.accountType}
+                            </p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-600">Debit Total:</span>
-                            <p className="text-gray-900">{account.debitTotal.toLocaleString("en-LK", {
-                              style: "currency",
-                              currency: "LKR",
-                            })}</p>
+                            <span className="font-medium text-gray-600">
+                              Debit Total:
+                            </span>
+                            <p className="text-gray-900">
+                              {account.debitTotal.toLocaleString("en-LK", {
+                                style: "currency",
+                                currency: "LKR",
+                              })}
+                            </p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-600">Credit Total:</span>
-                            <p className="text-gray-900">{account.creditTotal.toLocaleString("en-LK", {
-                              style: "currency",
-                              currency: "LKR",
-                            })}</p>
+                            <span className="font-medium text-gray-600">
+                              Credit Total:
+                            </span>
+                            <p className="text-gray-900">
+                              {account.creditTotal.toLocaleString("en-LK", {
+                                style: "currency",
+                                currency: "LKR",
+                              })}
+                            </p>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
@@ -2438,19 +2720,25 @@ ${'='.repeat(80)}
                                   {entry.reference}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                  {entry.debit > 0 ? entry.debit.toLocaleString("en-LK", {
-                                    style: "currency",
-                                    currency: "LKR",
-                                  }) : "-"}
+                                  {entry.debit > 0
+                                    ? entry.debit.toLocaleString("en-LK", {
+                                        style: "currency",
+                                        currency: "LKR",
+                                      })
+                                    : "-"}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                  {entry.credit > 0 ? entry.credit.toLocaleString("en-LK", {
-                                    style: "currency",
-                                    currency: "LKR",
-                                  }) : "-"}
+                                  {entry.credit > 0
+                                    ? entry.credit.toLocaleString("en-LK", {
+                                        style: "currency",
+                                        currency: "LKR",
+                                      })
+                                    : "-"}
                                 </td>
                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                  {Math.abs(account.debitTotal - account.creditTotal).toLocaleString("en-LK", {
+                                  {Math.abs(
+                                    account.debitTotal - account.creditTotal
+                                  ).toLocaleString("en-LK", {
                                     style: "currency",
                                     currency: "LKR",
                                   })}
@@ -2459,7 +2747,7 @@ ${'='.repeat(80)}
                             ))}
                           </tbody>
                         </table>
-      </div>
+                      </div>
                     </div>
                   );
                 })()}
@@ -2488,12 +2776,27 @@ ${'='.repeat(80)}
               <h4 className="font-medium text-gray-900 mb-3">Select Format:</h4>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="format" value="pdf" defaultChecked className="text-indigo-600" />
-                  <span className="text-sm text-gray-700">PDF (HTML format for printing)</span>
+                  <input
+                    type="radio"
+                    name="format"
+                    value="pdf"
+                    defaultChecked
+                    className="text-indigo-600"
+                  />
+                  <span className="text-sm text-gray-700">
+                    PDF (HTML format for printing)
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="format" value="excel" className="text-indigo-600" />
-                  <span className="text-sm text-gray-700">Excel (CSV format)</span>
+                  <input
+                    type="radio"
+                    name="format"
+                    value="excel"
+                    className="text-indigo-600"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Excel (CSV format)
+                  </span>
                 </label>
               </div>
             </div>
@@ -2501,8 +2804,13 @@ ${'='.repeat(80)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={() => {
-                  const format = (document.querySelector('input[name="format"]:checked') as HTMLInputElement)?.value || 'pdf';
-                  downloadReport("balanceSheet", format as 'pdf' | 'excel');
+                  const format =
+                    (
+                      document.querySelector(
+                        'input[name="format"]:checked'
+                      ) as HTMLInputElement
+                    )?.value || "pdf";
+                  downloadReport("balanceSheet", format as "pdf" | "excel");
                 }}
                 className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
               >
@@ -2513,14 +2821,20 @@ ${'='.repeat(80)}
                   <h3 className="font-semibold text-gray-900">Balance Sheet</h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Assets, Liabilities & Equity as of {new Date().toLocaleDateString()}
+                  Assets, Liabilities & Equity as of{" "}
+                  {new Date().toLocaleDateString()}
                 </p>
               </button>
-              
+
               <button
                 onClick={() => {
-                  const format = (document.querySelector('input[name="format"]:checked') as HTMLInputElement)?.value || 'pdf';
-                  downloadReport("profitLoss", format as 'pdf' | 'excel');
+                  const format =
+                    (
+                      document.querySelector(
+                        'input[name="format"]:checked'
+                      ) as HTMLInputElement
+                    )?.value || "pdf";
+                  downloadReport("profitLoss", format as "pdf" | "excel");
                 }}
                 className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group"
               >
@@ -2534,11 +2848,16 @@ ${'='.repeat(80)}
                   Revenue, Expenses & Net Income statement
                 </p>
               </button>
-              
+
               <button
                 onClick={() => {
-                  const format = (document.querySelector('input[name="format"]:checked') as HTMLInputElement)?.value || 'pdf';
-                  downloadReport("cashFlow", format as 'pdf' | 'excel');
+                  const format =
+                    (
+                      document.querySelector(
+                        'input[name="format"]:checked'
+                      ) as HTMLInputElement
+                    )?.value || "pdf";
+                  downloadReport("cashFlow", format as "pdf" | "excel");
                 }}
                 className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group"
               >
@@ -2552,11 +2871,16 @@ ${'='.repeat(80)}
                   Operating, Investing & Financing activities
                 </p>
               </button>
-              
+
               <button
                 onClick={() => {
-                  const format = (document.querySelector('input[name="format"]:checked') as HTMLInputElement)?.value || 'pdf';
-                  downloadReport("trialBalance", format as 'pdf' | 'excel');
+                  const format =
+                    (
+                      document.querySelector(
+                        'input[name="format"]:checked'
+                      ) as HTMLInputElement
+                    )?.value || "pdf";
+                  downloadReport("trialBalance", format as "pdf" | "excel");
                 }}
                 className="p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors group"
               >
@@ -2571,26 +2895,32 @@ ${'='.repeat(80)}
                 </p>
               </button>
             </div>
-            
+
             <div className="mt-6 p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-gray-900 mb-2">Report Summary</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Total Assets:</span>
                   <p className="font-semibold text-gray-900">
-                    {generateFinancialReports.balanceSheet.assets.total.toLocaleString("en-LK", {
-                      style: "currency",
-                      currency: "LKR",
-                    })}
+                    {generateFinancialReports.balanceSheet.assets.total.toLocaleString(
+                      "en-LK",
+                      {
+                        style: "currency",
+                        currency: "LKR",
+                      }
+                    )}
                   </p>
                 </div>
                 <div>
                   <span className="text-gray-600">Net Income:</span>
                   <p className="font-semibold text-gray-900">
-                    {generateFinancialReports.profitLoss.netIncome.toLocaleString("en-LK", {
-                      style: "currency",
-                      currency: "LKR",
-                    })}
+                    {generateFinancialReports.profitLoss.netIncome.toLocaleString(
+                      "en-LK",
+                      {
+                        style: "currency",
+                        currency: "LKR",
+                      }
+                    )}
                   </p>
                 </div>
               </div>
@@ -2601,4 +2931,3 @@ ${'='.repeat(80)}
     </div>
   );
 }
-

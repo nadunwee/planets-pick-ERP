@@ -44,10 +44,20 @@ export default function Login({ onLogin }: LoginProps) {
 
       // Notify parent
       onLogin(data.token);
+
+      // Special check for Production manager by email
+      if (username.toLowerCase() === "prodman@gmail.com") {
+        navigate("/production");
+        return;
+      }
+
+      // Redirect based on department
       if (data.department === "Inventory") {
         navigate("/inventory");
         return;
       }
+
+      // Default redirect
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message);

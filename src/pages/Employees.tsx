@@ -17,7 +17,12 @@ import {
   DollarSign,
   X,
   Trash2,
+  Download,
+  FileText,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // For employees already in system
 interface Employee {
@@ -452,6 +457,9 @@ export default function Employees() {
   const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(
     null
   );
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -489,6 +497,11 @@ export default function Employees() {
     "Maintenance",
   ];
 
+  // Reset pagination when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDepartment]);
+
   // Fetch employees from backend on mount
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -514,6 +527,16 @@ export default function Employees() {
       employee.department === selectedDepartment;
     return matchesSearch && matchesDepartment;
   });
+
+  // Pagination logic
+  const paginatedEmployees = filteredEmployees.slice(
+    0,
+    currentPage * itemsPerPage
+  );
+
+  const handleSeeMore = () => {
+    setCurrentPage((prev) => prev + 1);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -801,6 +824,122 @@ export default function Employees() {
     }
   };
 
+  // Export functions
+  const exportToExcel = () => {
+    const dataToExport = filteredEmployees.map((employee) => ({
+      "Employee ID": employee.employeeId || employee.id,
+      Name: employee.name,
+      Email: employee.email,
+      Phone: employee.phone,
+      Position: employee.position,
+      Department: employee.department,
+      Status: employee.status,
+      "Join Date": employee.joinDate,
+      Salary: employee.salary,
+      Performance: employee.performance,
+      Attendance: employee.attendance,
+      Skills: Array.isArray(employee.skills)
+        ? employee.skills.join(", ")
+        : employee.skills,
+      "Has User Account": employee.hasUserAccount ? "Yes" : "No",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employees");
+
+    // Auto-fit column widths
+    const wscols = [
+      { wch: 12 }, // Employee ID
+      { wch: 20 }, // Name
+      { wch: 25 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 20 }, // Position
+      { wch: 18 }, // Department
+      { wch: 12 }, // Status
+      { wch: 12 }, // Join Date
+      { wch: 12 }, // Salary
+      { wch: 12 }, // Performance
+      { wch: 12 }, // Attendance
+      { wch: 30 }, // Skills
+      { wch: 15 }, // Has User Account
+    ];
+    ws["!cols"] = wscols;
+
+    XLSX.writeFile(
+      wb,
+      `employees_list_${new Date().toISOString().split("T")[0]}.xlsx`
+    );
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Add title
+    doc.setFontSize(20);
+    doc.text("Employee List", 14, 22);
+
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 32);
+
+    // Prepare data for table
+    const tableData = filteredEmployees.map((employee) => [
+      employee.employeeId || employee.id,
+      employee.name,
+      employee.email,
+      employee.phone,
+      employee.position,
+      employee.department,
+      employee.status,
+      employee.joinDate,
+      `$${employee.salary}`,
+      `${employee.performance}%`,
+      `${employee.attendance}%`,
+      employee.hasUserAccount ? "Yes" : "No",
+    ]);
+
+    // Create table
+    autoTable(doc, {
+      head: [
+        [
+          "ID",
+          "Name",
+          "Email",
+          "Phone",
+          "Position",
+          "Department",
+          "Status",
+          "Join Date",
+          "Salary",
+          "Performance",
+          "Attendance",
+          "User Account",
+        ],
+      ],
+      body: tableData,
+      startY: 40,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185] },
+      columnStyles: {
+        0: { cellWidth: 15 }, // ID
+        1: { cellWidth: 25 }, // Name
+        2: { cellWidth: 30 }, // Email
+        3: { cellWidth: 20 }, // Phone
+        4: { cellWidth: 25 }, // Position
+        5: { cellWidth: 20 }, // Department
+        6: { cellWidth: 15 }, // Status
+        7: { cellWidth: 18 }, // Join Date
+        8: { cellWidth: 15 }, // Salary
+        9: { cellWidth: 15 }, // Performance
+        10: { cellWidth: 15 }, // Attendance
+        11: { cellWidth: 15 }, // User Account
+      },
+    });
+
+    doc.save(`employees_list_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
   const generateAttendanceReport = () => {
     // This would generate a comprehensive report
     const reportData = {
@@ -828,28 +967,6 @@ export default function Employees() {
     console.log("Attendance Report:", reportData);
     alert(
       "Report generated! Check console for details. In production, this would export to PDF/Excel."
-    );
-  };
-
-  const exportToExcel = () => {
-    // This would export employee data to Excel
-    const excelData = employees.map((emp) => ({
-      "Employee ID": emp.employeeId,
-      Name: emp.name,
-      Email: emp.email,
-      Phone: emp.phone,
-      Position: emp.position,
-      Department: emp.department,
-      Status: emp.status,
-      "Join Date": emp.joinDate,
-      Salary: emp.salary,
-      Performance: emp.performance,
-      Attendance: emp.attendance,
-    }));
-
-    console.log("Excel Export Data:", excelData);
-    alert(
-      "Excel export ready! Check console for details. In production, this would download an Excel file."
     );
   };
 
@@ -890,6 +1007,20 @@ export default function Employees() {
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
             <Bot size={16} />
             AI Insights
+          </button>
+          <button
+            onClick={exportToExcel}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-emerald-700 transition"
+          >
+            <Download size={16} />
+            Export Excel
+          </button>
+          <button
+            onClick={exportToPDF}
+            className="bg-rose-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-rose-700 transition"
+          >
+            <FileText size={16} />
+            Export PDF
           </button>
         </div>
       </div>
@@ -1040,125 +1171,149 @@ export default function Employees() {
       </div>
       {/* Employees List */}
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEmployees.map((employee) => (
-            <div
-              key={employee.id}
-              className="bg-white rounded-lg shadow border p-4"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                    {employee.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-lg">{employee.name}</h3>
-                      {employee.hasUserAccount && employee.userId && (
-                        <div
-                          className="flex items-center"
-                          title="Has user account"
-                        >
-                          <UserCheck size={16} className="text-green-500" />
-                        </div>
-                      )}
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedEmployees.map((employee) => (
+              <div
+                key={employee.id}
+                className="bg-white rounded-lg shadow border p-4"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {employee.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                     </div>
-                    <p className="text-sm text-gray-600">{employee.position}</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">
+                          {employee.name}
+                        </h3>
+                        {employee.hasUserAccount && employee.userId && (
+                          <div
+                            className="flex items-center"
+                            title="Has user account"
+                          >
+                            <UserCheck size={16} className="text-green-500" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {employee.position}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                      employee.status
+                    )}`}
+                  >
+                    {employee.status}
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Mail size={14} />
+                    {employee.email}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Phone size={14} />
+                    {employee.phone}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar size={14} />
+                    Joined: {employee.joinDate}
                   </div>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                    employee.status
-                  )}`}
-                >
-                  {employee.status}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail size={14} />
-                  {employee.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Phone size={14} />
-                  {employee.phone}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar size={14} />
-                  Joined: {employee.joinDate}
-                </div>
-              </div>
+                <div className="grid grid-cols-2 gap-4 mb-4"></div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4"></div>
-
-              <div className="mb-4">
-                <p className="text-xs text-gray-500 mb-1">Skills</p>
-                <div className="flex flex-wrap gap-1">
-                  {employee.skills.slice(0, 2).map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {employee.skills.length > 2 && (
-                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                      +{employee.skills.length - 2} more
-                    </span>
-                  )}
+                <div className="mb-4">
+                  <p className="text-xs text-gray-500 mb-1">Skills</p>
+                  <div className="flex flex-wrap gap-1">
+                    {employee.skills.slice(0, 2).map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {employee.skills.length > 2 && (
+                      <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                        +{employee.skills.length - 2} more
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <Clock size={14} className="text-gray-400" />
-                  <span className="text-xs text-gray-600 capitalize">
-                    {employee.shift} shift
-                  </span>
-                </div>
-                <div className="flex gap-1">
-                  <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleEditEmployee(employee)}
-                    className="p-1 text-gray-600 hover:bg-gray-50 rounded"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEmployee(employee)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Today's Attendance Status */}
-              <div className="mt-3 pt-3 border-t">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Today's Status:</span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      getAttendanceStatus(employee.id) === "present"
-                        ? "bg-green-100 text-green-600"
-                        : getAttendanceStatus(employee.id) === "late"
-                        ? "bg-yellow-100 text-yellow-600"
-                        : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    {getAttendanceStatus(employee.id)}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <Clock size={14} className="text-gray-400" />
+                    <span className="text-xs text-gray-600 capitalize">
+                      {employee.shift} shift
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleEditEmployee(employee)}
+                      className="p-1 text-gray-600 hover:bg-gray-50 rounded"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEmployee(employee)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Today's Attendance Status */}
+                <div className="mt-3 pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">
+                      Today's Status:
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${
+                        getAttendanceStatus(employee.id) === "present"
+                          ? "bg-green-100 text-green-600"
+                          : getAttendanceStatus(employee.id) === "late"
+                          ? "bg-yellow-100 text-yellow-600"
+                          : "bg-red-100 text-red-600"
+                      }`}
+                    >
+                      {getAttendanceStatus(employee.id)}
+                    </span>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+          {/* See More Button */}
+          {currentPage * itemsPerPage < filteredEmployees.length && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleSeeMore}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                See More (
+                {Math.min(
+                  itemsPerPage,
+                  filteredEmployees.length - currentPage * itemsPerPage
+                )}{" "}
+                more)
+              </button>
             </div>
-          ))}
+          )}
         </div>
       ) : (
         /* Table View */
@@ -1177,7 +1332,7 @@ export default function Employees() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
+                {paginatedEmployees.map((employee) => (
                   <tr key={employee.id} className="border-b hover:bg-gray-50">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -1274,6 +1429,22 @@ export default function Employees() {
               </tbody>
             </table>
           </div>
+          {/* See More Button for Table View */}
+          {currentPage * itemsPerPage < filteredEmployees.length && (
+            <div className="flex justify-center p-4 border-t">
+              <button
+                onClick={handleSeeMore}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                See More (
+                {Math.min(
+                  itemsPerPage,
+                  filteredEmployees.length - currentPage * itemsPerPage
+                )}{" "}
+                more)
+              </button>
+            </div>
+          )}
         </div>
       )}
       {filteredEmployees.length === 0 && (
@@ -1947,27 +2118,6 @@ export default function Employees() {
                     placeholder="Hours per week"
                   />
                 </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={
-                      !!editingEmployee.userId || editingEmployee.hasUserAccount
-                    }
-                    disabled={!!editingEmployee.userId} // cannot uncheck if already a user
-                    onChange={(e) =>
-                      setEditingEmployee({
-                        ...editingEmployee,
-                        hasUserAccount: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <label className="text-sm font-medium text-gray-700">
-                    Create User
-                  </label>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Performance (%)
@@ -2131,7 +2281,8 @@ export default function Employees() {
                     className="ml-2 text-sm text-gray-700"
                   >
                     Create User Account{" "}
-                    {createUserDisabled && "(Already has account)"}
+                    {createUserDisabled &&
+                      "(Already has an account or account creation request has been sent)"}
                   </label>
                 </div>
                 {createUserChecked && !createUserDisabled && (
