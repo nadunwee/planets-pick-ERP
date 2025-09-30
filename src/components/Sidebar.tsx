@@ -80,7 +80,7 @@ export function Sidebar() {
   const productionMan = [
     "Dashboard",
     "Procurement",
-    "Production",
+    "Inventory",
     "Employees",
     "Delivery",
     "Finance",
