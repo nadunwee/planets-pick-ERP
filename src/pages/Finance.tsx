@@ -2995,7 +2995,6 @@ ${"=".repeat(80)}
                   Operating, Investing & Financing activities
                 </p>
               </button>
-
               <button
                 onClick={() => {
                   const format =
