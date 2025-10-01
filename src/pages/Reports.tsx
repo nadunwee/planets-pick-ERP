@@ -7,7 +7,6 @@ import {
   Eye,
   Printer,
   Search,
-  Calendar,
   DollarSign,
   Package,
   Users,
@@ -17,7 +16,14 @@ import {
   X,
   Clock,
   CheckCircle,
+  Lock,
 } from "lucide-react";
+import {
+  getCurrentUser,
+  canDownloadReports,
+  canDownloadReportCategory,
+  getUserLevelName,
+} from "../utils/userAuth";
 
 interface Report {
   id: string;
@@ -31,17 +37,6 @@ interface Report {
   isAvailable: boolean;
   icon: React.ReactNode;
 }
-
-interface UserRole {
-  role: "admin" | "finance" | "sales" | "production" | "hr" | "viewer";
-  permissions: string[];
-}
-
-// Mock user role - in real app this would come from authentication context
-const currentUser: UserRole = {
-  role: "admin", // Change this to test different user types
-  permissions: ["all"], // Admin has all permissions
-};
 
 const allReports: Report[] = [
   // Sales Reports
@@ -256,17 +251,17 @@ export default function Reports() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedFormat, setSelectedFormat] = useState("All");
   const [showReportDetails, setShowReportDetails] = useState<string | null>(null);
+  
+  // Get current user information from localStorage
+  const currentUser = getCurrentUser();
+  const userLevel = currentUser?.level || "L1";
+  const userDepartment = currentUser?.department || "";
 
   const categories = ["All", "sales", "finance", "inventory", "production", "hr", "system", "wastage"];
   const formats = ["All", "pdf", "excel", "csv"];
 
-  // Filter reports based on user permissions
-  const availableReports = allReports.filter(report => {
-    if (currentUser.permissions.includes("all")) return true;
-    return report.requiresPermission.some(permission => 
-      currentUser.permissions.includes(permission)
-    );
-  });
+  // All users can VIEW all reports, but download is restricted by level
+  const availableReports = allReports;
 
   const filteredReports = availableReports.filter((report) => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -275,6 +270,11 @@ export default function Reports() {
     const matchesFormat = selectedFormat === "All" || report.format === selectedFormat;
     return matchesSearch && matchesCategory && matchesFormat;
   });
+  
+  // Check if user can download a specific report
+  const canUserDownloadReport = (reportCategory: string): boolean => {
+    return canDownloadReportCategory(userLevel, userDepartment, reportCategory);
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -332,8 +332,14 @@ export default function Reports() {
   };
 
   const handleDownloadReport = (report: Report) => {
+    if (!canUserDownloadReport(report.category)) {
+      alert(`Access Denied: ${getUserLevelName(userLevel)} cannot download ${report.category} reports. ${userLevel === "L1" ? "Level 1 users cannot download any reports." : "You can only download reports relevant to your department."}`);
+      return;
+    }
     console.log(`Downloading ${report.name} in ${report.format} format`);
     // Here you would typically trigger the actual download
+    // For now, we'll just show a success message
+    alert(`Downloading ${report.name}...`);
   };
 
   const handlePreviewReport = (report: Report) => {
@@ -342,6 +348,10 @@ export default function Reports() {
   };
 
   const handlePrintReport = (report: Report) => {
+    if (!canUserDownloadReport(report.category)) {
+      alert(`Access Denied: ${getUserLevelName(userLevel)} cannot print ${report.category} reports.`);
+      return;
+    }
     console.log(`Printing ${report.name}`);
     // Here you would typically trigger printing
   };
@@ -362,24 +372,37 @@ export default function Reports() {
           <p className="text-gray-600">
             Access comprehensive reports based on your role and permissions
           </p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-sm text-gray-500">Current Role:</span>
-            <span className={`px-2 py-1 rounded-full text-xs ${getCategoryColor(currentUser.role)}`}>
-              {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
-            </span>
-            <span className="text-sm text-gray-500">
-              • {totalReports} reports available
+          <div className="flex items-center gap-3 mt-2">
+            <div className="flex items-center gap-2">
+              <Shield size={16} className="text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">
+                {currentUser?.name || "Guest"}
+              </span>
+              <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                {getUserLevelName(userLevel)}
+              </span>
+            </div>
+            <span className="text-sm text-gray-400">•</span>
+            <span className="text-sm text-gray-600">
+              {userLevel === "L1" && "Can view reports only"}
+              {userLevel === "L2" && "Can download department reports"}
+              {userLevel === "L3" && "Can download all reports"}
+              {userLevel === "L4" && "Full access"}
             </span>
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
+          <button 
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition ${
+              canDownloadReports(userLevel)
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            disabled={!canDownloadReports(userLevel)}
+            title={!canDownloadReports(userLevel) ? "Your access level does not permit bulk downloads" : ""}
+          >
             <Download size={16} />
             Bulk Download
-          </button>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition">
-            <Calendar size={16} />
-            Schedule Reports
           </button>
         </div>
       </div>
@@ -530,20 +553,47 @@ export default function Reports() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleDownloadReport(report)}
-                    className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition flex items-center justify-center gap-1"
+                    className={`flex-1 px-3 py-2 rounded text-sm transition flex items-center justify-center gap-1 ${
+                      canUserDownloadReport(report.category)
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={!canUserDownloadReport(report.category)}
+                    title={
+                      !canUserDownloadReport(report.category)
+                        ? userLevel === "L1"
+                          ? "Level 1 users cannot download reports"
+                          : "You can only download reports for your department"
+                        : ""
+                    }
                   >
-                    <Download size={14} />
+                    {canUserDownloadReport(report.category) ? (
+                      <Download size={14} />
+                    ) : (
+                      <Lock size={14} />
+                    )}
                     Download
                   </button>
                   <button
                     onClick={() => handlePreviewReport(report)}
                     className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition"
+                    title="Preview report"
                   >
                     <Eye size={14} />
                   </button>
                   <button
                     onClick={() => handlePrintReport(report)}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition"
+                    className={`px-3 py-2 rounded text-sm transition ${
+                      canUserDownloadReport(report.category)
+                        ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={!canUserDownloadReport(report.category)}
+                    title={
+                      !canUserDownloadReport(report.category)
+                        ? "Print access restricted"
+                        : "Print report"
+                    }
                   >
                     <Printer size={14} />
                   </button>
@@ -620,14 +670,28 @@ export default function Reports() {
                       <div className="space-y-2">
                         <button
                           onClick={() => handleDownloadReport(report)}
-                          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                          className={`w-full py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 ${
+                            canUserDownloadReport(report.category)
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          }`}
+                          disabled={!canUserDownloadReport(report.category)}
                         >
-                          <Download size={16} />
+                          {canUserDownloadReport(report.category) ? (
+                            <Download size={16} />
+                          ) : (
+                            <Lock size={16} />
+                          )}
                           Download Report
                         </button>
                         <button
                           onClick={() => handlePrintReport(report)}
-                          className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                          className={`w-full py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 ${
+                            canUserDownloadReport(report.category)
+                              ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
+                          disabled={!canUserDownloadReport(report.category)}
                         >
                           <Printer size={16} />
                           Print Report

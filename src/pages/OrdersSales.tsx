@@ -194,6 +194,75 @@ export default function OrdersSales() {
     }
   };
 
+  // Export Sales Report with proper calculations
+  const exportSalesReport = () => {
+    // Calculate sales metrics
+    const totalOrders = filteredOrders.length;
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const deliveredOrders = filteredOrders.filter(o => o.status === "delivered").length;
+    const pendingOrders = filteredOrders.filter(o => o.status === "pending").length;
+    const processingOrders = filteredOrders.filter(o => o.status === "processing").length;
+    
+    // Group by product for product performance
+    const productPerformance: Record<string, { count: number; revenue: number }> = {};
+    filteredOrders.forEach(order => {
+      order.items?.forEach(item => {
+        const productName = item.productName || item.name || 'Unknown Product';
+        if (!productPerformance[productName]) {
+          productPerformance[productName] = { count: 0, revenue: 0 };
+        }
+        productPerformance[productName].count += item.quantity || 0;
+        productPerformance[productName].revenue += (item.quantity || 0) * (item.unitPrice || 0);
+      });
+    });
+
+    // Create CSV content
+    let csvContent = "PLANETS PICK ERP - SALES PERFORMANCE REPORT\n";
+    csvContent += `Generated: ${new Date().toLocaleString()}\n`;
+    csvContent += `Period: ${dateRange === 'all' ? 'All Time' : dateRange}\n\n`;
+    
+    csvContent += "SALES SUMMARY\n";
+    csvContent += "Metric,Value\n";
+    csvContent += `Total Orders,${totalOrders}\n`;
+    csvContent += `Total Revenue,LKR ${totalRevenue.toLocaleString()}\n`;
+    csvContent += `Average Order Value,LKR ${averageOrderValue.toLocaleString()}\n`;
+    csvContent += `Delivered Orders,${deliveredOrders}\n`;
+    csvContent += `Processing Orders,${processingOrders}\n`;
+    csvContent += `Pending Orders,${pendingOrders}\n\n`;
+    
+    csvContent += "ORDER DETAILS\n";
+    csvContent += "Order Number,Customer,Date,Status,Items,Total Amount\n";
+    filteredOrders.forEach(order => {
+      const orderNumber = order.orderNumber || order.orderId || 'N/A';
+      const customer = order.customer || 'Unknown';
+      const date = new Date(order.orderDate || order.createdAt || '').toLocaleDateString();
+      const status = order.status || 'unknown';
+      const itemCount = order.items?.length || 0;
+      const total = order.totalAmount || 0;
+      csvContent += `${orderNumber},"${customer}",${date},${status},${itemCount},${total}\n`;
+    });
+    
+    csvContent += "\nPRODUCT PERFORMANCE\n";
+    csvContent += "Product,Quantity Sold,Revenue\n";
+    Object.entries(productPerformance).forEach(([product, data]) => {
+      csvContent += `"${product}",${data.count},${data.revenue.toLocaleString()}\n`;
+    });
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Sales_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Sales report exported successfully!');
+  };
+
   const statuses = [
     "All",
     "pending",
@@ -308,9 +377,12 @@ export default function OrdersSales() {
               New Customer
             </button>
           )}
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition">
+          <button 
+            onClick={exportSalesReport}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"
+          >
             <Download size={16} />
-            Export
+            Export Report
           </button>
         </div>
       </div>
