@@ -21,28 +21,31 @@ import Login from "@/pages/Login";
 import Procurement from "@/pages/Suppliers"; // 👈 import Suppliers page
 
 import { Sidebar } from "@/components/Sidebar";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <Login
-              onLogin={(token: string) => {
-                // handle login token here, e.g., save to localStorage or context
-                console.log("Logged in with token:", token);
-              }}
-            />
-          }
-        />
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <Login
+                onLogin={(token: string) => {
+                  // handle login token here, e.g., save to localStorage or context
+                  console.log("Logged in with token:", token);
+                }}
+              />
+            }
+          />
 
-        {/* Main app layout */}
-        <Route path="/*" element={<MainLayout />} />
-      </Routes>
-    </Router>
+          {/* Main app layout */}
+          <Route path="/*" element={<MainLayout />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 

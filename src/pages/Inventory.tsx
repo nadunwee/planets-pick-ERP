@@ -10,6 +10,7 @@ import {
   Download,
 } from "lucide-react";
 import AddItemModal from "@/components/inventory/AddItemModal";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const categories = ["All", "Raw Materials", "Finished Products", "Packaging"];
 
@@ -400,6 +401,7 @@ export default function Inventory() {
         onSubmit={handleSaveItem}
         initialData={editingItem} // pass current values
       />
+    <ScrollToTop />
     </div>
   );
 }

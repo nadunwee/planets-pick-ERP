@@ -32,6 +32,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import ScrollToTop from "@/components/ScrollToTop";
 
 // Register ChartJS components
 ChartJS.register(
@@ -2595,6 +2596,7 @@ export default function Production() {
           </div>
         </div>
       )}
+    <ScrollToTop />
     </div>
   );
 }

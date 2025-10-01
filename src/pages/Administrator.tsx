@@ -10,6 +10,7 @@ import {
   Plus,
   Activity,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
 
 interface User {
   _id: string;
@@ -389,6 +390,7 @@ export default function Administrator() {
           </div>
         </div>
       </div>
+    <ScrollToTop />
     </div>
   );
 }

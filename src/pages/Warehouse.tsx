@@ -20,6 +20,7 @@ import {
   TrendingDown,
   X,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
 
 interface WarehouseItem {
   id: string;
@@ -1825,6 +1826,7 @@ export default function Warehouse() {
           </div>
         </div>
       )}
+    <ScrollToTop />
     </div>
   );
 }

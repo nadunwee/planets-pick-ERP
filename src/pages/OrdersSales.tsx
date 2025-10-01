@@ -29,6 +29,7 @@ import {
   type Order as OrderType,
   type OrderPayload,
 } from "@/components/services/orderService";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export default function OrdersSales() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -784,6 +785,7 @@ export default function OrdersSales() {
         isEdit={!!editingOrder}
         initialOrder={editingOrder || undefined}
       />
+    <ScrollToTop />
     </div>
   );
 }

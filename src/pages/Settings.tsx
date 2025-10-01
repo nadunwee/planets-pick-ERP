@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Settings as SettingsIcon,
   Building,
@@ -11,6 +11,8 @@ import {
   Download,
   CheckCircle,
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
+import ScrollToTop from "@/components/ScrollToTop";
 
 interface CompanyInfo {
   name: string;
@@ -59,6 +61,7 @@ const timezones = ["Asia/Colombo", "UTC", "America/New_York", "Europe/London"];
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("company");
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
     name: "Planet's Pick ERP",
@@ -75,13 +78,18 @@ export default function Settings() {
     language: "English",
     dateFormat: "DD/MM/YYYY",
     timeFormat: "24-hour",
-    theme: "light",
+    theme: theme,
     notifications: {
       email: true,
       push: true,
       sms: false,
     },
   });
+
+  // Sync theme from context to local state
+  useEffect(() => {
+    setSystemPreferences(prev => ({ ...prev, theme }));
+  }, [theme]);
 
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     passwordPolicy: {
@@ -327,7 +335,11 @@ export default function Settings() {
                   </label>
                   <select
                     value={systemPreferences.theme}
-                    onChange={(e) => setSystemPreferences({...systemPreferences, theme: e.target.value as "light" | "dark" | "auto"})}
+                    onChange={(e) => {
+                      const newTheme = e.target.value as "light" | "dark" | "auto";
+                      setSystemPreferences({...systemPreferences, theme: newTheme});
+                      setTheme(newTheme); // Update global theme context
+                    }}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
                     <option value="light">Light</option>
@@ -624,6 +636,7 @@ export default function Settings() {
           )}
         </div>
       </div>
+    <ScrollToTop />
     </div>
   );
 }

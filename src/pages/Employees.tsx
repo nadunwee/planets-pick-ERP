@@ -23,6 +23,7 @@ import {
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ScrollToTop from "@/components/ScrollToTop";
 
 // For employees already in system
 interface Employee {
@@ -569,8 +570,9 @@ export default function Employees() {
   const pendingLeaveRequests = leaveRequests.filter(
     (r) => r.status === "pending"
   ).length;
-  const totalPayrollAmount = payrollRecords.reduce(
-    (sum, record) => sum + record.netSalary,
+  // Calculate total payroll from sum of all employee salaries
+  const totalPayrollAmount = employees.reduce(
+    (sum, employee) => sum + (employee.salary || 0),
     0
   );
 
@@ -2633,6 +2635,7 @@ export default function Employees() {
           </div>
         </div>
       )}{" "}
+    <ScrollToTop />
     </div>
   );
 }
