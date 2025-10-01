@@ -229,6 +229,88 @@ export default function Wastage() {
   const resolvedItems = wastageItems.filter(item => item.status === "resolved").length;
   const pendingItems = wastageItems.filter(item => item.status === "pending").length;
 
+  // Export Wastage Analysis Report
+  const exportWastageReport = () => {
+    // Calculate wastage analytics
+    const categoryBreakdown: Record<string, { quantity: number; cost: number; count: number }> = {};
+    filteredWastage.forEach(item => {
+      const cat = getCategoryName(item.category);
+      if (!categoryBreakdown[cat]) {
+        categoryBreakdown[cat] = { quantity: 0, cost: 0, count: 0 };
+      }
+      categoryBreakdown[cat].quantity += item.quantity;
+      categoryBreakdown[cat].cost += item.cost;
+      categoryBreakdown[cat].count += 1;
+    });
+
+    const departmentBreakdown: Record<string, { cost: number; count: number }> = {};
+    filteredWastage.forEach(item => {
+      if (!departmentBreakdown[item.department]) {
+        departmentBreakdown[item.department] = { cost: 0, count: 0 };
+      }
+      departmentBreakdown[item.department].cost += item.cost;
+      departmentBreakdown[item.department].count += 1;
+    });
+
+    const totalCost = filteredWastage.reduce((sum, item) => sum + item.cost, 0);
+    const totalItems = filteredWastage.length;
+    const averageCostPerIncident = totalItems > 0 ? totalCost / totalItems : 0;
+
+    // Create CSV content
+    let csvContent = "PLANETS PICK ERP - WASTAGE ANALYSIS REPORT\n";
+    csvContent += `Generated: ${new Date().toLocaleString()}\n`;
+    csvContent += `Analysis Period: All Records\n\n`;
+    
+    csvContent += "WASTAGE SUMMARY\n";
+    csvContent += "Metric,Value\n";
+    csvContent += `Total Wastage Incidents,${totalItems}\n`;
+    csvContent += `Total Wastage Cost,LKR ${totalCost.toLocaleString()}\n`;
+    csvContent += `Average Cost per Incident,LKR ${averageCostPerIncident.toLocaleString()}\n`;
+    csvContent += `Resolved Incidents,${filteredWastage.filter(i => i.status === 'resolved').length}\n`;
+    csvContent += `Pending Incidents,${filteredWastage.filter(i => i.status === 'pending').length}\n`;
+    csvContent += `Prevented Recurrences,${filteredWastage.filter(i => i.status === 'prevented').length}\n\n`;
+    
+    csvContent += "CATEGORY BREAKDOWN\n";
+    csvContent += "Category,Incidents,Quantity,Total Cost,Avg Cost\n";
+    Object.entries(categoryBreakdown).forEach(([category, data]) => {
+      const avgCost = data.count > 0 ? data.cost / data.count : 0;
+      csvContent += `"${category}",${data.count},${data.quantity},${data.cost.toLocaleString()},${avgCost.toLocaleString()}\n`;
+    });
+    
+    csvContent += "\nDEPARTMENT BREAKDOWN\n";
+    csvContent += "Department,Incidents,Total Cost,Avg Cost per Incident\n";
+    Object.entries(departmentBreakdown).forEach(([dept, data]) => {
+      const avgCost = data.count > 0 ? data.cost / data.count : 0;
+      csvContent += `"${dept}",${data.count},${data.cost.toLocaleString()},${avgCost.toLocaleString()}\n`;
+    });
+    
+    csvContent += "\nWASTAGE INCIDENT DETAILS\n";
+    csvContent += "Date,Category,Description,Quantity,Unit,Cost,Reason,Department,Reported By,Status,Prevention Measures\n";
+    filteredWastage.forEach(item => {
+      const prevention = item.preventionMeasures || 'N/A';
+      csvContent += `${item.date},"${getCategoryName(item.category)}","${item.description}",${item.quantity},${item.unit},${item.cost},"${item.reason}","${item.department}","${item.reportedBy}",${item.status},"${prevention}"\n`;
+    });
+    
+    csvContent += "\nPREVENTION MEASURES IMPLEMENTED\n";
+    csvContent += "Category,Description,Prevention Measures\n";
+    filteredWastage.filter(i => i.preventionMeasures).forEach(item => {
+      csvContent += `"${getCategoryName(item.category)}","${item.description}","${item.preventionMeasures}"\n`;
+    });
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Wastage_Analysis_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Wastage analysis report exported successfully!');
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -249,7 +331,10 @@ export default function Wastage() {
             <Plus size={16} />
             Report Wastage
           </button>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition">
+          <button 
+            onClick={exportWastageReport}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          >
             <Download size={16} />
             Export Report
           </button>
