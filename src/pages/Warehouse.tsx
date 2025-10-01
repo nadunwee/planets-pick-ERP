@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-import ScrollToTop from "@/components/ScrollToTop";
   Package,
   Search,
   Plus,
@@ -21,6 +20,7 @@ import ScrollToTop from "@/components/ScrollToTop";
   TrendingDown,
   X,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
 
 interface WarehouseItem {
   id: string;
@@ -1826,7 +1826,7 @@ export default function Warehouse() {
           </div>
         </div>
       )}
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }

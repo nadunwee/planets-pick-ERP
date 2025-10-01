@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-import ScrollToTop from "@/components/ScrollToTop";
   Users,
   Shield,
   Settings,
@@ -11,6 +10,7 @@ import ScrollToTop from "@/components/ScrollToTop";
   Plus,
   Activity,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
 
 interface User {
   _id: string;
@@ -390,7 +390,7 @@ export default function Administrator() {
           </div>
         </div>
       </div>
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }

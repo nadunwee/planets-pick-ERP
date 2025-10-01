@@ -22,7 +22,6 @@ import {
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
 import {
-import ScrollToTop from "@/components/ScrollToTop";
   getAllOrders,
   deleteOrder,
   createOrder,
@@ -30,6 +29,7 @@ import ScrollToTop from "@/components/ScrollToTop";
   type Order as OrderType,
   type OrderPayload,
 } from "@/components/services/orderService";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export default function OrdersSales() {
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -785,7 +785,7 @@ export default function OrdersSales() {
         isEdit={!!editingOrder}
         initialOrder={editingOrder || undefined}
       />
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }

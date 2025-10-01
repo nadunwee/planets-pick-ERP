@@ -401,7 +401,7 @@ export default function Inventory() {
         onSubmit={handleSaveItem}
         initialData={editingItem} // pass current values
       />
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }

@@ -2596,7 +2596,7 @@ export default function Production() {
           </div>
         </div>
       )}
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }

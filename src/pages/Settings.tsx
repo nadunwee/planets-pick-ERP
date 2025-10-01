@@ -636,7 +636,7 @@ export default function Settings() {
           )}
         </div>
       </div>
-      <ScrollToTop />
+    <ScrollToTop />
     </div>
   );
 }
