@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+import ScrollToTop from "@/components/ScrollToTop";
   Users,
   Shield,
   Settings,
@@ -389,6 +390,7 @@ export default function Administrator() {
           </div>
         </div>
       </div>
+      <ScrollToTop />
     </div>
   );
 }

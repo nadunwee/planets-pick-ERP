@@ -19,6 +19,7 @@ import {
   Lock,
 } from "lucide-react";
 import {
+import ScrollToTop from "@/components/ScrollToTop";
   getCurrentUser,
   canDownloadReports,
   canDownloadReportCategory,
@@ -705,6 +706,7 @@ export default function Reports() {
           </div>
         </div>
       )}
+      <ScrollToTop />
     </div>
   );
 }

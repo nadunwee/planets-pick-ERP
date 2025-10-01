@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+import ScrollToTop from "@/components/ScrollToTop";
   Package,
   Search,
   Plus,
@@ -1825,6 +1826,7 @@ export default function Warehouse() {
           </div>
         </div>
       )}
+      <ScrollToTop />
     </div>
   );
 }

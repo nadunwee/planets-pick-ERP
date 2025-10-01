@@ -92,6 +92,11 @@ userSchema.statics.login = async function (email, password) {
     throw Error("Incorrect Email");
   }
 
+  // Check if user is approved
+  if (!user.approved) {
+    throw Error("Account pending admin approval. Please contact administrator.");
+  }
+
   // const match = await bcrypt.compare(password, user.password);
   // if (!match) {
   //   throw Error("Incorrect Password");

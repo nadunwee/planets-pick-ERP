@@ -22,6 +22,7 @@ import {
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
 import {
+import ScrollToTop from "@/components/ScrollToTop";
   getAllOrders,
   deleteOrder,
   createOrder,
@@ -784,6 +785,7 @@ export default function OrdersSales() {
         isEdit={!!editingOrder}
         initialOrder={editingOrder || undefined}
       />
+      <ScrollToTop />
     </div>
   );
 }
