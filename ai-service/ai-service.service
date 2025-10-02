@@ -1,0 +1,19 @@
+[Unit]
+Description=Finance AI Prediction Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/planets-pick-ERP/ai-service
+Environment="PATH=/usr/bin:/usr/local/bin"
+ExecStart=/usr/bin/python3 /path/to/planets-pick-ERP/ai-service/app.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/var/log/ai-service/output.log
+StandardError=append:/var/log/ai-service/error.log
+
+[Install]
+WantedBy=multi-user.target

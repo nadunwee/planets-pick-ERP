@@ -1,4 +1,49 @@
-# React + TypeScript + Vite
+# Planets Pick ERP System
+
+A modern ERP (Enterprise Resource Planning) system built with React, TypeScript, Vite, Node.js, and AI-powered financial predictions.
+
+## Features
+
+- **Finance Management** with AI-powered predictions and insights
+- **Inventory Management**
+- **Production Planning**
+- **Employee Management**
+- **Orders & Sales**
+- **Procurement**
+- **Warehouse Management**
+- **Reports & Analytics**
+
+## 🚀 Quick Start
+
+See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
+
+### Start All Services
+
+```bash
+./start-services.sh
+```
+
+This will start:
+- 🤖 AI Prediction Service (Port 5001)
+- 🔧 Backend Server (Port 4000)
+- 🌐 Frontend (Port 5173)
+
+### Access the Application
+
+Open your browser and navigate to: http://localhost:5173
+
+## AI Financial Insights
+
+The Finance module includes AI-powered features:
+- **3-Month Financial Predictions** - Machine learning predictions for income, expenses, and profit
+- **Automated Insights** - AI-generated recommendations based on financial trends
+- **Trend Analysis** - Visualize historical and predicted financial data
+
+For more information, see [AI_FINANCE_PREDICTION.md](AI_FINANCE_PREDICTION.md).
+
+---
+
+## Original Vite + React Template Info
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
