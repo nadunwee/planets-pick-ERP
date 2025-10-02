@@ -37,6 +37,7 @@ app.use("/api/inventory", inventoryRoutes); // Inventory endpoints
 app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/finance-ai", require("./routes/financeAi.js"));
 
 // Additional routes from ranudi branch
 app.use("/api/reports", require("./routes/reportRoutes.js"));
