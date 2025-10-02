@@ -13,6 +13,8 @@ import {
   Calculator,
   BarChart3,
   ArrowUp,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 
 import { Bar, Line } from "react-chartjs-2";
@@ -170,9 +172,36 @@ interface FinancialReport {
   };
 }
 
+interface PredictionData {
+  month: string;
+  predicted_income: number;
+  predicted_expense: number;
+  predicted_profit: number;
+}
+
+interface HistoricalData {
+  month: string;
+  income: number;
+  expense: number;
+  profit: number;
+}
+
+interface AIPredictionResponse {
+  success: boolean;
+  predictions: PredictionData[];
+  insights: string[];
+  historical: HistoricalData[];
+  model_trained: boolean;
+  data_points: number;
+}
+
 // --- API ---
 const API = axios.create({
   baseURL: "http://localhost:4000/api/finance",
+});
+
+const AI_API = axios.create({
+  baseURL: "http://localhost:4000/api/finance-ai",
 });
 
 export default function Finance() {
@@ -214,6 +243,12 @@ export default function Finance() {
   const [assetToDelete, setAssetToDelete] = useState<AssetLiability | null>(
     null
   );
+
+  // --- AI PREDICTION STATES ---
+  const [aiPredictions, setAiPredictions] = useState<PredictionData[]>([]);
+  const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
 
   const [formData, setFormData] = useState({
     type: "expense",
@@ -263,6 +298,30 @@ export default function Finance() {
     };
     fetchData();
   }, []);
+
+  // --- FETCH AI PREDICTIONS ---
+  useEffect(() => {
+    const fetchPredictions = async () => {
+      setAiLoading(true);
+      try {
+        const response = await AI_API.get<AIPredictionResponse>("/predict");
+        if (response.data.success) {
+          setAiPredictions(response.data.predictions);
+          setAiInsights(response.data.insights);
+          setHistoricalData(response.data.historical);
+        }
+      } catch (err: any) {
+        console.error("AI Prediction error:", err.response?.data || err.message);
+        // Set default insights if AI service is not available
+        setAiInsights([
+          "AI prediction service is currently unavailable. Start the AI service to get predictions.",
+        ]);
+      } finally {
+        setAiLoading(false);
+      }
+    };
+    fetchPredictions();
+  }, [transactions]); // Re-fetch when transactions change
 
   // --- RESET FORM WHEN MODAL OPENS ---
   useEffect(() => {
@@ -697,6 +756,84 @@ export default function Finance() {
     assetsLiabilities,
     "liability"
   );
+
+  // --- AI PREDICTION CHART DATA ---
+  const predictionChartData = useMemo(() => {
+    const allData = [...historicalData, ...aiPredictions];
+    
+    if (allData.length === 0) {
+      return {
+        labels: ["No Data"],
+        datasets: [
+          {
+            label: "Income",
+            data: [0],
+            borderColor: "rgba(34, 197, 94, 1)",
+            backgroundColor: "rgba(34, 197, 94, 0.1)",
+            tension: 0.4,
+          },
+          {
+            label: "Expenses",
+            data: [0],
+            borderColor: "rgba(239, 68, 68, 1)",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            tension: 0.4,
+          },
+          {
+            label: "Profit",
+            data: [0],
+            borderColor: "rgba(59, 130, 246, 1)",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            tension: 0.4,
+          },
+        ],
+      };
+    }
+
+    const labels = allData.map((d) => d.month);
+    const incomeData = allData.map((d) => 
+      'income' in d ? d.income : d.predicted_income
+    );
+    const expenseData = allData.map((d) => 
+      'expense' in d ? d.expense : d.predicted_expense
+    );
+    const profitData = allData.map((d) => 
+      'profit' in d ? d.profit : d.predicted_profit
+    );
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Income",
+          data: incomeData,
+          borderColor: "rgba(34, 197, 94, 1)",
+          backgroundColor: "rgba(34, 197, 94, 0.1)",
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: "Expenses",
+          data: expenseData,
+          borderColor: "rgba(239, 68, 68, 1)",
+          backgroundColor: "rgba(239, 68, 68, 0.1)",
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+        },
+        {
+          label: "Profit",
+          data: profitData,
+          borderColor: "rgba(59, 130, 246, 1)",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+        },
+      ],
+    };
+  }, [historicalData, aiPredictions]);
 
   // --- UTILS ---
   const getStatusColor = (status: string) => {
@@ -1890,6 +2027,139 @@ ${"=".repeat(80)}
               </p>
             </div>
           </div>
+
+          {/* AI Financial Insights */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-purple-500 text-white p-2 rounded-lg flex-shrink-0">
+                <Bot size={20} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                  AI Financial Insights
+                  <Sparkles size={16} className="text-purple-600" />
+                </h3>
+                {aiLoading ? (
+                  <p className="text-purple-700 text-sm mt-1">
+                    Analyzing financial data...
+                  </p>
+                ) : (
+                  <div className="space-y-1 mt-2">
+                    {aiInsights.map((insight, idx) => (
+                      <p key={idx} className="text-purple-700 text-sm">
+                        • {insight}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Predictions Card */}
+          {aiPredictions.length > 0 && (
+            <div className="bg-white rounded-lg shadow border p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <TrendingUp className="text-purple-600" size={20} />
+                Financial Predictions (Next 3 Months)
+              </h3>
+              
+              {/* Prediction Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {aiPredictions.map((pred, idx) => (
+                  <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">
+                      {pred.month}
+                    </h4>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Income</p>
+                        <p className="text-base font-bold text-green-600">
+                          {pred.predicted_income.toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Expenses</p>
+                        <p className="text-base font-bold text-red-600">
+                          {pred.predicted_expense.toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Profit</p>
+                        <p className={`text-base font-bold ${pred.predicted_profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                          {pred.predicted_profit.toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Prediction Chart */}
+              <div className="h-64">
+                <Line
+                  data={predictionChartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "top" as const,
+                      },
+                      title: {
+                        display: true,
+                        text: "Historical & Predicted Financial Trends",
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                              label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                              label += context.parsed.y.toLocaleString("en-LK", {
+                                style: "currency",
+                                currency: "LKR",
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              });
+                            }
+                            return label;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: function(value) {
+                            return 'LKR ' + Number(value).toLocaleString();
+                          }
+                        }
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* ASSET/LIABILITY MODAL */}
           {showAddAssetModal && (
