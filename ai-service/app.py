@@ -26,7 +26,7 @@ def fetch_transactions():
 def prepare_data(transactions):
     """Prepare data for ML model"""
     if not transactions:
-        return None, None, None, None
+        return None, None
     
     df = pd.DataFrame(transactions)
     
