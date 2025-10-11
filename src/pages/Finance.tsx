@@ -153,16 +153,20 @@ interface TrialBalanceEntry {
   creditBalance: number;
 }
 
+// Financial Report Structure
+// Enhanced to include detailed line items for P&L and balance verification
 interface FinancialReport {
   balanceSheet: {
     assets: { current: number; nonCurrent: number; total: number };
     liabilities: { current: number; nonCurrent: number; total: number };
-    equity: number;
+    equity: number; // Net profit/loss (retained earnings from P&L)
   };
   profitLoss: {
-    revenue: number;
-    expenses: number;
-    netIncome: number;
+    revenueItems: Array<{ accountName: string; amount: number }>; // Detailed revenue breakdown
+    revenue: number; // Total revenue
+    expenseItems: Array<{ accountName: string; amount: number }>; // Detailed expense breakdown
+    expenses: number; // Total expenses
+    netIncome: number; // Revenue - Expenses (flows to Balance Sheet equity)
   };
   cashFlow: {
     operating: number;
@@ -606,11 +610,33 @@ export default function Finance() {
       (acc) => !acc.accountName.includes("Current")
     );
 
+    // ===== PROFIT & LOSS CALCULATION =====
+    // Extract detailed revenue line items from income accounts
+    // Each income account's credit total represents revenue earned
+    const revenueItems = income.map(acc => ({
+      accountName: acc.accountName,
+      amount: acc.creditTotal
+    }));
+    
+    // Extract detailed expense line items from expense accounts
+    // Each expense account's debit total represents expenses incurred
+    const expenseItems = expenses.map(acc => ({
+      accountName: acc.accountName,
+      amount: acc.debitTotal
+    }));
+
+    // Calculate total revenue from all income accounts
     const totalRevenue = income.reduce((sum, acc) => sum + acc.creditTotal, 0);
+    
+    // Calculate total expenses from all expense accounts
     const totalExpenses = expenses.reduce(
       (sum, acc) => sum + acc.debitTotal,
       0
     );
+    
+    // Net Profit/Loss = Total Revenue - Total Expenses
+    // This is the bottom line of the P&L statement
+    const netIncome = totalRevenue - totalExpenses;
 
     return {
       balanceSheet: {
@@ -633,18 +659,24 @@ export default function Finance() {
           ),
           total: liabilities.reduce((sum, acc) => sum + acc.balance, 0),
         },
-        equity: totalRevenue - totalExpenses,
+        // ===== EQUITY CALCULATION =====
+        // Equity = Net Profit/Loss (Retained Earnings)
+        // This creates the link between P&L and Balance Sheet
+        // The profit/loss flows into equity on the balance sheet
+        equity: netIncome,
       },
       profitLoss: {
+        revenueItems,    // Detailed revenue breakdown
         revenue: totalRevenue,
+        expenseItems,    // Detailed expense breakdown
         expenses: totalExpenses,
-        netIncome: totalRevenue - totalExpenses,
+        netIncome,       // Bottom line: Revenue - Expenses
       },
       cashFlow: {
-        operating: totalRevenue - totalExpenses,
+        operating: netIncome,
         investing: 0, // Would need more detailed transaction categorization
         financing: 0, // Would need more detailed transaction categorization
-        netChange: totalRevenue - totalExpenses,
+        netChange: netIncome,
       },
     };
   }, [generateLedgerAccounts]);
@@ -1438,7 +1470,7 @@ export default function Finance() {
             <td class="amount currency"><strong>${balanceSheet.liabilities.total.toLocaleString()}</strong></td>
           </tr>
           <tr>
-            <td style="padding-left: 20px;">Retained Earnings</td>
+            <td style="padding-left: 20px;">Retained Earnings (Net Profit/Loss)</td>
             <td class="amount currency">${balanceSheet.equity.toLocaleString()}</td>
           </tr>
           <tr class="total">
@@ -1446,6 +1478,41 @@ export default function Finance() {
             <td class="amount currency"><strong>${(
               balanceSheet.liabilities.total + balanceSheet.equity
             ).toLocaleString()}</strong></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <table>
+          <tr class="total" style="background-color: #f0f9ff;">
+            <td><strong>ACCOUNTING EQUATION VERIFICATION</strong></td>
+            <td class="amount"></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 20px;">Assets</td>
+            <td class="amount currency">${balanceSheet.assets.total.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="padding-left: 20px;">Liabilities + Equity</td>
+            <td class="amount currency">${(
+              balanceSheet.liabilities.total + balanceSheet.equity
+            ).toLocaleString()}</td>
+          </tr>
+          <tr class="total" style="background-color: ${
+            Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
+              ? '#d1fae5'
+              : '#fee2e2'
+          };">
+            <td><strong>${
+              Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
+                ? '✓ BALANCED'
+                : '✗ OUT OF BALANCE'
+            }</strong></td>
+            <td class="amount currency"><strong>${
+              Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
+                ? '0'
+                : Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)).toLocaleString()
+            }</strong></td>
           </tr>
         </table>
       </div>
@@ -1463,10 +1530,12 @@ export default function Finance() {
             <th style="width: 70%;">Description</th>
             <th class="amount" style="width: 30%;">Amount (LKR)</th>
           </tr>
+          ${profitLoss.revenueItems.map(item => `
           <tr>
-            <td style="padding-left: 20px;">Total Revenue</td>
-            <td class="amount currency">${profitLoss.revenue.toLocaleString()}</td>
+            <td style="padding-left: 20px;">${item.accountName}</td>
+            <td class="amount currency">${item.amount.toLocaleString()}</td>
           </tr>
+          `).join('')}
           <tr class="total">
             <td><strong>TOTAL REVENUE</strong></td>
             <td class="amount currency"><strong>${profitLoss.revenue.toLocaleString()}</strong></td>
@@ -1481,10 +1550,12 @@ export default function Finance() {
             <th style="width: 70%;">Description</th>
             <th class="amount" style="width: 30%;">Amount (LKR)</th>
           </tr>
+          ${profitLoss.expenseItems.map(item => `
           <tr>
-            <td style="padding-left: 20px;">Total Expenses</td>
-            <td class="amount currency">${profitLoss.expenses.toLocaleString()}</td>
+            <td style="padding-left: 20px;">${item.accountName}</td>
+            <td class="amount currency">${item.amount.toLocaleString()}</td>
           </tr>
+          `).join('')}
           <tr class="total">
             <td><strong>TOTAL EXPENSES</strong></td>
             <td class="amount currency"><strong>${profitLoss.expenses.toLocaleString()}</strong></td>
@@ -1641,6 +1712,10 @@ export default function Finance() {
   const generateBalanceSheetCSV = (
     balanceSheet: FinancialReport["balanceSheet"]
   ) => {
+    const totalLiabilitiesEquity = balanceSheet.liabilities.total + balanceSheet.equity;
+    const difference = Math.abs(balanceSheet.assets.total - totalLiabilitiesEquity);
+    const isBalanced = difference < 0.01;
+    
     return `PLANETS PICK ERP SYSTEM - BALANCE SHEET
 Generated: ${new Date().toLocaleString()}
 As of: ${new Date().toLocaleDateString()}
@@ -1656,25 +1731,37 @@ Description,Amount (LKR)
 Current Liabilities,${balanceSheet.liabilities.current.toLocaleString()}
 Non-Current Liabilities,${balanceSheet.liabilities.nonCurrent.toLocaleString()}
 Total Liabilities,${balanceSheet.liabilities.total.toLocaleString()}
-Retained Earnings,${balanceSheet.equity.toLocaleString()}
-TOTAL LIABILITIES & EQUITY,${(
-      balanceSheet.liabilities.total + balanceSheet.equity
-    ).toLocaleString()}`;
+Retained Earnings (Net Profit/Loss),${balanceSheet.equity.toLocaleString()}
+TOTAL LIABILITIES & EQUITY,${totalLiabilitiesEquity.toLocaleString()}
+
+ACCOUNTING EQUATION VERIFICATION
+Assets,${balanceSheet.assets.total.toLocaleString()}
+Liabilities + Equity,${totalLiabilitiesEquity.toLocaleString()}
+Status,${isBalanced ? 'BALANCED' : 'OUT OF BALANCE'}
+${!isBalanced ? `Difference,${difference.toLocaleString()}` : ''}`;
   };
 
   const generateProfitLossCSV = (profitLoss: FinancialReport["profitLoss"]) => {
+    const revenueLines = profitLoss.revenueItems
+      .map(item => `${item.accountName},${item.amount.toLocaleString()}`)
+      .join('\n');
+    
+    const expenseLines = profitLoss.expenseItems
+      .map(item => `${item.accountName},${item.amount.toLocaleString()}`)
+      .join('\n');
+    
     return `PLANETS PICK ERP SYSTEM - PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleString()}
 Period: ${new Date().toLocaleDateString()}
 
 REVENUE
 Description,Amount (LKR)
-Total Revenue,${profitLoss.revenue.toLocaleString()}
+${revenueLines}
 TOTAL REVENUE,${profitLoss.revenue.toLocaleString()}
 
 EXPENSES
 Description,Amount (LKR)
-Total Expenses,${profitLoss.expenses.toLocaleString()}
+${expenseLines}
 TOTAL EXPENSES,${profitLoss.expenses.toLocaleString()}
 
 NET INCOME (LOSS),${profitLoss.netIncome.toLocaleString()}`;
@@ -1745,23 +1832,42 @@ ${
   const generateProfitLossReport = (
     profitLoss: FinancialReport["profitLoss"]
   ) => {
+    const revenueLines = profitLoss.revenueItems
+      .map(item => `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
+        style: "currency",
+        currency: "LKR",
+      })}`)
+      .join('\n');
+    
+    const expenseLines = profitLoss.expenseItems
+      .map(item => `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
+        style: "currency",
+        currency: "LKR",
+      })}`)
+      .join('\n');
+    
     return `
 PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleDateString()}
 
 REVENUE:
+${revenueLines}
+  ────────────────────────────
   Total Revenue: ${profitLoss.revenue.toLocaleString("en-LK", {
     style: "currency",
     currency: "LKR",
   })}
 
 EXPENSES:
+${expenseLines}
+  ────────────────────────────
   Total Expenses: ${profitLoss.expenses.toLocaleString("en-LK", {
     style: "currency",
     currency: "LKR",
   })}
 
-NET INCOME: ${profitLoss.netIncome.toLocaleString("en-LK", {
+═════════════════════════════════
+NET INCOME (LOSS): ${profitLoss.netIncome.toLocaleString("en-LK", {
       style: "currency",
       currency: "LKR",
     })}
