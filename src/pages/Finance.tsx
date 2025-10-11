@@ -30,6 +30,10 @@ import {
   Legend,
 } from "chart.js";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
 function PageWithScrollTop() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -481,6 +485,21 @@ export default function Finance() {
       cashAccount.creditTotal += cashDecrease;
     }
 
+    // Calculate balance for each account based on accounting rules
+    accountsMap.forEach((account) => {
+      if (account.accountType === "asset" || account.accountType === "expense") {
+        // Assets and Expenses have normal debit balances
+        account.balance = account.debitTotal - account.creditTotal;
+      } else if (
+        account.accountType === "liability" ||
+        account.accountType === "equity" ||
+        account.accountType === "income"
+      ) {
+        // Liabilities, Equity, and Income have normal credit balances
+        account.balance = account.creditTotal - account.debitTotal;
+      }
+    });
+
     return Array.from(accountsMap.values()).sort((a, b) =>
       a.accountName.localeCompare(b.accountName)
     );
@@ -564,26 +583,39 @@ export default function Finance() {
       0
     );
 
+    // Calculate asset totals using absolute values of balance
+    const totalCurrentAssets = currentAssets.reduce(
+      (sum, acc) => sum + Math.abs(acc.balance),
+      0
+    );
+    const totalNonCurrentAssets = nonCurrentAssets.reduce(
+      (sum, acc) => sum + Math.abs(acc.balance),
+      0
+    );
+    const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
+
+    // Calculate liability totals using absolute values of balance
+    const totalCurrentLiabilities = currentLiabilities.reduce(
+      (sum, acc) => sum + Math.abs(acc.balance),
+      0
+    );
+    const totalNonCurrentLiabilities = nonCurrentLiabilities.reduce(
+      (sum, acc) => sum + Math.abs(acc.balance),
+      0
+    );
+    const totalLiabilities = totalCurrentLiabilities + totalNonCurrentLiabilities;
+
     return {
       balanceSheet: {
         assets: {
-          current: currentAssets.reduce((sum, acc) => sum + acc.balance, 0),
-          nonCurrent: nonCurrentAssets.reduce(
-            (sum, acc) => sum + acc.balance,
-            0
-          ),
-          total: assets.reduce((sum, acc) => sum + acc.balance, 0),
+          current: totalCurrentAssets,
+          nonCurrent: totalNonCurrentAssets,
+          total: totalAssets,
         },
         liabilities: {
-          current: currentLiabilities.reduce(
-            (sum, acc) => sum + acc.balance,
-            0
-          ),
-          nonCurrent: nonCurrentLiabilities.reduce(
-            (sum, acc) => sum + acc.balance,
-            0
-          ),
-          total: liabilities.reduce((sum, acc) => sum + acc.balance, 0),
+          current: totalCurrentLiabilities,
+          nonCurrent: totalNonCurrentLiabilities,
+          total: totalLiabilities,
         },
         equity: totalRevenue - totalExpenses,
       },
@@ -1030,161 +1062,64 @@ export default function Finance() {
     reports: FinancialReport,
     date: string
   ) => {
-    // Create professional HTML content for PDF generation
-    let htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${
-        reportType === "balanceSheet"
-          ? "Balance Sheet"
-          : reportType === "profitLoss"
-          ? "Profit & Loss Statement"
-          : reportType === "cashFlow"
-          ? "Cash Flow Statement"
-          : "Trial Balance"
-      }</title>
-      <style>
-        @page { margin: 0.5in; }
-        body { 
-          font-family: 'Times New Roman', serif; 
-          margin: 0; 
-          padding: 0;
-          font-size: 12px;
-          line-height: 1.4;
-        }
-        .header { 
-          text-align: center; 
-          margin-bottom: 40px;
-          border-bottom: 2px solid #000;
-          padding-bottom: 20px;
-        }
-        .company-name { 
-          font-size: 28px; 
-          font-weight: bold; 
-          margin-bottom: 10px;
-          letter-spacing: 2px;
-        }
-        .report-title { 
-          font-size: 18px; 
-          font-weight: bold; 
-          margin-bottom: 5px;
-          text-transform: uppercase;
-        }
-        .date { 
-          font-size: 12px; 
-          margin-bottom: 10px;
-        }
-        .section { 
-          margin: 30px 0; 
-        }
-        .section-title { 
-          font-size: 14px; 
-          font-weight: bold; 
-          margin-bottom: 15px;
-          text-decoration: underline;
-        }
-        table { 
-          width: 100%; 
-          border-collapse: collapse; 
-          margin: 10px 0;
-          font-size: 11px;
-        }
-        th, td { 
-          border: 1px solid #000; 
-          padding: 8px 12px; 
-          text-align: left;
-          vertical-align: top;
-        }
-        th { 
-          background-color: #f0f0f0; 
-          font-weight: bold;
-          text-align: center;
-        }
-        .amount { 
-          text-align: right; 
-          font-family: 'Courier New', monospace;
-        }
-        .total { 
-          font-weight: bold; 
-          border-top: 2px solid #000;
-          background-color: #f8f8f8;
-        }
-        .subtotal {
-          font-weight: bold;
-          background-color: #f5f5f5;
-        }
-        .currency { 
-          font-family: 'Courier New', monospace;
-          font-weight: normal;
-        }
-        .footer {
-          margin-top: 40px;
-          text-align: center;
-          font-size: 10px;
-          color: #666;
-          border-top: 1px solid #ccc;
-          padding-top: 20px;
-        }
-        .report-info {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 20px;
-          font-size: 10px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="report-info">
-        <div>Generated: ${new Date().toLocaleString()}</div>
-        <div>Page 1 of 1</div>
-      </div>
-      
-      <div class="header">
-        <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-        <div class="report-title">${
-          reportType === "balanceSheet"
-            ? "BALANCE SHEET"
-            : reportType === "profitLoss"
-            ? "PROFIT & LOSS STATEMENT"
-            : reportType === "cashFlow"
-            ? "CASH FLOW STATEMENT"
-            : "TRIAL BALANCE"
-        }</div>
-        <div class="date">As of ${new Date().toLocaleDateString()}</div>
-      </div>
-    `;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Add header
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("PLANETS PICK ERP SYSTEM", pageWidth / 2, 20, { align: "center" });
+
+    doc.setFontSize(14);
+    const reportTitle =
+      reportType === "balanceSheet"
+        ? "BALANCE SHEET"
+        : reportType === "profitLoss"
+        ? "PROFIT & LOSS STATEMENT"
+        : reportType === "cashFlow"
+        ? "CASH FLOW STATEMENT"
+        : "TRIAL BALANCE";
+    doc.text(reportTitle, pageWidth / 2, 30, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`As of ${new Date().toLocaleDateString()}`, pageWidth / 2, 37, {
+      align: "center",
+    });
+
+    doc.setFontSize(8);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 45);
+
+    let startY = 55;
 
     switch (reportType) {
       case "balanceSheet":
-        htmlContent += generateBalanceSheetHTML(reports.balanceSheet);
+        startY = generateBalanceSheetPDF(doc, reports.balanceSheet, startY);
         break;
       case "profitLoss":
-        htmlContent += generateProfitLossHTML(reports.profitLoss);
+        startY = generateProfitLossPDF(doc, reports.profitLoss, startY);
         break;
       case "cashFlow":
-        htmlContent += generateCashFlowHTML(reports.cashFlow);
+        startY = generateCashFlowPDF(doc, reports.cashFlow, startY);
         break;
       case "trialBalance":
-        htmlContent += generateTrialBalanceHTML(generateTrialBalance);
+        startY = generateTrialBalancePDF(doc, generateTrialBalance, startY);
         break;
     }
 
-    htmlContent += `
-      <div class="footer">
-        <p>This report was generated by Planets Pick ERP System</p>
-        <p>For questions regarding this report, please contact the Finance Department</p>
-      </div>
-    </body>
-    </html>
-    `;
+    // Add footer
+    const footerY = pageHeight - 20;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.text(
+      "This report was generated by Planets Pick ERP System",
+      pageWidth / 2,
+      footerY,
+      { align: "center" }
+    );
 
-    // Create and download HTML file with instructions for PDF conversion
-    const blob = new Blob([htmlContent], { type: "text/html" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${
+    const fileName = `${
       reportType === "balanceSheet"
         ? "Balance_Sheet"
         : reportType === "profitLoss"
@@ -1192,19 +1127,9 @@ export default function Finance() {
         : reportType === "cashFlow"
         ? "Cash_Flow_Statement"
         : "Trial_Balance"
-    }_${date}.html`;
+    }_${date}.pdf`;
 
-    // Add instructions for PDF conversion
-    setTimeout(() => {
-      alert(
-        'File downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save'
-      );
-    }, 100);
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    doc.save(fileName);
   };
 
   // Scroll handler (already declared above)
@@ -1307,28 +1232,35 @@ export default function Finance() {
     reports: FinancialReport,
     date: string
   ) => {
-    let csvContent = "";
+    let workbook: XLSX.WorkBook;
+    let worksheet: XLSX.WorkSheet;
+    let sheetName = "";
 
     switch (reportType) {
       case "balanceSheet":
-        csvContent = generateBalanceSheetCSV(reports.balanceSheet);
+        worksheet = generateBalanceSheetExcel(reports.balanceSheet);
+        sheetName = "Balance Sheet";
         break;
       case "profitLoss":
-        csvContent = generateProfitLossCSV(reports.profitLoss);
+        worksheet = generateProfitLossExcel(reports.profitLoss);
+        sheetName = "Profit & Loss";
         break;
       case "cashFlow":
-        csvContent = generateCashFlowCSV(reports.cashFlow);
+        worksheet = generateCashFlowExcel(reports.cashFlow);
+        sheetName = "Cash Flow";
         break;
       case "trialBalance":
-        csvContent = generateTrialBalanceCSV(generateTrialBalance);
+        worksheet = generateTrialBalanceExcel(generateTrialBalance);
+        sheetName = "Trial Balance";
         break;
+      default:
+        return;
     }
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${
+    workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+    const fileName = `${
       reportType === "balanceSheet"
         ? "Balance_Sheet"
         : reportType === "profitLoss"
@@ -1336,219 +1268,265 @@ export default function Finance() {
         : reportType === "cashFlow"
         ? "Cash_Flow_Statement"
         : "Trial_Balance"
-    }_${date}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    }_${date}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
   };
 
-  // --- HTML REPORT GENERATORS ---
-  const generateBalanceSheetHTML = (
-    balanceSheet: FinancialReport["balanceSheet"]
-  ) => {
-    return `
-      <div class="section">
-        <div class="section-title">ASSETS</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Current Assets</td>
-            <td class="amount currency">${balanceSheet.assets.current.toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Non-Current Assets</td>
-            <td class="amount currency">${balanceSheet.assets.nonCurrent.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>TOTAL ASSETS</strong></td>
-            <td class="amount currency"><strong>${balanceSheet.assets.total.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
+  // --- PDF GENERATION HELPERS ---
+  const generateBalanceSheetPDF = (
+    doc: jsPDF,
+    balanceSheet: FinancialReport["balanceSheet"],
+    startY: number
+  ): number => {
+    // Assets table
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ASSETS", 14, startY);
+    startY += 5;
 
-      <div class="section">
-        <div class="section-title">LIABILITIES & EQUITY</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Current Liabilities</td>
-            <td class="amount currency">${balanceSheet.liabilities.current.toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Non-Current Liabilities</td>
-            <td class="amount currency">${balanceSheet.liabilities.nonCurrent.toLocaleString()}</td>
-          </tr>
-          <tr class="subtotal">
-            <td style="padding-left: 10px;"><strong>Total Liabilities</strong></td>
-            <td class="amount currency"><strong>${balanceSheet.liabilities.total.toLocaleString()}</strong></td>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Retained Earnings</td>
-            <td class="amount currency">${balanceSheet.equity.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>TOTAL LIABILITIES & EQUITY</strong></td>
-            <td class="amount currency"><strong>${(
-              balanceSheet.liabilities.total + balanceSheet.equity
-            ).toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-    `;
-  };
-
-  const generateProfitLossHTML = (
-    profitLoss: FinancialReport["profitLoss"]
-  ) => {
-    return `
-      <div class="section">
-        <div class="section-title">REVENUE</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Total Revenue</td>
-            <td class="amount currency">${profitLoss.revenue.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>TOTAL REVENUE</strong></td>
-            <td class="amount currency"><strong>${profitLoss.revenue.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-title">EXPENSES</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Total Expenses</td>
-            <td class="amount currency">${profitLoss.expenses.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>TOTAL EXPENSES</strong></td>
-            <td class="amount currency"><strong>${profitLoss.expenses.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <table>
-          <tr class="total">
-            <td><strong>NET INCOME (LOSS)</strong></td>
-            <td class="amount currency"><strong>${profitLoss.netIncome.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-    `;
-  };
-
-  const generateCashFlowHTML = (cashFlow: FinancialReport["cashFlow"]) => {
-    return `
-      <div class="section">
-        <div class="section-title">CASH FLOWS FROM OPERATING ACTIVITIES</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Net Income</td>
-            <td class="amount currency">${cashFlow.operating.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>NET CASH FROM OPERATING ACTIVITIES</strong></td>
-            <td class="amount currency"><strong>${cashFlow.operating.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-title">CASH FLOWS FROM INVESTING ACTIVITIES</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Investing Activities</td>
-            <td class="amount currency">${cashFlow.investing.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>NET CASH FROM INVESTING ACTIVITIES</strong></td>
-            <td class="amount currency"><strong>${cashFlow.investing.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-title">CASH FLOWS FROM FINANCING ACTIVITIES</div>
-        <table>
-          <tr>
-            <th style="width: 70%;">Description</th>
-            <th class="amount" style="width: 30%;">Amount (LKR)</th>
-          </tr>
-          <tr>
-            <td style="padding-left: 20px;">Financing Activities</td>
-            <td class="amount currency">${cashFlow.financing.toLocaleString()}</td>
-          </tr>
-          <tr class="total">
-            <td><strong>NET CASH FROM FINANCING ACTIVITIES</strong></td>
-            <td class="amount currency"><strong>${cashFlow.financing.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <table>
-          <tr class="total">
-            <td><strong>NET INCREASE (DECREASE) IN CASH</strong></td>
-            <td class="amount currency"><strong>${cashFlow.netChange.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-    `;
-  };
-
-  const generateTrialBalanceHTML = (trialBalance: TrialBalanceEntry[]) => {
-    let html = `
-      <div class="section">
-        <table>
-          <tr>
-            <th style="width: 50%;">Account Name</th>
-            <th style="width: 15%;">Type</th>
-            <th class="amount" style="width: 17.5%;">Debit (LKR)</th>
-            <th class="amount" style="width: 17.5%;">Credit (LKR)</th>
-          </tr>
-    `;
-
-    trialBalance.forEach((entry) => {
-      html += `
-        <tr>
-          <td style="padding-left: 10px;">${entry.accountName}</td>
-          <td style="text-align: center;">${entry.accountType.toUpperCase()}</td>
-          <td class="amount currency">${
-            entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : "-"
-          }</td>
-          <td class="amount currency">${
-            entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : "-"
-          }</td>
-        </tr>
-      `;
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [
+        ["Current Assets", balanceSheet.assets.current.toLocaleString()],
+        [
+          "Non-Current Assets",
+          balanceSheet.assets.nonCurrent.toLocaleString(),
+        ],
+      ],
+      foot: [["TOTAL ASSETS", balanceSheet.assets.total.toLocaleString()]],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
     });
 
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Liabilities & Equity table
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("LIABILITIES & EQUITY", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [
+        [
+          "Current Liabilities",
+          balanceSheet.liabilities.current.toLocaleString(),
+        ],
+        [
+          "Non-Current Liabilities",
+          balanceSheet.liabilities.nonCurrent.toLocaleString(),
+        ],
+        ["Total Liabilities", balanceSheet.liabilities.total.toLocaleString()],
+        ["Retained Earnings", balanceSheet.equity.toLocaleString()],
+      ],
+      foot: [
+        [
+          "TOTAL LIABILITIES & EQUITY",
+          (balanceSheet.liabilities.total + balanceSheet.equity).toLocaleString(),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    return (doc as any).lastAutoTable.finalY + 10;
+  };
+
+  const generateProfitLossPDF = (
+    doc: jsPDF,
+    profitLoss: FinancialReport["profitLoss"],
+    startY: number
+  ): number => {
+    // Revenue table
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("REVENUE", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [["Total Revenue", profitLoss.revenue.toLocaleString()]],
+      foot: [["TOTAL REVENUE", profitLoss.revenue.toLocaleString()]],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Expenses table
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("EXPENSES", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [["Total Expenses", profitLoss.expenses.toLocaleString()]],
+      foot: [["TOTAL EXPENSES", profitLoss.expenses.toLocaleString()]],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Net Income
+    autoTable(doc, {
+      startY: startY,
+      body: [["NET INCOME (LOSS)", profitLoss.netIncome.toLocaleString()]],
+      theme: "grid",
+      bodyStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    return (doc as any).lastAutoTable.finalY + 10;
+  };
+
+  const generateCashFlowPDF = (
+    doc: jsPDF,
+    cashFlow: FinancialReport["cashFlow"],
+    startY: number
+  ): number => {
+    // Operating Activities
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CASH FLOWS FROM OPERATING ACTIVITIES", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [["Net Income", cashFlow.operating.toLocaleString()]],
+      foot: [
+        [
+          "NET CASH FROM OPERATING ACTIVITIES",
+          cashFlow.operating.toLocaleString(),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Investing Activities
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CASH FLOWS FROM INVESTING ACTIVITIES", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [["Investing Activities", cashFlow.investing.toLocaleString()]],
+      foot: [
+        [
+          "NET CASH FROM INVESTING ACTIVITIES",
+          cashFlow.investing.toLocaleString(),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Financing Activities
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CASH FLOWS FROM FINANCING ACTIVITIES", 14, startY);
+    startY += 5;
+
+    autoTable(doc, {
+      startY: startY,
+      head: [["Description", "Amount (LKR)"]],
+      body: [["Financing Activities", cashFlow.financing.toLocaleString()]],
+      foot: [
+        [
+          "NET CASH FROM FINANCING ACTIVITIES",
+          cashFlow.financing.toLocaleString(),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Net Change
+    autoTable(doc, {
+      startY: startY,
+      body: [
+        ["NET INCREASE (DECREASE) IN CASH", cashFlow.netChange.toLocaleString()],
+      ],
+      theme: "grid",
+      bodyStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 60, halign: "right" },
+      },
+    });
+
+    return (doc as any).lastAutoTable.finalY + 10;
+  };
+
+  const generateTrialBalancePDF = (
+    doc: jsPDF,
+    trialBalance: TrialBalanceEntry[],
+    startY: number
+  ): number => {
     const totalDebits = trialBalance.reduce(
       (sum, entry) => sum + entry.debitBalance,
       0
@@ -1558,234 +1536,190 @@ export default function Finance() {
       0
     );
 
-    html += `
-          <tr class="total">
-            <td><strong>TOTALS</strong></td>
-            <td></td>
-            <td class="amount currency"><strong>${totalDebits.toLocaleString()}</strong></td>
-            <td class="amount currency"><strong>${totalCredits.toLocaleString()}</strong></td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="section">
-        <div style="text-align: center; margin: 20px 0;">
-          <strong>Trial Balance is ${
-            Math.abs(totalDebits - totalCredits) < 0.01
-              ? "BALANCED"
-              : "OUT OF BALANCE"
-          }</strong>
-          ${
-            Math.abs(totalDebits - totalCredits) >= 0.01
-              ? `<br><span style="color: red;">Difference: ${(
-                  totalDebits - totalCredits
-                ).toLocaleString()} LKR</span>`
-              : ""
-          }
-        </div>
-      </div>
-    `;
+    const tableData = trialBalance.map((entry) => [
+      entry.accountName,
+      entry.accountType.toUpperCase(),
+      entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : "-",
+      entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : "-",
+    ]);
 
-    return html;
-  };
-
-  // --- CSV REPORT GENERATORS ---
-  const generateBalanceSheetCSV = (
-    balanceSheet: FinancialReport["balanceSheet"]
-  ) => {
-    return `PLANETS PICK ERP SYSTEM - BALANCE SHEET
-Generated: ${new Date().toLocaleString()}
-As of: ${new Date().toLocaleDateString()}
-
-ASSETS
-Description,Amount (LKR)
-Current Assets,${balanceSheet.assets.current.toLocaleString()}
-Non-Current Assets,${balanceSheet.assets.nonCurrent.toLocaleString()}
-TOTAL ASSETS,${balanceSheet.assets.total.toLocaleString()}
-
-LIABILITIES & EQUITY
-Description,Amount (LKR)
-Current Liabilities,${balanceSheet.liabilities.current.toLocaleString()}
-Non-Current Liabilities,${balanceSheet.liabilities.nonCurrent.toLocaleString()}
-Total Liabilities,${balanceSheet.liabilities.total.toLocaleString()}
-Retained Earnings,${balanceSheet.equity.toLocaleString()}
-TOTAL LIABILITIES & EQUITY,${(
-      balanceSheet.liabilities.total + balanceSheet.equity
-    ).toLocaleString()}`;
-  };
-
-  const generateProfitLossCSV = (profitLoss: FinancialReport["profitLoss"]) => {
-    return `PLANETS PICK ERP SYSTEM - PROFIT & LOSS STATEMENT
-Generated: ${new Date().toLocaleString()}
-Period: ${new Date().toLocaleDateString()}
-
-REVENUE
-Description,Amount (LKR)
-Total Revenue,${profitLoss.revenue.toLocaleString()}
-TOTAL REVENUE,${profitLoss.revenue.toLocaleString()}
-
-EXPENSES
-Description,Amount (LKR)
-Total Expenses,${profitLoss.expenses.toLocaleString()}
-TOTAL EXPENSES,${profitLoss.expenses.toLocaleString()}
-
-NET INCOME (LOSS),${profitLoss.netIncome.toLocaleString()}`;
-  };
-
-  const generateCashFlowCSV = (cashFlow: FinancialReport["cashFlow"]) => {
-    return `PLANETS PICK ERP SYSTEM - CASH FLOW STATEMENT
-Generated: ${new Date().toLocaleString()}
-Period: ${new Date().toLocaleDateString()}
-
-CASH FLOWS FROM OPERATING ACTIVITIES
-Description,Amount (LKR)
-Net Income,${cashFlow.operating.toLocaleString()}
-NET CASH FROM OPERATING ACTIVITIES,${cashFlow.operating.toLocaleString()}
-
-CASH FLOWS FROM INVESTING ACTIVITIES
-Description,Amount (LKR)
-Investing Activities,${cashFlow.investing.toLocaleString()}
-NET CASH FROM INVESTING ACTIVITIES,${cashFlow.investing.toLocaleString()}
-
-CASH FLOWS FROM FINANCING ACTIVITIES
-Description,Amount (LKR)
-Financing Activities,${cashFlow.financing.toLocaleString()}
-NET CASH FROM FINANCING ACTIVITIES,${cashFlow.financing.toLocaleString()}
-
-NET INCREASE (DECREASE) IN CASH,${cashFlow.netChange.toLocaleString()}`;
-  };
-
-  const generateTrialBalanceCSV = (trialBalance: TrialBalanceEntry[]) => {
-    const totalDebits = trialBalance.reduce(
-      (sum, entry) => sum + entry.debitBalance,
-      0
-    );
-    const totalCredits = trialBalance.reduce(
-      (sum, entry) => sum + entry.creditBalance,
-      0
-    );
-
-    let csv = `PLANETS PICK ERP SYSTEM - TRIAL BALANCE
-Generated: ${new Date().toLocaleString()}
-As of: ${new Date().toLocaleDateString()}
-
-Account Name,Type,Debit (LKR),Credit (LKR)\n`;
-
-    trialBalance.forEach((entry) => {
-      csv += `${entry.accountName},${entry.accountType.toUpperCase()},${
-        entry.debitBalance > 0 ? entry.debitBalance.toLocaleString() : ""
-      },${
-        entry.creditBalance > 0 ? entry.creditBalance.toLocaleString() : ""
-      }\n`;
+    autoTable(doc, {
+      startY: startY,
+      head: [["Account Name", "Type", "Debit (LKR)", "Credit (LKR)"]],
+      body: tableData,
+      foot: [
+        [
+          "TOTALS",
+          "",
+          totalDebits.toLocaleString(),
+          totalCredits.toLocaleString(),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+      footStyles: { fillColor: [230, 230, 230], fontStyle: "bold" },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 30, halign: "center" },
+        2: { cellWidth: 40, halign: "right" },
+        3: { cellWidth: 40, halign: "right" },
+      },
     });
 
-    csv += `TOTALS,,${totalDebits.toLocaleString()},${totalCredits.toLocaleString()}
-Trial Balance Status,${
-      Math.abs(totalDebits - totalCredits) < 0.01
-        ? "BALANCED"
-        : "OUT OF BALANCE"
+    startY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Add balance status
+    const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `Trial Balance is ${isBalanced ? "BALANCED" : "OUT OF BALANCE"}`,
+      doc.internal.pageSize.getWidth() / 2,
+      startY,
+      { align: "center" }
+    );
+
+    if (!isBalanced) {
+      startY += 7;
+      doc.setTextColor(255, 0, 0);
+      doc.text(
+        `Difference: ${(totalDebits - totalCredits).toLocaleString()} LKR`,
+        doc.internal.pageSize.getWidth() / 2,
+        startY,
+        { align: "center" }
+      );
+      doc.setTextColor(0, 0, 0);
     }
-${
-  Math.abs(totalDebits - totalCredits) >= 0.01
-    ? `Difference,${(totalDebits - totalCredits).toLocaleString()},`
-    : ""
-}`;
 
-    return csv;
+    return startY + 10;
   };
 
-  const generateProfitLossReport = (
+  // --- EXCEL GENERATION HELPERS ---
+  const generateBalanceSheetExcel = (
+    balanceSheet: FinancialReport["balanceSheet"]
+  ): XLSX.WorkSheet => {
+    const data = [
+      ["PLANETS PICK ERP SYSTEM - BALANCE SHEET"],
+      [`Generated: ${new Date().toLocaleString()}`],
+      [`As of: ${new Date().toLocaleDateString()}`],
+      [],
+      ["ASSETS"],
+      ["Description", "Amount (LKR)"],
+      ["Current Assets", balanceSheet.assets.current],
+      ["Non-Current Assets", balanceSheet.assets.nonCurrent],
+      ["TOTAL ASSETS", balanceSheet.assets.total],
+      [],
+      ["LIABILITIES & EQUITY"],
+      ["Description", "Amount (LKR)"],
+      ["Current Liabilities", balanceSheet.liabilities.current],
+      ["Non-Current Liabilities", balanceSheet.liabilities.nonCurrent],
+      ["Total Liabilities", balanceSheet.liabilities.total],
+      ["Retained Earnings", balanceSheet.equity],
+      [
+        "TOTAL LIABILITIES & EQUITY",
+        balanceSheet.liabilities.total + balanceSheet.equity,
+      ],
+    ];
+
+    return XLSX.utils.aoa_to_sheet(data);
+  };
+
+  const generateProfitLossExcel = (
     profitLoss: FinancialReport["profitLoss"]
-  ) => {
-    return `
-PROFIT & LOSS STATEMENT
-Generated: ${new Date().toLocaleDateString()}
+  ): XLSX.WorkSheet => {
+    const data = [
+      ["PLANETS PICK ERP SYSTEM - PROFIT & LOSS STATEMENT"],
+      [`Generated: ${new Date().toLocaleString()}`],
+      [`Period: ${new Date().toLocaleDateString()}`],
+      [],
+      ["REVENUE"],
+      ["Description", "Amount (LKR)"],
+      ["Total Revenue", profitLoss.revenue],
+      ["TOTAL REVENUE", profitLoss.revenue],
+      [],
+      ["EXPENSES"],
+      ["Description", "Amount (LKR)"],
+      ["Total Expenses", profitLoss.expenses],
+      ["TOTAL EXPENSES", profitLoss.expenses],
+      [],
+      ["NET INCOME (LOSS)", profitLoss.netIncome],
+    ];
 
-REVENUE:
-  Total Revenue: ${profitLoss.revenue.toLocaleString("en-LK", {
-    style: "currency",
-    currency: "LKR",
-  })}
-
-EXPENSES:
-  Total Expenses: ${profitLoss.expenses.toLocaleString("en-LK", {
-    style: "currency",
-    currency: "LKR",
-  })}
-
-NET INCOME: ${profitLoss.netIncome.toLocaleString("en-LK", {
-      style: "currency",
-      currency: "LKR",
-    })}
-`;
+    return XLSX.utils.aoa_to_sheet(data);
   };
 
-  const generateCashFlowReport = (cashFlow: FinancialReport["cashFlow"]) => {
-    return `
-CASH FLOW STATEMENT
-Generated: ${new Date().toLocaleDateString()}
+  const generateCashFlowExcel = (
+    cashFlow: FinancialReport["cashFlow"]
+  ): XLSX.WorkSheet => {
+    const data = [
+      ["PLANETS PICK ERP SYSTEM - CASH FLOW STATEMENT"],
+      [`Generated: ${new Date().toLocaleString()}`],
+      [`Period: ${new Date().toLocaleDateString()}`],
+      [],
+      ["CASH FLOWS FROM OPERATING ACTIVITIES"],
+      ["Description", "Amount (LKR)"],
+      ["Net Income", cashFlow.operating],
+      ["NET CASH FROM OPERATING ACTIVITIES", cashFlow.operating],
+      [],
+      ["CASH FLOWS FROM INVESTING ACTIVITIES"],
+      ["Description", "Amount (LKR)"],
+      ["Investing Activities", cashFlow.investing],
+      ["NET CASH FROM INVESTING ACTIVITIES", cashFlow.investing],
+      [],
+      ["CASH FLOWS FROM FINANCING ACTIVITIES"],
+      ["Description", "Amount (LKR)"],
+      ["Financing Activities", cashFlow.financing],
+      ["NET CASH FROM FINANCING ACTIVITIES", cashFlow.financing],
+      [],
+      ["NET INCREASE (DECREASE) IN CASH", cashFlow.netChange],
+    ];
 
-OPERATING ACTIVITIES:
-  Net Cash from Operations: ${cashFlow.operating.toLocaleString("en-LK", {
-    style: "currency",
-    currency: "LKR",
-  })}
-
-INVESTING ACTIVITIES:
-  Net Cash from Investing: ${cashFlow.investing.toLocaleString("en-LK", {
-    style: "currency",
-    currency: "LKR",
-  })}
-
-FINANCING ACTIVITIES:
-  Net Cash from Financing: ${cashFlow.financing.toLocaleString("en-LK", {
-    style: "currency",
-    currency: "LKR",
-  })}
-
-NET CHANGE IN CASH: ${cashFlow.netChange.toLocaleString("en-LK", {
-      style: "currency",
-      currency: "LKR",
-    })}
-`;
+    return XLSX.utils.aoa_to_sheet(data);
   };
 
-  const generateTrialBalanceReport = (trialBalance: TrialBalanceEntry[]) => {
-    let content = `
-TRIAL BALANCE
-Generated: ${new Date().toLocaleDateString()}
+  const generateTrialBalanceExcel = (
+    trialBalance: TrialBalanceEntry[]
+  ): XLSX.WorkSheet => {
+    const totalDebits = trialBalance.reduce(
+      (sum, entry) => sum + entry.debitBalance,
+      0
+    );
+    const totalCredits = trialBalance.reduce(
+      (sum, entry) => sum + entry.creditBalance,
+      0
+    );
 
-Account Name\t\t\t\tDebit\t\tCredit
-${"=".repeat(80)}
-`;
-
-    let totalDebits = 0;
-    let totalCredits = 0;
+    const data: any[][] = [
+      ["PLANETS PICK ERP SYSTEM - TRIAL BALANCE"],
+      [`Generated: ${new Date().toLocaleString()}`],
+      [`As of: ${new Date().toLocaleDateString()}`],
+      [],
+      ["Account Name", "Type", "Debit (LKR)", "Credit (LKR)"],
+    ];
 
     trialBalance.forEach((entry) => {
-      content += `${
-        entry.accountName
-      }\t\t\t\t${entry.debitBalance.toLocaleString("en-LK", {
-        style: "currency",
-        currency: "LKR",
-      })}\t\t${entry.creditBalance.toLocaleString("en-LK", {
-        style: "currency",
-        currency: "LKR",
-      })}\n`;
-      totalDebits += entry.debitBalance;
-      totalCredits += entry.creditBalance;
+      data.push([
+        entry.accountName,
+        entry.accountType.toUpperCase(),
+        entry.debitBalance > 0 ? entry.debitBalance : "",
+        entry.creditBalance > 0 ? entry.creditBalance : "",
+      ]);
     });
 
-    content += `${"=".repeat(80)}\n`;
-    content += `TOTALS\t\t\t\t${totalDebits.toLocaleString("en-LK", {
-      style: "currency",
-      currency: "LKR",
-    })}\t\t${totalCredits.toLocaleString("en-LK", {
-      style: "currency",
-      currency: "LKR",
-    })}\n`;
+    data.push(["TOTALS", "", totalDebits, totalCredits]);
+    data.push([
+      "Trial Balance Status",
+      Math.abs(totalDebits - totalCredits) < 0.01 ? "BALANCED" : "OUT OF BALANCE",
+      "",
+      "",
+    ]);
 
-    return content;
+    if (Math.abs(totalDebits - totalCredits) >= 0.01) {
+      data.push(["Difference", totalDebits - totalCredits, "", ""]);
+    }
+
+    return XLSX.utils.aoa_to_sheet(data);
   };
 
   // --- ADD ASSET/LIABILITY HANDLER ---
