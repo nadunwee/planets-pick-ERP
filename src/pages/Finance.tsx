@@ -343,9 +343,25 @@ export default function Finance() {
   const generateLedgerAccounts = useMemo(() => {
     const accountsMap = new Map<string, LedgerAccount>();
 
-    // Process transactions with proper double-entry
+    // Create Cash account first (it's used in all transactions)
+    if (!accountsMap.has("Cash")) {
+      accountsMap.set("Cash", {
+        _id: "ledger-Cash",
+        accountCode: "CASH-001",
+        accountName: "Cash",
+        accountType: "asset",
+        debitTotal: 0,
+        creditTotal: 0,
+        balance: 0,
+        entries: [],
+      });
+    }
+
+    // Process transactions with proper double-entry bookkeeping
     transactions.forEach((transaction) => {
       const accountName = transaction.account;
+      
+      // Create the income/expense account if it doesn't exist
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
           _id: `ledger-${accountName}`,
@@ -360,28 +376,77 @@ export default function Finance() {
       }
 
       const account = accountsMap.get(accountName)!;
-      const entry: LedgerEntry = {
-        _id: `entry-${transaction._id}`,
-        accountName,
-        date: transaction.date,
-        description: transaction.description,
-        reference: transaction.reference || `TXN-${transaction._id.slice(-6)}`,
-        debit: transaction.type === "expense" ? transaction.amount : 0,
-        credit: transaction.type === "income" ? transaction.amount : 0,
-        balance: 0,
-        transactionId: transaction._id,
-      };
+      const cashAccount = accountsMap.get("Cash")!;
+      const reference = transaction.reference || `TXN-${transaction._id.slice(-6)}`;
 
-      account.entries.push(entry);
-      account.debitTotal += entry.debit;
-      account.creditTotal += entry.credit;
+      if (transaction.type === "income") {
+        // When sales/income happens: Debit Cash, Credit Income
+        // Cash account entry (debit side)
+        cashAccount.entries.push({
+          _id: `cash-entry-${transaction._id}`,
+          accountName: "Cash",
+          date: transaction.date,
+          description: `Cash from ${transaction.description}`,
+          reference: reference,
+          debit: transaction.amount,
+          credit: 0,
+          balance: 0,
+          transactionId: transaction._id,
+        });
+        cashAccount.debitTotal += transaction.amount;
+
+        // Income account entry (credit side)
+        account.entries.push({
+          _id: `entry-${transaction._id}`,
+          accountName,
+          date: transaction.date,
+          description: transaction.description,
+          reference: reference,
+          debit: 0,
+          credit: transaction.amount,
+          balance: 0,
+          transactionId: transaction._id,
+        });
+        account.creditTotal += transaction.amount;
+      } else {
+        // When expense is paid: Debit Expense, Credit Cash
+        // Expense account entry (debit side)
+        account.entries.push({
+          _id: `entry-${transaction._id}`,
+          accountName,
+          date: transaction.date,
+          description: transaction.description,
+          reference: reference,
+          debit: transaction.amount,
+          credit: 0,
+          balance: 0,
+          transactionId: transaction._id,
+        });
+        account.debitTotal += transaction.amount;
+
+        // Cash account entry (credit side)
+        cashAccount.entries.push({
+          _id: `cash-entry-${transaction._id}`,
+          accountName: "Cash",
+          date: transaction.date,
+          description: `Cash paid for ${transaction.description}`,
+          reference: reference,
+          debit: 0,
+          credit: transaction.amount,
+          balance: 0,
+          transactionId: transaction._id,
+        });
+        cashAccount.creditTotal += transaction.amount;
+      }
     });
 
-    // Process assets/liabilities with proper double-entry
+    // Process assets/liabilities with proper double-entry bookkeeping
     assetsLiabilities.forEach((item) => {
       const accountName = `${
         item.type === "asset" ? "Assets" : "Liabilities"
       } - ${item.name}`;
+      
+      // Create the asset/liability account if it doesn't exist
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
           _id: `ledger-${accountName}`,
@@ -399,87 +464,70 @@ export default function Finance() {
       }
 
       const account = accountsMap.get(accountName)!;
-      const entry: LedgerEntry = {
-        _id: `entry-${item._id}`,
-        accountName,
-        date: item.date,
-        description: `${item.type === "asset" ? "Asset" : "Liability"} - ${
-          item.name
-        }`,
-        reference: `AST-${item._id.slice(-6)}`,
-        debit: item.type === "asset" ? item.value : 0,
-        credit: item.type === "liability" ? item.value : 0,
-        balance: 0,
-        transactionId: item._id,
-      };
+      const cashAccount = accountsMap.get("Cash")!;
+      const reference = `AST-${item._id.slice(-6)}`;
 
-      account.entries.push(entry);
-      account.debitTotal += entry.debit;
-      account.creditTotal += entry.credit;
+      if (item.type === "asset") {
+        // When asset is bought: Debit Asset, Credit Cash
+        // Asset account entry (debit side)
+        account.entries.push({
+          _id: `entry-${item._id}`,
+          accountName,
+          date: item.date,
+          description: `Asset - ${item.name}`,
+          reference: reference,
+          debit: item.value,
+          credit: 0,
+          balance: 0,
+          transactionId: item._id,
+        });
+        account.debitTotal += item.value;
+
+        // Cash account entry (credit side)
+        cashAccount.entries.push({
+          _id: `cash-entry-${item._id}`,
+          accountName: "Cash",
+          date: item.date,
+          description: `Cash paid for asset - ${item.name}`,
+          reference: reference,
+          debit: 0,
+          credit: item.value,
+          balance: 0,
+          transactionId: item._id,
+        });
+        cashAccount.creditTotal += item.value;
+      } else {
+        // When liability is incurred: Debit Cash (or expense), Credit Liability
+        // For liabilities, we assume cash is received
+        // Cash account entry (debit side)
+        cashAccount.entries.push({
+          _id: `cash-entry-${item._id}`,
+          accountName: "Cash",
+          date: item.date,
+          description: `Cash from liability - ${item.name}`,
+          reference: reference,
+          debit: item.value,
+          credit: 0,
+          balance: 0,
+          transactionId: item._id,
+        });
+        cashAccount.debitTotal += item.value;
+
+        // Liability account entry (credit side)
+        account.entries.push({
+          _id: `entry-${item._id}`,
+          accountName,
+          date: item.date,
+          description: `Liability - ${item.name}`,
+          reference: reference,
+          debit: 0,
+          credit: item.value,
+          balance: 0,
+          transactionId: item._id,
+        });
+        account.creditTotal += item.value;
+      }
     });
-
-    // Add Cash account for proper double-entry (every transaction affects cash)
-    const totalIncome = transactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const totalExpenses = transactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + t.amount, 0);
-    const totalAssets = assetsLiabilities
-      .filter((al) => al.type === "asset")
-      .reduce((sum, al) => sum + al.value, 0);
-    const totalLiabilities = assetsLiabilities
-      .filter((al) => al.type === "liability")
-      .reduce((sum, al) => sum + al.value, 0);
-
-    // Cash account (debit for income and assets, credit for expenses and liabilities)
-    if (!accountsMap.has("Cash")) {
-      accountsMap.set("Cash", {
-        _id: "ledger-Cash",
-        accountCode: "CASH-001",
-        accountName: "Cash",
-        accountType: "asset",
-        debitTotal: 0,
-        creditTotal: 0,
-        balance: 0,
-        entries: [],
-      });
-    }
-
-    const cashAccount = accountsMap.get("Cash")!;
-    // Cash increases with income and assets, decreases with expenses and liabilities
-    const cashIncrease = totalIncome + totalAssets;
-    const cashDecrease = totalExpenses + totalLiabilities;
-
-    if (cashIncrease > 0) {
-      cashAccount.entries.push({
-        _id: "cash-income-assets",
-        accountName: "Cash",
-        date: new Date().toISOString(),
-        description: "Cash from Income and Assets",
-        reference: "CASH-INC",
-        debit: cashIncrease,
-        credit: 0,
-        balance: 0,
-        transactionId: "cash-entry",
-      });
-      cashAccount.debitTotal += cashIncrease;
-    }
-
-    if (cashDecrease > 0) {
-      cashAccount.entries.push({
-        _id: "cash-expenses-liabilities",
-        accountName: "Cash",
-        date: new Date().toISOString(),
-        description: "Cash for Expenses and Liabilities",
-        reference: "CASH-EXP",
-        debit: 0,
-        credit: cashDecrease,
-        balance: 0,
-        transactionId: "cash-entry",
-      });
-      cashAccount.creditTotal += cashDecrease;
-    }
 
     return Array.from(accountsMap.values()).sort((a, b) =>
       a.accountName.localeCompare(b.accountName)
