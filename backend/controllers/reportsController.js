@@ -4,6 +4,8 @@ const fs = require("fs");
 const pdfService = require("../services/pdfService");
 const Supplier = require("../models/Supplier");
 const PurchaseOrder = require("../models/PurchaseOrder");
+const InventoryItem = require("../models/inventoryModel");
+const Order = require("../models/orderModel");
 
 exports.getReportsDashboard = async (req, res) => {
   try {
@@ -23,41 +25,55 @@ exports.getReportsDashboard = async (req, res) => {
         title: "Monthly Procurement Summary",
         category: "Procurement",
         filename: "procurement-summary.pdf",
-        description: "Comprehensive analysis of monthly procurement activities"
+        description: "Comprehensive analysis of monthly procurement activities",
       },
       {
-        id: "2", 
+        id: "2",
         title: "Supplier Performance Report",
         category: "Suppliers",
         filename: "supplier-performance.pdf",
-        description: "Performance metrics and rankings for all suppliers"
+        description: "Performance metrics and rankings for all suppliers",
       },
       {
         id: "3",
-        title: "Purchase Order Analysis", 
+        title: "Purchase Order Analysis",
         category: "Orders",
         filename: "purchase-orders.pdf",
-        description: "Detailed analysis of purchase orders and trends"
-      }
+        description: "Detailed analysis of purchase orders and trends",
+      },
+      {
+        id: "4",
+        title: "Inventory Status Report",
+        category: "Inventory",
+        filename: "inventory-report.pdf",
+        description: "Current stock levels, values, and statuses.",
+      },
+      {
+        id: "5",
+        title: "Order Summary Report",
+        category: "Orders",
+        filename: "order-report.pdf",
+        description: "A summary of all orders.",
+      },
     ];
 
     // Check which reports are available
     for (const report of reportDefinitions) {
       const filePath = path.join(reportsDir, report.filename);
       const fileExists = fs.existsSync(filePath);
-      
+
       if (fileExists) {
         const stats = fs.statSync(filePath);
         reports.push({
           id: report.id,
           title: report.title,
           category: report.category,
-          date: stats.mtime.toISOString().split('T')[0],
+          date: stats.mtime.toISOString().split("T")[0],
           fileUrl: `/api/reports/view/${report.id}`,
           downloadUrl: `/api/reports/download/${report.id}`,
           description: report.description,
           size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`,
-          lastModified: stats.mtime.toISOString()
+          lastModified: stats.mtime.toISOString(),
         });
       } else {
         // Add placeholder for missing reports
@@ -65,13 +81,13 @@ exports.getReportsDashboard = async (req, res) => {
           id: report.id,
           title: report.title,
           category: report.category,
-          date: new Date().toISOString().split('T')[0],
+          date: new Date().toISOString().split("T")[0],
           fileUrl: `/api/reports/view/${report.id}`,
           downloadUrl: `/api/reports/download/${report.id}`,
           description: report.description,
           size: "N/A",
           lastModified: null,
-          isPlaceholder: true
+          isPlaceholder: true,
         });
       }
     }
@@ -98,6 +114,12 @@ exports.viewReport = (req, res) => {
     case "3":
       file = "purchase-orders.pdf";
       break;
+    case "4":
+      file = "inventory-report.pdf";
+      break;
+    case "5":
+      file = "order-report.pdf";
+      break;
     default:
       return res.status(404).json({ message: "Report not found" });
   }
@@ -121,18 +143,24 @@ exports.downloadReport = (req, res) => {
     case "3":
       file = "purchase-orders.pdf";
       break;
+    case "4":
+      file = "inventory-report.pdf";
+      break;
+    case "5":
+      file = "order-report.pdf";
+      break;
     default:
       return res.status(404).json({ message: "Report not found" });
   }
 
   const filePath = path.join(__dirname, "..", "reports", file);
-  
+
   // Check if file exists
-  const fs = require('fs');
+  const fs = require("fs");
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: "Report file not found" });
   }
-  
+
   res.download(filePath, file);
 };
 
@@ -335,6 +363,122 @@ exports.generatePurchaseOrdersPDF = async (req, res) => {
 
   } catch (error) {
     console.error("Error generating purchase orders PDF:", error);
+    res.status(500).json({ message: "Failed to generate PDF", error: error.message });
+  }
+};
+
+exports.generateInventoryReportPDF = async (req, res) => {
+  try {
+    const items = await InventoryItem.find({});
+
+    const totalItems = items.length;
+    const totalValue = items.reduce((sum, item) => sum + item.currentStock * (item.price || item.unitPrice || 0), 0);
+    const lowStockItems = items.filter(item => item.currentStock <= item.minStock && item.currentStock > 0).length;
+    const outOfStockItems = items.filter(item => item.currentStock === 0).length;
+
+    const itemsData = items.map(item => {
+      const status = item.currentStock === 0 ? 'OUT OF STOCK' : 
+                     item.currentStock <= item.minStock ? 'LOW STOCK' : 'OK';
+      let statusClass;
+      switch (status) {
+        case 'OK':
+          statusClass = 'ok';
+          break;
+        case 'LOW STOCK':
+          statusClass = 'low-stock';
+          break;
+        case 'OUT OF STOCK':
+          statusClass = 'out-of-stock';
+          break;
+        default:
+          statusClass = 'ok';
+      }
+      return {
+        name: item.name,
+        category: item.type,
+        sku: item.sku,
+        quantity: item.currentStock,
+        unitPrice: (item.price || item.unitPrice || 0).toFixed(2),
+        totalValue: (item.currentStock * (item.price || item.unitPrice || 0)).toFixed(2),
+        status,
+        statusClass
+      };
+    });
+
+    const reportData = {
+      generatedDate: new Date().toLocaleDateString(),
+      totalItems,
+      totalValue: totalValue.toLocaleString(),
+      lowStockItems,
+      outOfStockItems,
+      items: itemsData
+    };
+
+    const outputPath = path.join(__dirname, "..", "reports", "inventory-report.pdf");
+    const result = await pdfService.generateReportPDF(reportData, 'inventory-report', outputPath);
+
+    res.json({
+      success: true,
+      message: "PDF generated successfully",
+      filePath: result.filePath,
+      size: result.size,
+      downloadUrl: `/api/reports/download/4`
+    });
+
+  } catch (error) {
+    console.error("Error generating inventory report PDF:", error);
+    res.status(500).json({ message: "Failed to generate PDF", error: error.message });
+  }
+};
+
+exports.generateOrderReportPDF = async (req, res) => {
+  try {
+    const orders = await Order.find({}).populate("customer");
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const pendingOrders = orders.filter((o) => o.status === "pending").length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const ordersData = orders.map((order) => {
+      return {
+        orderId: order.orderId,
+        customerName: order.customer ? order.customer.name : "N/A",
+        orderedOn: new Date(order.orderedOn).toLocaleDateString(),
+        totalAmount: order.totalAmount.toLocaleString(),
+        status: order.status,
+        items: order.items.map(item => ({
+          productName: item.productName || item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+        shippingMethod: order.shippingMethod,
+      };
+    });
+
+    const reportData = {
+      generatedDate: new Date().toLocaleDateString(),
+      totalOrders,
+      totalRevenue: totalRevenue.toLocaleString(),
+      pendingOrders,
+      averageOrderValue: averageOrderValue.toLocaleString(),
+      orders: ordersData,
+    };
+
+    const outputPath = path.join(__dirname, "..", "reports", "order-report.pdf");
+    const result = await pdfService.generateReportPDF(reportData, "order-report", outputPath);
+
+    res.json({
+      success: true,
+      message: "PDF generated successfully",
+      filePath: result.filePath,
+      size: result.size,
+      downloadUrl: `/api/reports/download/5`,
+    });
+  } catch (error) {
+    console.error("Error generating order report PDF:", error);
     res.status(500).json({ message: "Failed to generate PDF", error: error.message });
   }
 };

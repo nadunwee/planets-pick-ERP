@@ -77,11 +77,17 @@ class PDFService {
       case 'purchase-orders':
         template = this.getPurchaseOrdersTemplate();
         break;
+      case 'inventory-report':
+        template = this.getInventoryReportTemplate();
+        break;
+      case 'order-report':
+        template = this.getOrderReportTemplate();
+        break;
       default:
         template = this.getDefaultTemplate();
     }
 
-    return this.populateTemplate(template, data);
+    return this.populateTemplate(template, data, templateName);
   }
 
   getProcurementSummaryTemplate() {
@@ -157,6 +163,139 @@ class PDFService {
     return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Purchase Orders Analysis</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px}.header{text-align:center;margin-bottom:30px;border-bottom:2px solid #333;padding-bottom:20px}.header h1{color:#2c3e50;margin:0}.section{margin-bottom:25px}.section h2{color:#34495e;border-bottom:1px solid #bdc3c7;padding-bottom:5px}.table{width:100%;border-collapse:collapse;margin:15px 0}.table th,.table td{padding:10px;text-align:left;border-bottom:1px solid #ddd}.table th{background-color:#f8f9fa;font-weight:bold}.status{display:inline-block;padding:4px 8px;border-radius:3px;font-weight:bold}.status.pending{background:#fff3cd;color:#856404}.status.approved{background:#d1ecf1;color:#0c5460}.status.delivered{background:#d4edda;color:#155724}.footer{margin-top:30px;text-align:center;color:#7f8c8d;font-size:12px}</style></head><body><div class="header"><h1>Purchase Orders Analysis</h1><p>Generated on: {{generatedDate}}</p><p>Period: {{startDate}} to {{endDate}}</p></div><div class="section"><h2>Order Summary</h2><table class="table"><thead><tr><th>Order ID</th><th>Supplier</th><th>Date</th><th>Total Amount</th><th>Status</th><th>Items</th></tr></thead><tbody>{{#each orders}}<tr><td>{{orderId}}</td><td>{{supplierName}}</td><td>{{orderDate}}</td><td>${{totalAmount}}</td><td><span class="status {{statusClass}}">{{status}}</span></td><td>{{itemCount}}</td></tr>{{/each}}</tbody></table></div><div class="footer"><p>Planet\'s Pick ERP System - Purchase Order Module</p></div></body></html>';
   }
 
+  getInventoryReportTemplate() {
+    return `<!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Inventory Status Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .header h1 { color: #2c3e50; margin: 0; }
+          .section { margin-bottom: 25px; }
+          .section h2 { color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+          .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin:20px 0}
+          .stat-card{background:#f8f9fa;padding:15px;border-radius:5px;text-align:center}
+          .stat-value{font-size:24px;font-weight:bold;color:#2c3e50}
+          .stat-label{color:#7f8c8d;font-size:14px}
+          .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+          .table th { background-color: #f8f9fa; font-weight: bold; }
+          .status { display: inline-block; padding: 4px 8px; border-radius: 3px; font-weight: bold; }
+          .status.ok { background: #d4edda; color: #155724; }
+          .status.low-stock { background: #fff3cd; color: #856404; }
+          .status.out-of-stock { background: #f8d7da; color: #721c24; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Inventory Status Report</h1>
+          <p>Generated on: {{generatedDate}}</p>
+        </div>
+
+        <div class="section">
+          <h2>Inventory Summary</h2>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value">{{totalItems}}</div><div class="stat-label">Total Items</div></div>
+            <div class="stat-card"><div class="stat-value">LKR {{totalValue}}</div><div class="stat-label">Total Inventory Value</div></div>
+            <div class="stat-card"><div class="stat-value">{{lowStockItems}}</div><div class="stat-label">Low Stock Items</div></div>
+            <div class="stat-card"><div class="stat-value">{{outOfStockItems}}</div><div class="stat-label">Out of Stock Items</div></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Stock Details</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each items}}
+              <tr>
+                <td>{{name}}</td>
+                <td>{{category}}</td>
+                <td>{{sku}}</td>
+                <td>{{quantity}}</td>
+                <td>{{unitPrice}}</td>
+                <td>{{totalValue}}</td>
+                <td><span class="status {{statusClass}}">{{status}}</span></td>
+              </tr>
+              {{/each}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p>Planet's Pick ERP System - Inventory Management</p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  getOrderReportTemplate() {
+    return `<!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Order Summary Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .header h1 { color: #2c3e50; margin: 0; }
+          .section { margin-bottom: 25px; }
+          .section h2 { color: #34495e; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+          .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin:20px 0}
+          .stat-card{background:#f8f9fa;padding:15px;border-radius:5px;text-align:center}
+          .stat-value{font-size:24px;font-weight:bold;color:#2c3e50}
+          .stat-label{color:#7f8c8d;font-size:14px}
+          .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+          .table th { background-color: #f8f9fa; font-weight: bold; }
+          .order-card { border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; }
+          .order-header { background-color: #f8f9fa; padding: 10px; border-bottom: 1px solid #ddd; }
+          .order-body { padding: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Order Summary Report</h1>
+          <p>Generated on: {{generatedDate}}</p>
+        </div>
+
+        <div class="section">
+          <h2>Sales Summary</h2>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value">{{totalOrders}}</div><div class="stat-label">Total Orders</div></div>
+            <div class="stat-card"><div class="stat-value">LKR {{totalRevenue}}</div><div class="stat-label">Total Revenue</div></div>
+            <div class="stat-card"><div class="stat-value">{{pendingOrders}}</div><div class="stat-label">Pending Orders</div></div>
+            <div class="stat-card"><div class="stat-value">LKR {{averageOrderValue}}</div><div class="stat-label">Average Order Value</div></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Order Details</h2>
+          {{#each orders}}
+          {{/each}}
+        </div>
+
+        <div class="footer">
+          <p>Planet's Pick ERP System - Order Management</p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   getDefaultTemplate() {
     return `
       <!DOCTYPE html>
@@ -183,7 +322,7 @@ class PDFService {
     `;
   }
 
-  populateTemplate(template, data) {
+  populateTemplate(template, data, templateName) {
     let html = template;
     
     // Debug: log the data being passed
@@ -200,25 +339,56 @@ class PDFService {
     html = html.replace(/{{generatedDate}}/g, new Date().toLocaleDateString());
     
     // Handle arrays (simplified - in production you'd use a proper templating engine)
-    if (data.topSuppliers && Array.isArray(data.topSuppliers)) {
+    if (templateName === 'procurement-summary' && data.topSuppliers && Array.isArray(data.topSuppliers)) {
       const suppliersHtml = data.topSuppliers.map(supplier => 
-        `<tr><td>${supplier.name}</td><td>${supplier.orders}</td><td>$${supplier.spend}</td><td>${supplier.percentage}%</td></tr>`
+        `<tr><td>${supplier.name}</td><td>${supplier.orders}</td><td>${supplier.spend}</td><td>${supplier.percentage}%</td></tr>`
       ).join('');
       html = html.replace(/{{#each topSuppliers}}[\s\S]*?{{\/each}}/g, suppliersHtml);
-    }
-    
-    if (data.suppliers && Array.isArray(data.suppliers)) {
+    } else if (templateName === 'supplier-performance' && data.suppliers && Array.isArray(data.suppliers)) {
       const suppliersHtml = data.suppliers.map(supplier => 
         `<tr><td>${supplier.name}</td><td>${supplier.onTimeDelivery}%</td><td>${supplier.qualityScore}/100</td><td>${supplier.responsivenessScore}/100</td><td><span class="rating ${supplier.ratingClass}">${supplier.overallRating}</span></td><td>${supplier.totalOrders}</td></tr>`
       ).join('');
       html = html.replace(/{{#each suppliers}}[\s\S]*?{{\/each}}/g, suppliersHtml);
-    }
-    
-    if (data.orders && Array.isArray(data.orders)) {
+    } else if (templateName === 'purchase-orders' && data.orders && Array.isArray(data.orders)) {
       const ordersHtml = data.orders.map(order => 
-        `<tr><td>${order.orderId}</td><td>${order.supplierName}</td><td>${order.orderDate}</td><td>$${order.totalAmount}</td><td><span class="status ${order.statusClass}">${order.status}</span></td><td>${order.itemCount}</td></tr>`
+        `<tr><td>${order.orderId}</td><td>${order.supplierName}</td><td>${order.orderDate}</td><td>${order.totalAmount}</td><td><span class="status ${order.statusClass}">${order.status}</span></td><td>${order.itemCount}</td></tr>`
       ).join('');
       html = html.replace(/{{#each orders}}[\s\S]*?{{\/each}}/g, ordersHtml);
+    } else if (templateName === 'order-report' && data.orders && Array.isArray(data.orders)) {
+      const ordersHtml = data.orders.map(order => {
+        const itemsHtml = order.items.map(item =>
+          `<tr><td>${item.productName}</td><td>${item.quantity} ${item.unit}</td><td>LKR ${item.unitPrice}</td><td>LKR ${item.totalPrice}</td></tr>`
+        ).join('');
+
+        return `<div class="order-card">
+            <div class="order-header">
+              <strong>Order ID:</strong> ${order.orderId} | <strong>Customer:</strong> ${order.customerName} | <strong>Date:</strong> ${order.orderedOn} | <strong>Status:</strong> ${order.status}
+            </div>
+            <div class="order-body">
+              <p><strong>Shipping Method:</strong> ${order.shippingMethod}</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              <p><strong>Total Amount:</strong> LKR ${order.totalAmount}</p>
+            </div>
+          </div>`
+      }).join('');
+      html = html.replace(/{{#each orders}}[\s\S]*?{{\/each}}/g, ordersHtml);
+    } else if (templateName === 'inventory-report' && data.items && Array.isArray(data.items)) {
+      const itemsHtml = data.items.map(item => 
+        `<tr><td>${item.name}</td><td>${item.category}</td><td>${item.sku}</td><td>${item.quantity}</td><td>${item.unitPrice}</td><td>${item.totalValue}</td><td><span class="status ${item.statusClass}">${item.status}</span></td></tr>`
+      ).join('');
+      html = html.replace(/{{#each items}}[\s\S]*?{{\/each}}/g, itemsHtml);
     }
     
     return html;

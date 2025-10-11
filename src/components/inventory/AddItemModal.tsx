@@ -26,6 +26,8 @@ export default function AddItemModal({
         initialData.currentStock;
       (form.elements.namedItem("minStock") as HTMLInputElement).value =
         initialData.minStock;
+      (form.elements.namedItem("unit") as HTMLInputElement).value =
+        initialData.unit;
       (form.elements.namedItem("unitPrice") as HTMLInputElement).value =
         initialData.unitPrice;
     }
@@ -112,7 +114,7 @@ export default function AddItemModal({
                 id="add-item-title"
                 className="text-lg font-semibold text-slate-800"
               >
-                Add New Item
+                {initialData ? "Edit Item" : "Add New Item"}
               </h2>
               <button
                 type="button"
@@ -164,6 +166,12 @@ export default function AddItemModal({
                     placeholder: "0",
                   },
                   {
+                    label: "Unit",
+                    name: "unit",
+                    type: "text",
+                    placeholder: "e.g. kg, l, pcs",
+                  },
+                  {
                     label: "Unit Price",
                     name: "unitPrice",
                     type: "number",
@@ -204,7 +212,7 @@ export default function AddItemModal({
                   type="submit"
                   className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold shadow hover:from-blue-500 hover:to-indigo-500 active:scale-[.97] transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  Add Item
+                  {initialData ? "Save Changes" : "Add Item"}
                 </button>
               </div>
             </form>
