@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Users, AlertCircle, FileText, ShoppingCart } from "lucide-react";
 import SupplierForm from "../components/suppliers/SupplierForm";
-import type { Supplier as SupplierType } from "../components/suppliers/SupplierForm";
+import type { Supplier as SupplierType } from "../types";
 import { fetchSuppliers, createSupplier, updateSupplier, deleteSupplier } from "../utils/api";
 
 import PurchaseOrders from "../components/purchase-orders/PurchaseOrders";
@@ -80,10 +80,11 @@ export default function Procurement() {
         const created = await createSupplier(data);
         setSuppliers(prev => [...prev, created]);
       }
+      setShowForm(false);
+      setEditingSupplier(null);
     } catch (err) {
       console.error("Error saving supplier:", err);
-    } finally {
-      setShowForm(false);
+      throw err; // Re-throw to let the form handle the error
     }
   };
 
@@ -226,26 +227,15 @@ export default function Procurement() {
           )}
 
           {/* Form Modal */}
-          {showForm && (
-            <div className="fixed inset-0 z-50 flex justify-center items-center">
-              <div
-                className="absolute inset-0 bg-black bg-opacity-40"
-                onClick={() => setShowForm(false)}
-              />
-              <div className="relative w-full max-w-md p-6 bg-white rounded-lg shadow-lg z-10">
-                <SupplierForm
-                  initialData={editingSupplier || undefined}
-                  onSubmit={handleFormSubmit}
-                />
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="mt-2 w-full px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          <SupplierForm
+            open={showForm}
+            onClose={() => {
+              setShowForm(false);
+              setEditingSupplier(null);
+            }}
+            initial={editingSupplier}
+            onSubmit={handleFormSubmit}
+          />
         </>
       )}
 

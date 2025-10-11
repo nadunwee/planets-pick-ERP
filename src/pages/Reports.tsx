@@ -18,12 +18,12 @@ import {
   CheckCircle,
   Lock,
 } from "lucide-react";
-import {
-  getCurrentUser,
-  canDownloadReports,
-  canDownloadReportCategory,
-  getUserLevelName,
-} from "../utils/userAuth";
+import ProcurementReportsDashboard from "../components/reports/ProcurementReportsDashboard";
+import { 
+  generateProcurementSummaryPDF, 
+  generateSupplierPerformancePDF, 
+  generatePurchaseOrdersPDF 
+} from "../components/services/reportService";
 
 interface Report {
   id: string;
@@ -36,6 +36,7 @@ interface Report {
   requiresPermission: string[];
   isAvailable: boolean;
   icon: React.ReactNode;
+  downloadUrl?: string;
 }
 
 const allReports: Report[] = [
@@ -244,13 +245,53 @@ const allReports: Report[] = [
     isAvailable: true,
     icon: <AlertTriangle size={20} />,
   },
+
+  // Procurement Reports (PDF Generation Enabled)
+  {
+    id: "procurement-summary",
+    name: "Monthly Procurement Summary",
+    description: "Comprehensive analysis of monthly procurement activities and spending",
+    category: "finance",
+    format: "pdf",
+    lastGenerated: "2024-01-15 14:30",
+    size: "3.2 MB",
+    requiresPermission: ["finance", "reports"],
+    isAvailable: true,
+    icon: <TrendingUp size={20} />,
+  },
+  {
+    id: "supplier-performance",
+    name: "Supplier Performance Report",
+    description: "Performance metrics and rankings for all suppliers",
+    category: "finance",
+    format: "pdf",
+    lastGenerated: "2024-01-15 15:00",
+    size: "2.8 MB",
+    requiresPermission: ["finance", "reports"],
+    isAvailable: true,
+    icon: <Users size={20} />,
+  },
+  {
+    id: "purchase-orders",
+    name: "Purchase Orders Analysis",
+    description: "Detailed analysis of purchase orders and trends",
+    category: "finance",
+    format: "pdf",
+    lastGenerated: "2024-01-15 15:30",
+    size: "2.5 MB",
+    requiresPermission: ["finance", "reports"],
+    isAvailable: true,
+    icon: <Package size={20} />,
+  },
 ];
 
 export default function Reports() {
+  const [activeTab, setActiveTab] = useState("general");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedFormat, setSelectedFormat] = useState("All");
   const [showReportDetails, setShowReportDetails] = useState<string | null>(null);
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null);
   
   // Get current user information from localStorage
   const currentUser = getCurrentUser();
@@ -331,15 +372,64 @@ export default function Reports() {
     }
   };
 
-  const handleDownloadReport = (report: Report) => {
-    if (!canUserDownloadReport(report.category)) {
-      alert(`Access Denied: ${getUserLevelName(userLevel)} cannot download ${report.category} reports. ${userLevel === "L1" ? "Level 1 users cannot download any reports." : "You can only download reports relevant to your department."}`);
-      return;
+  const handleDownloadReport = async (report: Report) => {
+    console.log(`Generating PDF for ${report.name}`);
+    setGeneratingPDF(report.id);
+    
+    try {
+      let result;
+      
+      // Use PDF generation for all reports
+      switch (report.id) {
+        case "sales-1":
+        case "finance-1":
+        case "inventory-1":
+        case "production-1":
+        case "hr-1":
+        case "system-1":
+        case "wastage-1":
+          // For now, show a message that PDF generation is not available for these reports
+          alert('PDF generation is not yet available for this report type. Please use the existing download option.');
+          setGeneratingPDF(null);
+          return;
+          
+        case "procurement-summary":
+          result = await generateProcurementSummaryPDF();
+          break;
+          
+        case "supplier-performance":
+          result = await generateSupplierPerformancePDF();
+          break;
+          
+        case "purchase-orders":
+          result = await generatePurchaseOrdersPDF();
+          break;
+          
+        default:
+          console.log(`No PDF generation available for ${report.name}`);
+          setGeneratingPDF(null);
+          return;
+      }
+      
+      if (result?.success && result.downloadUrl) {
+        // Create a proper download link for the PDF
+        const link = document.createElement('a');
+        link.href = `http://localhost:4000${result.downloadUrl}`;
+        link.download = `${report.name.replace(/\s+/g, '_')}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        console.error('PDF generation failed:', result?.message);
+        alert('Failed to generate PDF. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('An error occurred while generating the PDF.');
+    } finally {
+      setGeneratingPDF(null);
     }
-    console.log(`Downloading ${report.name} in ${report.format} format`);
-    // Here you would typically trigger the actual download
-    // For now, we'll just show a success message
-    alert(`Downloading ${report.name}...`);
   };
 
   const handlePreviewReport = (report: Report) => {
@@ -468,16 +558,46 @@ export default function Reports() {
       </div>
 
       {/* Reports Section */}
-      <div className="bg-white rounded-lg shadow border">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg flex items-center gap-2">
-            <BarChart3 size={20} />
-            Available Reports
-          </h2>
-        </div>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab("general")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "general"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            General Reports
+          </button>
+          <button
+            onClick={() => setActiveTab("procurement")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "procurement"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Procurement Reports
+          </button>
+        </nav>
+      </div>
 
-        {/* Filters */}
-        <div className="p-4 border-b bg-gray-50">
+      {/* Tab Content */}
+      {activeTab === "procurement" ? (
+        <ProcurementReportsDashboard />
+      ) : (
+        <div className="bg-white rounded-lg shadow border">
+          <div className="p-4 border-b">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              <BarChart3 size={20} />
+              Available Reports
+            </h2>
+          </div>
+
+         {/* Filters */}
+         <div className="p-4 border-b bg-gray-50">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -553,26 +673,20 @@ export default function Reports() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleDownloadReport(report)}
-                    className={`flex-1 px-3 py-2 rounded text-sm transition flex items-center justify-center gap-1 ${
-                      canUserDownloadReport(report.category)
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    }`}
-                    disabled={!canUserDownloadReport(report.category)}
-                    title={
-                      !canUserDownloadReport(report.category)
-                        ? userLevel === "L1"
-                          ? "Level 1 users cannot download reports"
-                          : "You can only download reports for your department"
-                        : ""
-                    }
+                    disabled={generatingPDF === report.id}
+                    className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {canUserDownloadReport(report.category) ? (
-                      <Download size={14} />
+                    {generatingPDF === report.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Generating...
+                      </>
                     ) : (
-                      <Lock size={14} />
+                      <>
+                        <Download size={14} />
+                        Download
+                      </>
                     )}
-                    Download
                   </button>
                   <button
                     onClick={() => handlePreviewReport(report)}
@@ -602,107 +716,81 @@ export default function Reports() {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Report Details Modal */}
-      {showReportDetails && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Report Details</h2>
-              <button
-                onClick={() => setShowReportDetails(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            {(() => {
-              const report = availableReports.find(r => r.id === showReportDetails);
-              if (!report) return null;
+        {/* Report Details Modal */}
+        {showReportDetails && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Report Details</h2>
+                <button
+                  onClick={() => setShowReportDetails(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
               
-              return (
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="text-blue-600 p-3 bg-blue-50 rounded-lg">
-                      {report.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{report.name}</h3>
-                      <p className="text-gray-600 mb-3">{report.description}</p>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-sm ${getCategoryColor(report.category)}`}>
-                          {getCategoryName(report.category)}
-                        </span>
-                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                          {report.format.toUpperCase()}
-                        </span>
+              {(() => {
+                const report = allReports.find(r => r.id === showReportDetails);
+                if (!report) return null;
+                
+                return (
+                  <div className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="text-blue-600 p-3 bg-blue-50 rounded-lg">
+                        {report.icon}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Report Information</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Last Generated:</span>
-                          <span className="font-medium">{report.lastGenerated}</span>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-2">{report.name}</h3>
+                        <p className="text-gray-600 mb-4">{report.description}</p>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <span className="text-sm text-gray-500">Category</span>
+                            <p className="font-medium">{getCategoryName(report.category)}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-500">Format</span>
+                            <p className="font-medium flex items-center gap-2">
+                              {getFormatIcon(report.format)}
+                              {report.format.toUpperCase()}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-500">Last Generated</span>
+                            <p className="font-medium">{report.lastGenerated}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-500">File Size</span>
+                            <p className="font-medium">{report.size}</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">File Size:</span>
-                          <span className="font-medium">{report.size}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Category:</span>
-                          <span className="font-medium">{getCategoryName(report.category)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Format:</span>
-                          <span className="font-medium">{report.format.toUpperCase()}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Actions</h4>
-                      <div className="space-y-2">
-                        <button
-                          onClick={() => handleDownloadReport(report)}
-                          className={`w-full py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 ${
-                            canUserDownloadReport(report.category)
-                              ? "bg-blue-600 text-white hover:bg-blue-700"
-                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                          disabled={!canUserDownloadReport(report.category)}
-                        >
-                          {canUserDownloadReport(report.category) ? (
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleDownloadReport(report)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                          >
                             <Download size={16} />
-                          ) : (
-                            <Lock size={16} />
-                          )}
-                          Download Report
-                        </button>
-                        <button
-                          onClick={() => handlePrintReport(report)}
-                          className={`w-full py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 ${
-                            canUserDownloadReport(report.category)
-                              ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          }`}
-                          disabled={!canUserDownloadReport(report.category)}
-                        >
-                          <Printer size={16} />
-                          Print Report
-                        </button>
+                            Download
+                          </button>
+                          <button
+                            onClick={() => window.print()}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                          >
+                            <Printer size={16} />
+                            Print
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+            </div>
           </div>
+        )}
         </div>
       )}
     </div>
