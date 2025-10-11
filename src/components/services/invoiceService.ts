@@ -15,3 +15,10 @@ export const generateInvoiceFromPO = async (poId: string): Promise<Invoice> => {
   const { data } = await api.post<Invoice>(`/invoices/from-po/${poId}`);
   return data;
 };
+
+export const fetchInvoicePdf = async (id: string): Promise<Blob> => {
+  const response = await api.get<Blob>(`/invoices/${id}/pdf`, {
+    responseType: "blob",
+  });
+  return response.data;
+};

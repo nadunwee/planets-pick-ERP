@@ -22,7 +22,18 @@ const purchaseOrderSchema = new mongoose.Schema({
   },
   invoice: { type: mongoose.Schema.Types.ObjectId, ref: "Invoice" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  notes: { type: String, default: "" },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  approvedAt: { type: Date },
+  approvalNotes: { type: String, default: "" },
+  deliveredAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+purchaseOrderSchema.pre("save", function save(next) {
+  this.updatedAt = new Date();
+  next();
 });
 
 module.exports = mongoose.model("PurchaseOrder", purchaseOrderSchema);
