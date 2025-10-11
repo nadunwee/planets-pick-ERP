@@ -41,6 +41,7 @@ export default function OrdersSales() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const department = localStorage.getItem("department");
 
   // Fetch orders from API
@@ -196,6 +197,7 @@ export default function OrdersSales() {
 
   const exportOrderReportPDF = async () => {
     try {
+      setIsExporting(true);
       const res = await fetch(
         "http://localhost:4000/api/reports/generate/order-report",
         {
@@ -219,6 +221,8 @@ export default function OrdersSales() {
     } catch (err: any) {
       console.error(err);
       alert(err.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -338,10 +342,20 @@ export default function OrdersSales() {
           )}
           <button 
             onClick={exportOrderReportPDF}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"
+            disabled={isExporting}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition disabled:opacity-50"
           >
-            <Download size={16} />
-            Export Report
+            {isExporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Export Report
+              </>
+            )}
           </button>
         </div>
       </div>

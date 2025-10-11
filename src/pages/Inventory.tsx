@@ -21,6 +21,7 @@ export default function Inventory() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null); // new
+  const [isExporting, setIsExporting] = useState(false);
 
   async function fetchInventory() {
     try {
@@ -114,6 +115,7 @@ export default function Inventory() {
 
   const exportInventoryReport = async () => {
     try {
+      setIsExporting(true);
       const res = await fetch(
         "http://localhost:4000/api/reports/generate/inventory-report",
         {
@@ -137,6 +139,8 @@ export default function Inventory() {
     } catch (err: any) {
       console.error(err);
       alert(err.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -156,10 +160,20 @@ export default function Inventory() {
         <div className="flex gap-2">
           <button
             onClick={exportInventoryReport}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"
+            disabled={isExporting}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition disabled:opacity-50"
           >
-            <Download size={16} />
-            Export Report
+            {isExporting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                Export Report
+              </>
+            )}
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
