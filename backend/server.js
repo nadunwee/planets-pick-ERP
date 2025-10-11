@@ -13,7 +13,6 @@ const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
 
-
 const app = express();
 
 // ✅ Middleware
@@ -35,6 +34,7 @@ app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/finance-ai", require("./routes/financeAi.js"));
+app.use("/api/invoices", require("./routes/invoice.js"));
 
 // Additional routes from ranudi branch
 app.use("/api/reports", require("./routes/reportRoutes.js"));
@@ -42,7 +42,10 @@ app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
 app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
 
 // Procurement Reports routes
-app.use("/api/procurement-reports", require("./routes/procurementReportsRoutes.js"));
+app.use(
+  "/api/procurement-reports",
+  require("./routes/procurementReportsRoutes.js")
+);
 
 // Error handling middleware from ranudi branch
 app.use(require("./middleware/errorHandler.js").notFound);
@@ -50,24 +53,42 @@ app.use(require("./middleware/errorHandler.js").errorHandler);
 
 // ✅ Connect to MongoDB and start server
 const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 4000,
-    });
-    console.log("✅ Connected to MongoDB");
+  const primaryUri = process.env.MONGO_URI;
+  const fallbackUri =
+    process.env.MONGO_FALLBACK_URI ||
+    "mongodb://127.0.0.1:27017/planets-pick-erp";
 
-    app.listen(process.env.PORT, () => {
-      console.log(`✅ Server listening on port ${process.env.PORT}`);
-    });
-  } catch (error) {
-    console.error("❌ Database connection error:", error.message);
-    // Start server regardless of database connection
-    app.listen(process.env.PORT, () => {
-      console.log(
-        `✅ Server listening on port ${process.env.PORT} (without DB)`
-      );
-    });
+  const tryConnect = async (uri, label) => {
+    if (!uri) return false;
+    try {
+      await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 4000,
+      });
+      console.log(`✅ Connected to MongoDB (${label})`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Database connection error (${label}):`, error.message);
+      return false;
+    }
+  };
+
+  const connected =
+    (await tryConnect(primaryUri, "primary")) ||
+    (primaryUri !== fallbackUri && (await tryConnect(fallbackUri, "fallback")));
+
+  if (!connected) {
+    console.warn(
+      "⚠️ Continuing without a database connection. Data-dependent features will use mock data where available."
+    );
   }
+
+  app.listen(process.env.PORT, () => {
+    console.log(
+      `✅ Server listening on port ${process.env.PORT}${
+        connected ? "" : " (without DB)"
+      }`
+    );
+  });
 };
 
 startServer();

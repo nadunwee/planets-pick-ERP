@@ -10,6 +10,7 @@ export interface PurchaseOrder {
   _id?: string;
   poNumber: string; // add this
   supplierId: string;
+  supplierName?: string;
   items: {
     material: string;
     quantity: number;
@@ -20,6 +21,12 @@ export interface PurchaseOrder {
   totalAmount?: number; // optional if needed
   createdAt?: string;
   updatedAt?: string;
+  invoice?: {
+    _id: string;
+    invoiceNumber: string;
+    status: "Draft" | "Sent" | "Paid" | "Cancelled";
+    totalAmount: number;
+  };
 }
 
 // Backend API payload interface
@@ -36,7 +43,35 @@ export interface PurchaseOrderPayload {
   notes?: string;
 }
 
+export interface InvoiceItem {
+  product: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
 
+export interface Invoice {
+  _id?: string;
+  invoiceNumber: string;
+  purchaseOrder?: {
+    _id: string;
+    poNumber: string;
+    status?: string;
+  };
+  purchaseOrderId?: string;
+  supplier?: {
+    _id: string;
+    name: string;
+    code?: string;
+  };
+  supplierId?: string;
+  supplierName: string;
+  items: InvoiceItem[];
+  totalAmount: number;
+  status: "Draft" | "Sent" | "Paid" | "Cancelled";
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface Supplier {
   _id?: string;
@@ -58,10 +93,23 @@ export interface Supplier {
 }
 
 /** Reports */
-export interface SupplierRankingRow { supplier: string; score: number; }
-export interface SpendingTrendRow { month: string; spending: number; }
-export interface OrdersBySupplierRow { supplier: string; orders: number; value: number; }
-export interface CycleTimelineRow { month: string; avgDays: number; }
+export interface SupplierRankingRow {
+  supplier: string;
+  score: number;
+}
+export interface SpendingTrendRow {
+  month: string;
+  spending: number;
+}
+export interface OrdersBySupplierRow {
+  supplier: string;
+  orders: number;
+  value: number;
+}
+export interface CycleTimelineRow {
+  month: string;
+  avgDays: number;
+}
 
 export interface ReportsDashboardDTO {
   supplierRanking: SupplierRankingRow[];

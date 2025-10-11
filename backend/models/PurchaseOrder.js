@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 
 const purchaseOrderSchema = new mongoose.Schema({
   poNumber: { type: String, required: true, unique: true },
-  supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier", required: true },
+  supplier: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Supplier",
+    required: true,
+  },
   items: [
     {
       materialName: { type: String, required: true },
@@ -16,6 +20,7 @@ const purchaseOrderSchema = new mongoose.Schema({
     enum: ["Pending", "Approved", "Delivered"],
     default: "Pending",
   },
+  invoice: { type: mongoose.Schema.Types.ObjectId, ref: "Invoice" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },
 });

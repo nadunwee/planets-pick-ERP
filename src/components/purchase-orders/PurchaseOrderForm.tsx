@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo } from "react";
-import { Modal, Form, Input, Select, Space, InputNumber, Divider, Alert, message } from "antd";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Space,
+  InputNumber,
+  Divider,
+  Alert,
+  message,
+} from "antd";
 // import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { PurchaseOrder, Supplier } from "../../types";
 import { listSuppliersLite } from "../services/supplierService";
@@ -11,12 +21,21 @@ type Props = {
   onSubmit: (po: PurchaseOrder) => Promise<void>;
 };
 
-const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }) => {
+const PurchaseOrderForm: React.FC<Props> = ({
+  open,
+  onClose,
+  initial,
+  onSubmit,
+}) => {
   const [form] = Form.useForm<PurchaseOrder>();
   const [suppliers, setSuppliers] = React.useState<Supplier[]>([]);
 
   const isEditing = !!initial?._id;
-  const isLocked = useMemo(() => initial ? ["Approved", "Delivered"].includes(initial.status) : false, [initial]);
+  const isLocked = useMemo(
+    () =>
+      initial ? ["Approved", "Delivered"].includes(initial.status) : false,
+    [initial]
+  );
 
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -29,20 +48,20 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
   useEffect(() => {
     if (open) {
       form.resetFields();
-      
+
       // Ensure we have valid default values
       const defaultItems = initial?.items?.length
         ? initial.items
         : [{ material: "", quantity: 1, price: 0 }];
-      
+
       const formValues = {
         supplierId: initial?.supplierId,
         items: defaultItems,
         status: initial?.status || "Pending",
         notes: initial?.notes || "",
       };
-      
-      console.log('Setting form values:', formValues);
+
+      console.log("Setting form values:", formValues);
       form.setFieldsValue(formValues);
     }
   }, [open, initial, form]);
@@ -50,23 +69,23 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      console.log('Form values before processing:', values);
-      
+      console.log("Form values before processing:", values);
+
       // Ensure all numeric values are properly converted and validated
       const processedValues = {
         ...values,
         items: values.items.map((item: any) => {
           const quantity = Number(item.quantity);
           const price = Number(item.price);
-          
+
           if (isNaN(quantity) || quantity <= 0) {
             throw new Error(`Invalid quantity: ${item.quantity}`);
           }
-          
+
           if (isNaN(price) || price < 0) {
             throw new Error(`Invalid price: ${item.price}`);
           }
-          
+
           return {
             ...item,
             quantity: quantity,
@@ -74,15 +93,15 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
           };
         }),
       };
-      
-      console.log('Processed values:', processedValues);
+
+      console.log("Processed values:", processedValues);
       await onSubmit({ ...initial, ...processedValues });
     } catch (error) {
-      console.error('Form validation error:', error);
+      console.error("Form validation error:", error);
       if (error instanceof Error) {
         message.error(error.message);
       } else {
-        message.error('Form validation failed');
+        message.error("Form validation failed");
       }
     }
   };
@@ -115,153 +134,246 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
             {
               validator: (_, value) => {
                 if (!value) {
-                  return Promise.reject(new Error('Supplier is required'));
+                  return Promise.reject(new Error("Supplier is required"));
                 }
                 return Promise.resolve();
-              }
-            }
+              },
+            },
           ]}
         >
           <Select
             placeholder="Choose supplier"
             showSearch
             optionFilterProp="label"
-            options={suppliers.map((s) => ({ value: s._id!, label: `${s.name} (${s.code})` }))}
+            options={suppliers.map((s) => ({
+              value: s._id!,
+              label: `${s.name} (${s.code})`,
+            }))}
           />
         </Form.Item>
 
         <Divider orientation="left">Items</Divider>
         <Form.List
           name="items"
-          rules={[{
-            validator: async (_, items) => {
-              if (!items || items.length === 0) {
-                return Promise.reject(new Error("At least one item is required"));
-              }
-              
-              // Validate that each item has required fields
-              for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                
-                if (!item.material || item.material.trim() === '') {
-                  return Promise.reject(new Error(`Item ${i + 1}: Material name is required`));
+          rules={[
+            {
+              validator: async (_, items) => {
+                if (!items || items.length === 0) {
+                  return Promise.reject(
+                    new Error("At least one item is required")
+                  );
                 }
-                
-                if (item.quantity === undefined || item.quantity === null || item.quantity === '') {
-                  return Promise.reject(new Error(`Item ${i + 1}: Quantity is required`));
+
+                // Validate that each item has required fields
+                for (let i = 0; i < items.length; i++) {
+                  const item = items[i];
+
+                  if (!item.material || item.material.trim() === "") {
+                    return Promise.reject(
+                      new Error(`Item ${i + 1}: Material name is required`)
+                    );
+                  }
+
+                  if (
+                    item.quantity === undefined ||
+                    item.quantity === null ||
+                    item.quantity === ""
+                  ) {
+                    return Promise.reject(
+                      new Error(`Item ${i + 1}: Quantity is required`)
+                    );
+                  }
+
+                  const quantity = Number(item.quantity);
+                  if (isNaN(quantity) || quantity <= 0) {
+                    return Promise.reject(
+                      new Error(
+                        `Item ${i + 1}: Quantity must be a positive number`
+                      )
+                    );
+                  }
+
+                  if (
+                    item.price === undefined ||
+                    item.price === null ||
+                    item.price === ""
+                  ) {
+                    return Promise.reject(
+                      new Error(`Item ${i + 1}: Price is required`)
+                    );
+                  }
+
+                  const price = Number(item.price);
+                  if (isNaN(price) || price < 0) {
+                    return Promise.reject(
+                      new Error(
+                        `Item ${i + 1}: Price must be a non-negative number`
+                      )
+                    );
+                  }
                 }
-                
-                const quantity = Number(item.quantity);
-                if (isNaN(quantity) || quantity <= 0) {
-                  return Promise.reject(new Error(`Item ${i + 1}: Quantity must be a positive number`));
-                }
-                
-                if (item.price === undefined || item.price === null || item.price === '') {
-                  return Promise.reject(new Error(`Item ${i + 1}: Price is required`));
-                }
-                
-                const price = Number(item.price);
-                if (isNaN(price) || price < 0) {
-                  return Promise.reject(new Error(`Item ${i + 1}: Price must be a non-negative number`));
-                }
-              }
-            }
-          }]}
+              },
+            },
+          ]}
         >
           {(fields, _, { errors }) => (
             <>
               {fields.map((field) => (
                 <Space key={field.key} align="baseline" className="w-full mb-2">
-                  <Form.Item 
-                    {...field} 
-                    name={[field.name, "material"]} 
-                    fieldKey={[field.fieldKey!, "material"]} 
+                  <Form.Item
+                    {...field}
+                    name={[field.name, "material"]}
+                    fieldKey={[field.fieldKey!, "material"]}
                     rules={[
                       { required: true, message: "Material required" },
-                      { min: 2, message: "Material name must be at least 2 characters" },
-                      { max: 100, message: "Material name must not exceed 100 characters" },
+                      {
+                        min: 2,
+                        message: "Material name must be at least 2 characters",
+                      },
+                      {
+                        max: 100,
+                        message: "Material name must not exceed 100 characters",
+                      },
                       {
                         validator: (_, value) => {
-                          if (!value || value.trim() === '') {
-                            return Promise.reject(new Error('Material name is required'));
+                          if (!value || value.trim() === "") {
+                            return Promise.reject(
+                              new Error("Material name is required")
+                            );
                           }
                           if (value.trim().length < 2) {
-                            return Promise.reject(new Error('Material name must be at least 2 characters'));
+                            return Promise.reject(
+                              new Error(
+                                "Material name must be at least 2 characters"
+                              )
+                            );
                           }
                           if (value.length > 100) {
-                            return Promise.reject(new Error('Material name must not exceed 100 characters'));
+                            return Promise.reject(
+                              new Error(
+                                "Material name must not exceed 100 characters"
+                              )
+                            );
                           }
                           return Promise.resolve();
-                        }
-                      }
+                        },
+                      },
                     ]}
                   >
                     <Input placeholder="Material name" />
                   </Form.Item>
-                  <Form.Item 
-                    {...field} 
-                    name={[field.name, "quantity"]} 
-                    fieldKey={[field.fieldKey!, "quantity"]} 
+                  <Form.Item
+                    {...field}
+                    name={[field.name, "quantity"]}
+                    fieldKey={[field.fieldKey!, "quantity"]}
                     rules={[
                       { required: true, message: "Qty required" },
-                      { type: 'number', min: 1, max: 999999, message: 'Quantity must be between 1-999999' },
+                      {
+                        type: "number",
+                        min: 1,
+                        max: 999999,
+                        message: "Quantity must be between 1-999999",
+                      },
                       {
                         validator: (_, value) => {
-                          if (value === undefined || value === null || value === '') {
-                            return Promise.reject(new Error('Quantity is required'));
+                          if (
+                            value === undefined ||
+                            value === null ||
+                            value === ""
+                          ) {
+                            return Promise.reject(
+                              new Error("Quantity is required")
+                            );
                           }
                           const num = Number(value);
                           if (isNaN(num)) {
-                            return Promise.reject(new Error('Quantity must be a valid number'));
+                            return Promise.reject(
+                              new Error("Quantity must be a valid number")
+                            );
                           }
                           if (num <= 0) {
-                            return Promise.reject(new Error('Quantity must be a positive number'));
+                            return Promise.reject(
+                              new Error("Quantity must be a positive number")
+                            );
                           }
                           if (num > 999999) {
-                            return Promise.reject(new Error('Quantity must not exceed 999999'));
+                            return Promise.reject(
+                              new Error("Quantity must not exceed 999999")
+                            );
                           }
                           if (!Number.isInteger(num)) {
-                            return Promise.reject(new Error('Quantity must be a whole number'));
+                            return Promise.reject(
+                              new Error("Quantity must be a whole number")
+                            );
                           }
                           return Promise.resolve();
-                        }
-                      }
+                        },
+                      },
                     ]}
                   >
                     <InputNumber min={1} max={999999} placeholder="Qty" />
                   </Form.Item>
-                  <Form.Item 
-                    {...field} 
-                    name={[field.name, "price"]} 
-                    fieldKey={[field.fieldKey!, "price"]} 
+                  <Form.Item
+                    {...field}
+                    name={[field.name, "price"]}
+                    fieldKey={[field.fieldKey!, "price"]}
                     rules={[
                       { required: true, message: "Price required" },
-                      { type: 'number', min: 0, max: 999999.99, message: 'Price must be between 0-999999.99' },
+                      {
+                        type: "number",
+                        min: 0,
+                        max: 999999.99,
+                        message: "Price must be between 0-999999.99",
+                      },
                       {
                         validator: (_, value) => {
-                          if (value === undefined || value === null || value === '') {
-                            return Promise.reject(new Error('Price is required'));
+                          if (
+                            value === undefined ||
+                            value === null ||
+                            value === ""
+                          ) {
+                            return Promise.reject(
+                              new Error("Price is required")
+                            );
                           }
                           const num = Number(value);
                           if (isNaN(num)) {
-                            return Promise.reject(new Error('Price must be a valid number'));
+                            return Promise.reject(
+                              new Error("Price must be a valid number")
+                            );
                           }
                           if (num < 0) {
-                            return Promise.reject(new Error('Price must be a non-negative number'));
+                            return Promise.reject(
+                              new Error("Price must be a non-negative number")
+                            );
                           }
                           if (num > 999999.99) {
-                            return Promise.reject(new Error('Price must not exceed 999999.99'));
+                            return Promise.reject(
+                              new Error("Price must not exceed 999999.99")
+                            );
                           }
                           // Check for reasonable decimal places (max 2)
-                          if (num.toString().includes('.') && num.toString().split('.')[1].length > 2) {
-                            return Promise.reject(new Error('Price can have maximum 2 decimal places'));
+                          if (
+                            num.toString().includes(".") &&
+                            num.toString().split(".")[1].length > 2
+                          ) {
+                            return Promise.reject(
+                              new Error(
+                                "Price can have maximum 2 decimal places"
+                              )
+                            );
                           }
                           return Promise.resolve();
-                        }
-                      }
+                        },
+                      },
                     ]}
                   >
-                    <InputNumber min={0} max={999999.99} step={0.01} placeholder="Price" />
+                    <InputNumber
+                      min={0}
+                      max={999999.99}
+                      step={0.01}
+                      placeholder="Price"
+                    />
                   </Form.Item>
                   {/* <MinusCircleOutlined onClick={() => remove(field.name)} /> */}
                 </Space>
@@ -269,67 +381,57 @@ const PurchaseOrderForm: React.FC<Props> = ({ open, onClose, initial, onSubmit }
               <Form.ErrorList errors={errors} />
               <Form.Item>
                 {/* <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}> */}
-                  Add item
+                Add item
                 {/* </Button> */}
               </Form.Item>
             </>
           )}
         </Form.List>
 
-        <Form.Item 
-          name="status" 
-          label="Status" 
+        <Form.Item
+          name="status"
+          label="Status"
           rules={[
             { required: true, message: "Status is required" },
             {
               validator: (_, value) => {
                 if (!value) {
-                  return Promise.reject(new Error('Status is required'));
+                  return Promise.reject(new Error("Status is required"));
                 }
                 return Promise.resolve();
-              }
-            }
+              },
+            },
           ]}
         >
-          <Select options={[
-            { value: "Pending", label: "Pending" },
-            { value: "Approved", label: "Approved" },
-            { value: "Delivered", label: "Delivered" },
-          ]} />
+          <Select
+            options={[
+              { value: "Pending", label: "Pending" },
+              { value: "Approved", label: "Approved" },
+              { value: "Delivered", label: "Delivered" },
+            ]}
+          />
         </Form.Item>
 
-        <Form.Item 
-          name="notes" 
-          label="Notes" 
+        <Form.Item
+          name="notes"
+          label="Notes"
           initialValue=""
           rules={[
             { max: 1000, message: "Notes must not exceed 1000 characters" },
             {
               validator: (_, value) => {
                 if (value && value.length > 1000) {
-                  return Promise.reject(new Error('Notes must not exceed 1000 characters'));
+                  return Promise.reject(
+                    new Error("Notes must not exceed 1000 characters")
+                  );
                 }
                 return Promise.resolve();
-              }
-            }
+              },
+            },
           ]}
         >
           <Input.TextArea rows={3} placeholder="Optional notes" />
         </Form.Item>
-        
-        {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <Form.Item label="Debug Info">
-            <pre style={{ fontSize: '12px', background: '#f5f5f5', padding: '8px' }}>
-              {JSON.stringify({ 
-                initial, 
-                isEditing, 
-                isLocked,
-                formValues: form.getFieldsValue()
-              }, null, 2)}
-            </pre>
-          </Form.Item>
-        )}
       </Form>
     </Modal>
   );
