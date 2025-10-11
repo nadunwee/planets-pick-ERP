@@ -15,6 +15,9 @@ import {
   ArrowUp,
   Bot,
   Sparkles,
+  Eye,
+  RefreshCw,
+  Receipt,
 } from "lucide-react";
 
 import { Bar, Line } from "react-chartjs-2";
@@ -29,6 +32,13 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+
+import type { PurchaseOrder, Invoice } from "../types";
+import { listPOs } from "../components/services/purchaseOrderService";
+import {
+  listInvoices,
+  generateInvoiceFromPO,
+} from "../components/services/invoiceService";
 
 function PageWithScrollTop() {
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -254,6 +264,29 @@ export default function Finance() {
   const [aiLoading, setAiLoading] = useState(false);
   const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
 
+  // --- INVOICE MATCHING STATES ---
+  const [pendingPurchaseOrders, setPendingPurchaseOrders] = useState<
+    PurchaseOrder[]
+  >([]);
+  const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
+  const [purchaseOrdersError, setPurchaseOrdersError] = useState<string | null>(
+    null
+  );
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] =
+    useState<PurchaseOrder | null>(null);
+  const [showPurchaseOrderPreview, setShowPurchaseOrderPreview] =
+    useState(false);
+  const [invoiceGenerating, setInvoiceGenerating] = useState(false);
+  const [invoiceModalError, setInvoiceModalError] = useState<string | null>(
+    null
+  );
+  const [generatedInvoice, setGeneratedInvoice] = useState<Invoice | null>(
+    null
+  );
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesError, setInvoicesError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     type: "expense",
     subType: "current" as "current" | "non-current",
@@ -282,6 +315,138 @@ export default function Finance() {
     { id: "2", name: "Quarterly Report", format: "excel" },
   ];
 
+  const normalizePurchaseOrder = (po: any): PurchaseOrder => {
+    const supplierIdValue =
+      typeof po.supplier === "string"
+        ? po.supplier
+        : po.supplier?._id?.toString() ?? "";
+
+    return {
+      _id: po._id,
+      poNumber: po.poNumber,
+      supplierId: supplierIdValue,
+      supplierName: po.supplier?.name ?? po.supplierName,
+      items: (po.items ?? []).map((item: any) => ({
+        material: item.material ?? item.materialName,
+        quantity: Number(item.quantity) || 0,
+        price: Number(item.price ?? item.unitPrice) || 0,
+      })),
+      status: po.status,
+      notes: po.notes,
+      totalAmount: Number(po.totalAmount) || 0,
+      createdAt: po.createdAt,
+      updatedAt: po.updatedAt,
+      invoice: po.invoice
+        ? {
+            _id: po.invoice._id,
+            invoiceNumber: po.invoice.invoiceNumber,
+            status: po.invoice.status,
+            totalAmount: Number(po.invoice.totalAmount) || 0,
+          }
+        : undefined,
+    };
+  };
+
+  const getPurchaseOrderTotal = (po: PurchaseOrder) =>
+    po.totalAmount ??
+    po.items.reduce(
+      (sum, item) =>
+        sum + (Number(item.quantity) || 0) * (Number(item.price) || 0),
+      0
+    );
+
+  const refreshPurchaseOrders = async () => {
+    setPurchaseOrdersLoading(true);
+    setPurchaseOrdersError(null);
+    try {
+      const data = await listPOs();
+      const normalized = data.map(normalizePurchaseOrder);
+      setPendingPurchaseOrders(normalized.filter((po) => !po.invoice));
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to load purchase orders";
+      setPurchaseOrdersError(message);
+    } finally {
+      setPurchaseOrdersLoading(false);
+    }
+  };
+
+  const refreshInvoices = async () => {
+    setInvoicesLoading(true);
+    setInvoicesError(null);
+    try {
+      const data = await listInvoices();
+      setInvoices(
+        data.map((invoice) => ({
+          ...invoice,
+          supplierName: invoice.supplierName || invoice.supplier?.name || "",
+        }))
+      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to load invoices";
+      setInvoicesError(message);
+    } finally {
+      setInvoicesLoading(false);
+    }
+  };
+
+  const openPurchaseOrderPreview = (po: PurchaseOrder) => {
+    setSelectedPurchaseOrder(po);
+    setGeneratedInvoice(null);
+    setInvoiceModalError(null);
+    setShowPurchaseOrderPreview(true);
+  };
+
+  const closePurchaseOrderPreview = () => {
+    setShowPurchaseOrderPreview(false);
+    setSelectedPurchaseOrder(null);
+    setGeneratedInvoice(null);
+    setInvoiceModalError(null);
+  };
+
+  const handleGenerateInvoice = async () => {
+    if (!selectedPurchaseOrder?._id) {
+      return;
+    }
+
+    setInvoiceGenerating(true);
+    setInvoiceModalError(null);
+
+    try {
+      const invoice = await generateInvoiceFromPO(selectedPurchaseOrder._id);
+      setGeneratedInvoice(invoice);
+      await refreshPurchaseOrders();
+      await refreshInvoices();
+
+      setSelectedPurchaseOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              invoice: {
+                _id: invoice._id!,
+                invoiceNumber: invoice.invoiceNumber,
+                status: invoice.status,
+                totalAmount: invoice.totalAmount,
+              },
+            }
+          : prev
+      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to generate invoice";
+      setInvoiceModalError(message);
+    } finally {
+      setInvoiceGenerating(false);
+    }
+  };
+
   // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
@@ -301,6 +466,11 @@ export default function Finance() {
       }
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    refreshPurchaseOrders();
+    refreshInvoices();
   }, []);
 
   // --- FETCH AI PREDICTIONS ---
@@ -364,7 +534,7 @@ export default function Finance() {
     // Process transactions with proper double-entry bookkeeping
     transactions.forEach((transaction) => {
       const accountName = transaction.account;
-      
+
       // Create the income/expense account if it doesn't exist
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
@@ -381,7 +551,8 @@ export default function Finance() {
 
       const account = accountsMap.get(accountName)!;
       const cashAccount = accountsMap.get("Cash")!;
-      const reference = transaction.reference || `TXN-${transaction._id.slice(-6)}`;
+      const reference =
+        transaction.reference || `TXN-${transaction._id.slice(-6)}`;
 
       if (transaction.type === "income") {
         // When sales/income happens: Debit Cash, Credit Income
@@ -449,7 +620,7 @@ export default function Finance() {
       const accountName = `${
         item.type === "asset" ? "Assets" : "Liabilities"
       } - ${item.name}`;
-      
+
       // Create the asset/liability account if it doesn't exist
       if (!accountsMap.has(accountName)) {
         accountsMap.set(accountName, {
@@ -613,27 +784,27 @@ export default function Finance() {
     // ===== PROFIT & LOSS CALCULATION =====
     // Extract detailed revenue line items from income accounts
     // Each income account's credit total represents revenue earned
-    const revenueItems = income.map(acc => ({
+    const revenueItems = income.map((acc) => ({
       accountName: acc.accountName,
-      amount: acc.creditTotal
+      amount: acc.creditTotal,
     }));
-    
+
     // Extract detailed expense line items from expense accounts
     // Each expense account's debit total represents expenses incurred
-    const expenseItems = expenses.map(acc => ({
+    const expenseItems = expenses.map((acc) => ({
       accountName: acc.accountName,
-      amount: acc.debitTotal
+      amount: acc.debitTotal,
     }));
 
     // Calculate total revenue from all income accounts
     const totalRevenue = income.reduce((sum, acc) => sum + acc.creditTotal, 0);
-    
+
     // Calculate total expenses from all expense accounts
     const totalExpenses = expenses.reduce(
       (sum, acc) => sum + acc.debitTotal,
       0
     );
-    
+
     // Net Profit/Loss = Total Revenue - Total Expenses
     // This is the bottom line of the P&L statement
     const netIncome = totalRevenue - totalExpenses;
@@ -666,11 +837,11 @@ export default function Finance() {
         equity: netIncome,
       },
       profitLoss: {
-        revenueItems,    // Detailed revenue breakdown
+        revenueItems, // Detailed revenue breakdown
         revenue: totalRevenue,
-        expenseItems,    // Detailed expense breakdown
+        expenseItems, // Detailed expense breakdown
         expenses: totalExpenses,
-        netIncome,       // Bottom line: Revenue - Expenses
+        netIncome, // Bottom line: Revenue - Expenses
       },
       cashFlow: {
         operating: netIncome,
@@ -929,6 +1100,20 @@ export default function Finance() {
         return "text-red-600 bg-red-100";
       default:
         return "text-gray-600 bg-gray-100";
+    }
+  };
+  const getInvoiceStatusColor = (status: Invoice["status"]) => {
+    switch (status) {
+      case "Draft":
+        return "bg-blue-100 text-blue-700";
+      case "Sent":
+        return "bg-indigo-100 text-indigo-700";
+      case "Paid":
+        return "bg-green-100 text-green-700";
+      case "Cancelled":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
   const getTypeColor = (type: string) =>
@@ -1499,19 +1684,31 @@ export default function Finance() {
             ).toLocaleString()}</td>
           </tr>
           <tr class="total" style="background-color: ${
-            Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
-              ? '#d1fae5'
-              : '#fee2e2'
+            Math.abs(
+              balanceSheet.assets.total -
+                (balanceSheet.liabilities.total + balanceSheet.equity)
+            ) < 0.01
+              ? "#d1fae5"
+              : "#fee2e2"
           };">
             <td><strong>${
-              Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
-                ? '✓ BALANCED'
-                : '✗ OUT OF BALANCE'
+              Math.abs(
+                balanceSheet.assets.total -
+                  (balanceSheet.liabilities.total + balanceSheet.equity)
+              ) < 0.01
+                ? "✓ BALANCED"
+                : "✗ OUT OF BALANCE"
             }</strong></td>
             <td class="amount currency"><strong>${
-              Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)) < 0.01
-                ? '0'
-                : Math.abs(balanceSheet.assets.total - (balanceSheet.liabilities.total + balanceSheet.equity)).toLocaleString()
+              Math.abs(
+                balanceSheet.assets.total -
+                  (balanceSheet.liabilities.total + balanceSheet.equity)
+              ) < 0.01
+                ? "0"
+                : Math.abs(
+                    balanceSheet.assets.total -
+                      (balanceSheet.liabilities.total + balanceSheet.equity)
+                  ).toLocaleString()
             }</strong></td>
           </tr>
         </table>
@@ -1530,12 +1727,16 @@ export default function Finance() {
             <th style="width: 70%;">Description</th>
             <th class="amount" style="width: 30%;">Amount (LKR)</th>
           </tr>
-          ${profitLoss.revenueItems.map(item => `
+          ${profitLoss.revenueItems
+            .map(
+              (item) => `
           <tr>
             <td style="padding-left: 20px;">${item.accountName}</td>
             <td class="amount currency">${item.amount.toLocaleString()}</td>
           </tr>
-          `).join('')}
+          `
+            )
+            .join("")}
           <tr class="total">
             <td><strong>TOTAL REVENUE</strong></td>
             <td class="amount currency"><strong>${profitLoss.revenue.toLocaleString()}</strong></td>
@@ -1550,12 +1751,16 @@ export default function Finance() {
             <th style="width: 70%;">Description</th>
             <th class="amount" style="width: 30%;">Amount (LKR)</th>
           </tr>
-          ${profitLoss.expenseItems.map(item => `
+          ${profitLoss.expenseItems
+            .map(
+              (item) => `
           <tr>
             <td style="padding-left: 20px;">${item.accountName}</td>
             <td class="amount currency">${item.amount.toLocaleString()}</td>
           </tr>
-          `).join('')}
+          `
+            )
+            .join("")}
           <tr class="total">
             <td><strong>TOTAL EXPENSES</strong></td>
             <td class="amount currency"><strong>${profitLoss.expenses.toLocaleString()}</strong></td>
@@ -1712,10 +1917,13 @@ export default function Finance() {
   const generateBalanceSheetCSV = (
     balanceSheet: FinancialReport["balanceSheet"]
   ) => {
-    const totalLiabilitiesEquity = balanceSheet.liabilities.total + balanceSheet.equity;
-    const difference = Math.abs(balanceSheet.assets.total - totalLiabilitiesEquity);
+    const totalLiabilitiesEquity =
+      balanceSheet.liabilities.total + balanceSheet.equity;
+    const difference = Math.abs(
+      balanceSheet.assets.total - totalLiabilitiesEquity
+    );
     const isBalanced = difference < 0.01;
-    
+
     return `PLANETS PICK ERP SYSTEM - BALANCE SHEET
 Generated: ${new Date().toLocaleString()}
 As of: ${new Date().toLocaleDateString()}
@@ -1737,19 +1945,19 @@ TOTAL LIABILITIES & EQUITY,${totalLiabilitiesEquity.toLocaleString()}
 ACCOUNTING EQUATION VERIFICATION
 Assets,${balanceSheet.assets.total.toLocaleString()}
 Liabilities + Equity,${totalLiabilitiesEquity.toLocaleString()}
-Status,${isBalanced ? 'BALANCED' : 'OUT OF BALANCE'}
-${!isBalanced ? `Difference,${difference.toLocaleString()}` : ''}`;
+Status,${isBalanced ? "BALANCED" : "OUT OF BALANCE"}
+${!isBalanced ? `Difference,${difference.toLocaleString()}` : ""}`;
   };
 
   const generateProfitLossCSV = (profitLoss: FinancialReport["profitLoss"]) => {
     const revenueLines = profitLoss.revenueItems
-      .map(item => `${item.accountName},${item.amount.toLocaleString()}`)
-      .join('\n');
-    
+      .map((item) => `${item.accountName},${item.amount.toLocaleString()}`)
+      .join("\n");
+
     const expenseLines = profitLoss.expenseItems
-      .map(item => `${item.accountName},${item.amount.toLocaleString()}`)
-      .join('\n');
-    
+      .map((item) => `${item.accountName},${item.amount.toLocaleString()}`)
+      .join("\n");
+
     return `PLANETS PICK ERP SYSTEM - PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleString()}
 Period: ${new Date().toLocaleDateString()}
@@ -1833,19 +2041,25 @@ ${
     profitLoss: FinancialReport["profitLoss"]
   ) => {
     const revenueLines = profitLoss.revenueItems
-      .map(item => `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
-        style: "currency",
-        currency: "LKR",
-      })}`)
-      .join('\n');
-    
+      .map(
+        (item) =>
+          `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
+            style: "currency",
+            currency: "LKR",
+          })}`
+      )
+      .join("\n");
+
     const expenseLines = profitLoss.expenseItems
-      .map(item => `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
-        style: "currency",
-        currency: "LKR",
-      })}`)
-      .join('\n');
-    
+      .map(
+        (item) =>
+          `  ${item.accountName}: ${item.amount.toLocaleString("en-LK", {
+            style: "currency",
+            currency: "LKR",
+          })}`
+      )
+      .join("\n");
+
     return `
 PROFIT & LOSS STATEMENT
 Generated: ${new Date().toLocaleDateString()}
@@ -2182,6 +2396,208 @@ ${"=".repeat(80)}
                   currency: "LKR",
                 })}
               </p>
+            </div>
+          </div>
+
+          {/* Invoice Matching Workspace */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg shadow border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Eye className="text-indigo-600" size={20} />
+                  Purchase Order Review Queue
+                </h3>
+                <button
+                  onClick={refreshPurchaseOrders}
+                  className="flex items-center gap-2 text-sm text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition"
+                  disabled={purchaseOrdersLoading}
+                >
+                  <RefreshCw
+                    size={16}
+                    className={purchaseOrdersLoading ? "animate-spin" : ""}
+                  />
+                  Refresh
+                </button>
+              </div>
+              {purchaseOrdersError && (
+                <div className="text-sm text-red-600 mb-3">
+                  {purchaseOrdersError}
+                </div>
+              )}
+              {purchaseOrdersLoading ? (
+                <p className="text-sm text-gray-500">
+                  Loading purchase orders…
+                </p>
+              ) : pendingPurchaseOrders.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  All purchase orders have matching invoices.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          PO Number
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Supplier
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Total
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Created
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Items
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-gray-600">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {pendingPurchaseOrders.slice(0, 5).map((po) => (
+                        <tr key={po._id}>
+                          <td className="px-4 py-2 font-medium text-gray-900">
+                            {po.poNumber}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {po.supplierName || "Unknown Supplier"}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {po.totalAmount?.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {po.createdAt
+                              ? new Date(po.createdAt).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {po.items.length}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <button
+                              onClick={() => openPurchaseOrderPreview(po)}
+                              className="px-3 py-1.5 text-sm text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition"
+                            >
+                              Preview
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {pendingPurchaseOrders.length > 5 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Showing first 5 purchase orders pending invoices.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Receipt className="text-green-600" size={20} />
+                  Recent Invoices
+                </h3>
+                <button
+                  onClick={refreshInvoices}
+                  className="flex items-center gap-2 text-sm text-green-600 border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition"
+                  disabled={invoicesLoading}
+                >
+                  <RefreshCw
+                    size={16}
+                    className={invoicesLoading ? "animate-spin" : ""}
+                  />
+                  Refresh
+                </button>
+              </div>
+              {invoicesError && (
+                <div className="text-sm text-red-600 mb-3">{invoicesError}</div>
+              )}
+              {invoicesLoading ? (
+                <p className="text-sm text-gray-500">Loading invoices…</p>
+              ) : invoices.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No invoices generated yet. Generate one from a purchase order
+                  preview.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Invoice #
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Supplier
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          PO
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Total
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Status
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">
+                          Created
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {invoices.slice(0, 5).map((invoice) => (
+                        <tr key={invoice._id}>
+                          <td className="px-4 py-2 font-medium text-gray-900">
+                            {invoice.invoiceNumber}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {invoice.supplierName || "Unknown Supplier"}
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {invoice.purchaseOrder?.poNumber || "-"}
+                          </td>
+                          <td className="px-4 py-2 text-gray-700">
+                            {invoice.totalAmount.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })}
+                          </td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${getInvoiceStatusColor(
+                                invoice.status
+                              )}`}
+                            >
+                              {invoice.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-gray-500">
+                            {invoice.createdAt
+                              ? new Date(invoice.createdAt).toLocaleDateString()
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {invoices.length > 5 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Showing first 5 invoices. Use the reports module for the
+                      full list.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -3317,6 +3733,220 @@ ${"=".repeat(80)}
                 })()}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {showPurchaseOrderPreview && selectedPurchaseOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white shadow-xl rounded-2xl w-full max-w-3xl relative p-6">
+            <button
+              onClick={closePurchaseOrderPreview}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+            >
+              <X size={22} />
+            </button>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              Purchase Order Preview
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
+              <div>
+                <p className="font-medium text-gray-900">PO Number</p>
+                <p>{selectedPurchaseOrder.poNumber}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Supplier</p>
+                <p>
+                  {selectedPurchaseOrder.supplierName || "Unknown Supplier"}
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Status</p>
+                <p>{selectedPurchaseOrder.status}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Total Amount</p>
+                <p>
+                  {getPurchaseOrderTotal(selectedPurchaseOrder).toLocaleString(
+                    "en-LK",
+                    {
+                      style: "currency",
+                      currency: "LKR",
+                    }
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-600">
+                      Product
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-600">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-600">
+                      Unit Price
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-600">
+                      Line Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {selectedPurchaseOrder.items.map((item, idx) => {
+                    const lineTotal =
+                      (Number(item.quantity) || 0) * (Number(item.price) || 0);
+                    return (
+                      <tr key={`${item.material}-${idx}`} className="bg-white">
+                        <td className="px-4 py-2 text-gray-900 font-medium">
+                          {item.material}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-700">
+                          {item.quantity}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-700">
+                          {Number(item.price).toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                          })}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-900 font-semibold">
+                          {lineTotal.toLocaleString("en-LK", {
+                            style: "currency",
+                            currency: "LKR",
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td
+                      className="px-4 py-2 font-semibold text-gray-900"
+                      colSpan={3}
+                    >
+                      Total
+                    </td>
+                    <td className="px-4 py-2 text-right font-semibold text-gray-900">
+                      {getPurchaseOrderTotal(
+                        selectedPurchaseOrder
+                      ).toLocaleString("en-LK", {
+                        style: "currency",
+                        currency: "LKR",
+                      })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {invoiceModalError && (
+              <div className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                {invoiceModalError}
+              </div>
+            )}
+
+            {generatedInvoice && (
+              <div className="mt-4 border border-green-200 bg-green-50 rounded-xl p-4">
+                <h3 className="text-lg font-semibold text-green-800 flex items-center gap-2">
+                  <Receipt size={18} /> Invoice Generated
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-green-900 mt-2">
+                  <div>
+                    <span className="font-medium">Invoice Number:</span>{" "}
+                    {generatedInvoice.invoiceNumber}
+                  </div>
+                  <div>
+                    <span className="font-medium">Total Amount:</span>{" "}
+                    {generatedInvoice.totalAmount.toLocaleString("en-LK", {
+                      style: "currency",
+                      currency: "LKR",
+                    })}
+                  </div>
+                  <div>
+                    <span className="font-medium">Status:</span>{" "}
+                    {generatedInvoice.status}
+                  </div>
+                  <div>
+                    <span className="font-medium">Generated:</span>{" "}
+                    {generatedInvoice.createdAt
+                      ? new Date(generatedInvoice.createdAt).toLocaleString()
+                      : "Just now"}
+                  </div>
+                </div>
+                <div className="mt-3 bg-white rounded-lg border border-green-100 overflow-hidden">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-green-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-green-800">
+                          Product
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-green-800">
+                          Quantity
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-green-800">
+                          Unit Price
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-green-800">
+                          Line Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-green-100">
+                      {generatedInvoice.items.map((item, idx) => (
+                        <tr key={`${item.product}-${idx}`} className="bg-white">
+                          <td className="px-4 py-2 text-green-900 font-medium">
+                            {item.product}
+                          </td>
+                          <td className="px-4 py-2 text-right text-green-900">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-2 text-right text-green-900">
+                            {item.unitPrice.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })}
+                          </td>
+                          <td className="px-4 py-2 text-right text-green-900 font-semibold">
+                            {item.totalPrice.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closePurchaseOrderPreview}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleGenerateInvoice}
+                className="px-4 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={
+                  invoiceGenerating ||
+                  Boolean(generatedInvoice || selectedPurchaseOrder.invoice)
+                }
+              >
+                {generatedInvoice || selectedPurchaseOrder.invoice
+                  ? "Invoice Ready"
+                  : invoiceGenerating
+                  ? "Generating..."
+                  : "Generate Invoice"}
+              </button>
+            </div>
           </div>
         </div>
       )}
