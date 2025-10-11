@@ -10,7 +10,7 @@ exports.getReportsDashboard = async (req, res) => {
         title: "Monthly Procurement Summary",
         category: "Procurement",
         date: "2025-09-01",
-        fileUrl: "/api/reports/view/1",   // endpoint to view
+        fileUrl: "/api/reports/view/1", // endpoint to view
         downloadUrl: "/api/reports/download/1", // endpoint to download
       },
       {
