@@ -7,6 +7,7 @@ import {
   AlertCircle,
   TrendingUp,
   TrendingDown,
+  Download,
 } from "lucide-react";
 import AddItemModal from "@/components/inventory/AddItemModal";
 
@@ -111,6 +112,83 @@ export default function Inventory() {
     setIsModalOpen(true);
   };
 
+  // Export Inventory Report with stock analysis
+  const exportInventoryReport = () => {
+    // Calculate inventory metrics
+    const totalItems = filteredItems.length;
+    const totalValue = filteredItems.reduce((sum, item) => 
+      sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+    const lowStockItems = filteredItems.filter(item => 
+      (item.quantity || 0) < (item.reorderPoint || 10));
+    const outOfStockItems = filteredItems.filter(item => 
+      (item.quantity || 0) === 0);
+    
+    // Group by category
+    const categoryStats: Record<string, { count: number; value: number; quantity: number }> = {};
+    filteredItems.forEach(item => {
+      const category = item.type || item.category || 'Uncategorized';
+      if (!categoryStats[category]) {
+        categoryStats[category] = { count: 0, value: 0, quantity: 0 };
+      }
+      categoryStats[category].count += 1;
+      categoryStats[category].quantity += item.quantity || 0;
+      categoryStats[category].value += (item.quantity || 0) * (item.unitPrice || 0);
+    });
+
+    // Create CSV content
+    let csvContent = "PLANETS PICK ERP - INVENTORY STATUS REPORT\n";
+    csvContent += `Generated: ${new Date().toLocaleString()}\n`;
+    csvContent += `Report Period: Current Stock Levels\n\n`;
+    
+    csvContent += "INVENTORY SUMMARY\n";
+    csvContent += "Metric,Value\n";
+    csvContent += `Total Items,${totalItems}\n`;
+    csvContent += `Total Inventory Value,LKR ${totalValue.toLocaleString()}\n`;
+    csvContent += `Low Stock Items,${lowStockItems.length}\n`;
+    csvContent += `Out of Stock Items,${outOfStockItems.length}\n\n`;
+    
+    csvContent += "CATEGORY BREAKDOWN\n";
+    csvContent += "Category,Items Count,Total Quantity,Total Value\n";
+    Object.entries(categoryStats).forEach(([category, stats]) => {
+      csvContent += `"${category}",${stats.count},${stats.quantity},${stats.value.toLocaleString()}\n`;
+    });
+    
+    csvContent += "\nSTOCK DETAILS\n";
+    csvContent += "Item Name,Category,SKU,Quantity,Unit Price,Total Value,Status\n";
+    filteredItems.forEach(item => {
+      const name = item.name || 'Unknown';
+      const category = item.type || item.category || 'N/A';
+      const sku = item.sku || 'N/A';
+      const quantity = item.quantity || 0;
+      const unitPrice = item.unitPrice || 0;
+      const totalValue = quantity * unitPrice;
+      const status = quantity === 0 ? 'OUT OF STOCK' : 
+                     quantity < (item.reorderPoint || 10) ? 'LOW STOCK' : 'OK';
+      csvContent += `"${name}","${category}",${sku},${quantity},${unitPrice},${totalValue},${status}\n`;
+    });
+    
+    if (lowStockItems.length > 0) {
+      csvContent += "\nLOW STOCK ALERTS\n";
+      csvContent += "Item Name,Current Quantity,Reorder Point\n";
+      lowStockItems.forEach(item => {
+        csvContent += `"${item.name}",${item.quantity},${item.reorderPoint || 10}\n`;
+      });
+    }
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Inventory_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Inventory report exported successfully!');
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -123,13 +201,22 @@ export default function Inventory() {
             Manage your stock levels and inventory items
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition w-fit"
-        >
-          <Plus size={16} />
-          Add Item
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportInventoryReport}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition"
+          >
+            <Download size={16} />
+            Export Report
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition w-fit"
+          >
+            <Plus size={16} />
+            Add Item
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

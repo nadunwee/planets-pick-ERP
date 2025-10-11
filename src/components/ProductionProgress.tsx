@@ -16,7 +16,8 @@ export function ProductionProgress() {
       <h2 className="font-semibold text-lg mb-4">Today's Production</h2>
       <div className="space-y-4">
         {products.map((p, idx) => {
-          const percentage = (p.current / p.total) * 100;
+          const percentage = Math.min((p.current / p.total) * 100, 100);
+
           return (
             <div key={idx}>
               <div className="flex justify-between text-sm font-medium mb-1">

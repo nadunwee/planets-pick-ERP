@@ -5,7 +5,6 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 // Routes
-// Routes
 const userRoutes = require("./routes/user.js");
 const employeeRoutes = require("./routes/employee.js");
 const inventoryRoutes = require("./routes/inventory.js");
@@ -17,11 +16,6 @@ const productionRoutes = require("./routes/production.js");
 
 const app = express();
 
-// ✅ Middleware
-app.use(express.json()); // Parse JSON request body
-app.use(cors()); // allow all origins for testing
-
-// ✅ Request logger (for debugging)
 // ✅ Middleware
 app.use(express.json()); // Parse JSON request body
 app.use(cors()); // allow all origins for testing
@@ -40,6 +34,7 @@ app.use("/api/inventory", inventoryRoutes); // Inventory endpoints
 app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/finance-ai", require("./routes/financeAi.js"));
 
 // Additional routes from ranudi branch
 app.use("/api/reports", require("./routes/reportRoutes.js"));
@@ -56,28 +51,23 @@ app.use(require("./middleware/errorHandler.js").errorHandler);
 // ✅ Connect to MongoDB and start server
 const startServer = async () => {
   try {
-    // Try to connect to MongoDB with a timeout
-    const connectPromise = mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 4000, // 5 seconds timeout
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 4000,
     });
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("MongoDB connection timeout")), 6000)
-    );
-
-    await Promise.race([connectPromise, timeoutPromise]);
     console.log("✅ Connected to MongoDB");
+
+    app.listen(process.env.PORT, () => {
+      console.log(`✅ Server listening on port ${process.env.PORT}`);
+    });
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
-    console.log(
-      "🔄 Starting server without database connection for testing..."
-    );
+    // Start server regardless of database connection
+    app.listen(process.env.PORT, () => {
+      console.log(
+        `✅ Server listening on port ${process.env.PORT} (without DB)`
+      );
+    });
   }
-
-  // Start server regardless of database connection
-  app.listen(process.env.PORT, () => {
-    console.log(`✅ Server listening on port ${process.env.PORT}`);
-  });
 };
 
 startServer();

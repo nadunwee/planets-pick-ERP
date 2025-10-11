@@ -25,12 +25,12 @@ async function addInventoryItem(req, res) {
 // Edit inventory item (name, type, unit price)
 async function editInventoryItem(req, res) {
   const { id } = req.params;
-  const { name, type, unitPrice } = req.body;
+  const { name, type, unitPrice, currentStock, minStock } = req.body;
 
   try {
     const updatedItem = await Inventory.findByIdAndUpdate(
       id,
-      { name, type, unitPrice },
+      { name, type, unitPrice, currentStock, minStock },
       { new: true } // return updated document
     );
 

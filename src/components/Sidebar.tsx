@@ -74,10 +74,12 @@ export function Sidebar() {
     "Warehouse",
     "Wastage",
     "Settings",
+    "Procurement",
   ];
 
   const productionMan = [
     "Dashboard",
+    "Procurement",
     "Employees",
     "Delivery",
     "Finance",
@@ -85,6 +87,19 @@ export function Sidebar() {
     "Warehouse",
     "Wastage",
     "Settings",
+  ];
+
+  const HR = [
+    "Dashboard",
+    "Inventory",
+    "Production",
+    "Orders & Sales",
+    "Delivery",
+    "Finance",
+    "Administrator",
+    "Wastage",
+    "Settings",
+    "Procurement",
   ];
 
   let filteredMenuItems = menuItems;
@@ -95,10 +110,14 @@ export function Sidebar() {
     );
   }
 
-  if (userDepartment === "production") {
+  if (userDepartment === "Production") {
     filteredMenuItems = menuItems.filter(
       (item) => !productionMan.includes(item.name)
     );
+  }
+
+  if (userDepartment === "Human Resources") {
+    filteredMenuItems = menuItems.filter((item) => !HR.includes(item.name));
   }
 
   // Logout handler

@@ -20,12 +20,10 @@ const orderSchema = new Schema(
     expectedDate: { type: Date },
     priority: {
       type: String,
-      enum: ["low", "medium", "high"],
       default: "medium",
     },
     status: {
       type: String,
-      enum: ["confirmed", "pending", "cancelled"],
       default: "pending",
     },
     customer: { type: Schema.Types.ObjectId, ref: "Customer", required: true },
@@ -33,7 +31,6 @@ const orderSchema = new Schema(
     totalAmount: { type: Number, required: true },
     paymentStatus: {
       type: String,
-      enum: ["paid", "unpaid", "partial"],
       default: "unpaid",
     },
     paymentMethod: { type: String },
