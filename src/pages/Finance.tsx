@@ -153,18 +153,20 @@ interface TrialBalanceEntry {
   creditBalance: number;
 }
 
+// Financial Report Structure
+// Enhanced to include detailed line items for P&L and balance verification
 interface FinancialReport {
   balanceSheet: {
     assets: { current: number; nonCurrent: number; total: number };
     liabilities: { current: number; nonCurrent: number; total: number };
-    equity: number;
+    equity: number; // Net profit/loss (retained earnings from P&L)
   };
   profitLoss: {
-    revenueItems: Array<{ accountName: string; amount: number }>;
-    revenue: number;
-    expenseItems: Array<{ accountName: string; amount: number }>;
-    expenses: number;
-    netIncome: number;
+    revenueItems: Array<{ accountName: string; amount: number }>; // Detailed revenue breakdown
+    revenue: number; // Total revenue
+    expenseItems: Array<{ accountName: string; amount: number }>; // Detailed expense breakdown
+    expenses: number; // Total expenses
+    netIncome: number; // Revenue - Expenses (flows to Balance Sheet equity)
   };
   cashFlow: {
     operating: number;
@@ -608,24 +610,32 @@ export default function Finance() {
       (acc) => !acc.accountName.includes("Current")
     );
 
-    // Calculate revenue and expense line items from trial balance
+    // ===== PROFIT & LOSS CALCULATION =====
+    // Extract detailed revenue line items from income accounts
+    // Each income account's credit total represents revenue earned
     const revenueItems = income.map(acc => ({
       accountName: acc.accountName,
       amount: acc.creditTotal
     }));
     
+    // Extract detailed expense line items from expense accounts
+    // Each expense account's debit total represents expenses incurred
     const expenseItems = expenses.map(acc => ({
       accountName: acc.accountName,
       amount: acc.debitTotal
     }));
 
+    // Calculate total revenue from all income accounts
     const totalRevenue = income.reduce((sum, acc) => sum + acc.creditTotal, 0);
+    
+    // Calculate total expenses from all expense accounts
     const totalExpenses = expenses.reduce(
       (sum, acc) => sum + acc.debitTotal,
       0
     );
     
     // Net Profit/Loss = Total Revenue - Total Expenses
+    // This is the bottom line of the P&L statement
     const netIncome = totalRevenue - totalExpenses;
 
     return {
@@ -649,15 +659,18 @@ export default function Finance() {
           ),
           total: liabilities.reduce((sum, acc) => sum + acc.balance, 0),
         },
+        // ===== EQUITY CALCULATION =====
         // Equity = Net Profit/Loss (Retained Earnings)
+        // This creates the link between P&L and Balance Sheet
+        // The profit/loss flows into equity on the balance sheet
         equity: netIncome,
       },
       profitLoss: {
-        revenueItems,
+        revenueItems,    // Detailed revenue breakdown
         revenue: totalRevenue,
-        expenseItems,
+        expenseItems,    // Detailed expense breakdown
         expenses: totalExpenses,
-        netIncome,
+        netIncome,       // Bottom line: Revenue - Expenses
       },
       cashFlow: {
         operating: netIncome,
