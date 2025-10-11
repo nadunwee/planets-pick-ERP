@@ -311,7 +311,10 @@ export default function Finance() {
           setHistoricalData(response.data.historical);
         }
       } catch (err: any) {
-        console.error("AI Prediction error:", err.response?.data || err.message);
+        console.error(
+          "AI Prediction error:",
+          err.response?.data || err.message
+        );
         // Set default insights if AI service is not available
         setAiInsights([
           "AI prediction service is currently unavailable. Start the AI service to get predictions.",
@@ -760,7 +763,7 @@ export default function Finance() {
   // --- AI PREDICTION CHART DATA ---
   const predictionChartData = useMemo(() => {
     const allData = [...historicalData, ...aiPredictions];
-    
+
     if (allData.length === 0) {
       return {
         labels: ["No Data"],
@@ -791,14 +794,14 @@ export default function Finance() {
     }
 
     const labels = allData.map((d) => d.month);
-    const incomeData = allData.map((d) => 
-      'income' in d ? d.income : d.predicted_income
+    const incomeData = allData.map((d) =>
+      "income" in d ? d.income : d.predicted_income
     );
-    const expenseData = allData.map((d) => 
-      'expense' in d ? d.expense : d.predicted_expense
+    const expenseData = allData.map((d) =>
+      "expense" in d ? d.expense : d.predicted_expense
     );
-    const profitData = allData.map((d) => 
-      'profit' in d ? d.profit : d.predicted_profit
+    const profitData = allData.map((d) =>
+      "profit" in d ? d.profit : d.predicted_profit
     );
 
     return {
@@ -2061,13 +2064,16 @@ ${"=".repeat(80)}
             <div className="bg-white rounded-lg shadow border p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <TrendingUp className="text-purple-600" size={20} />
-                Financial Predictions (Next 3 Months)
+                Financial Predictions (Next 4 Months)
               </h3>
-              
+
               {/* Prediction Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {aiPredictions.map((pred, idx) => (
-                  <div key={idx} className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+                  <div
+                    key={idx}
+                    className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200"
+                  >
                     <h4 className="text-sm font-medium text-gray-600 mb-2">
                       {pred.month}
                     </h4>
@@ -2096,7 +2102,13 @@ ${"=".repeat(80)}
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Profit</p>
-                        <p className={`text-base font-bold ${pred.predicted_profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        <p
+                          className={`text-base font-bold ${
+                            pred.predicted_profit >= 0
+                              ? "text-blue-600"
+                              : "text-red-600"
+                          }`}
+                        >
                           {pred.predicted_profit.toLocaleString("en-LK", {
                             style: "currency",
                             currency: "LKR",
@@ -2127,32 +2139,35 @@ ${"=".repeat(80)}
                       },
                       tooltip: {
                         callbacks: {
-                          label: function(context) {
-                            let label = context.dataset.label || '';
+                          label: function (context) {
+                            let label = context.dataset.label || "";
                             if (label) {
-                              label += ': ';
+                              label += ": ";
                             }
                             if (context.parsed.y !== null) {
-                              label += context.parsed.y.toLocaleString("en-LK", {
-                                style: "currency",
-                                currency: "LKR",
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0,
-                              });
+                              label += context.parsed.y.toLocaleString(
+                                "en-LK",
+                                {
+                                  style: "currency",
+                                  currency: "LKR",
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                }
+                              );
                             }
                             return label;
-                          }
-                        }
-                      }
+                          },
+                        },
+                      },
                     },
                     scales: {
                       y: {
                         beginAtZero: true,
                         ticks: {
-                          callback: function(value) {
-                            return 'LKR ' + Number(value).toLocaleString();
-                          }
-                        }
+                          callback: function (value) {
+                            return "LKR " + Number(value).toLocaleString();
+                          },
+                        },
                       },
                     },
                   }}
