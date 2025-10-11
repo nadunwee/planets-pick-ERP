@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Search,
@@ -23,6 +24,7 @@ import {
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getCurrentUser, canManageUsers } from "@/utils/userAuth";
 
 // For employees already in system
 interface Employee {
@@ -444,6 +446,17 @@ const payrollRecords: PayrollRecord[] = [
 ];
 
 export default function Employees() {
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  
+  // Redirect if user doesn't have permission (only L4 can access)
+  useEffect(() => {
+    if (!currentUser || !canManageUsers(currentUser.level)) {
+      alert("Access Denied: Only administrators can manage employees");
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
+
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("All");

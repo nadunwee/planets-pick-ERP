@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Shield,
@@ -10,6 +11,7 @@ import {
   Plus,
   Activity,
 } from "lucide-react";
+import { getCurrentUser, canApproveUsers } from "@/utils/userAuth";
 
 interface User {
   _id: string;
@@ -23,6 +25,17 @@ interface User {
 }
 
 export default function Administrator() {
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  
+  // Redirect if user doesn't have permission (only L4 can access)
+  useEffect(() => {
+    if (!currentUser || !canApproveUsers(currentUser.level)) {
+      alert("Access Denied: Only administrators can manage users");
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
