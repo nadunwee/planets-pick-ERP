@@ -1,39 +1,44 @@
 const express = require("express");
 const router = express.Router();
 const financeController = require("../controllers/financeController");
+const requireAuth = require("../middleware/requireAuth");
+const { allowLevels } = require("../middleware/accessControl");
+
+router.use(requireAuth);
 
 // --- Transactions ---
-// Get all transactions
-router.get("/transactions", financeController.getTransactions);
+// Get all transactions - L3 and L4 (Finance Manager and Admin)
+router.get("/transactions", allowLevels("L3", "L4"), financeController.getTransactions);
 
-// Add a new transaction
-router.post("/transactions", financeController.addTransaction);
+// Add a new transaction - L3 and L4 only
+router.post("/transactions", allowLevels("L3", "L4"), financeController.addTransaction);
 
-// Edit/update a transaction by ID
-router.put("/transactions/:id", financeController.updateTransaction);
+// Edit/update a transaction by ID - L3 and L4 only
+router.put("/transactions/:id", allowLevels("L3", "L4"), financeController.updateTransaction);
 
-// Delete a transaction by ID
-router.delete("/transactions/:id", financeController.deleteTransaction);
+// Delete a transaction by ID - L3 and L4 only
+router.delete("/transactions/:id", allowLevels("L3", "L4"), financeController.deleteTransaction);
 
 // --- Accounts ---
-router.get("/accounts", financeController.getAccounts);
+router.get("/accounts", allowLevels("L3", "L4"), financeController.getAccounts);
 
 // --- Budgets ---
-router.get("/budgets", financeController.getBudgets);
+router.get("/budgets", allowLevels("L3", "L4"), financeController.getBudgets);
 
 // --- Assets & Liabilities ---
-// Get all assets & liabilities
-router.get("/assets-liabilities", financeController.getAssetsLiabilities);
+// Get all assets & liabilities - L3 and L4 only
+router.get("/assets-liabilities", allowLevels("L3", "L4"), financeController.getAssetsLiabilities);
 
-// Add a new asset/liability
-router.post("/assets-liabilities", financeController.addAssetLiability);
+// Add a new asset/liability - L3 and L4 only
+router.post("/assets-liabilities", allowLevels("L3", "L4"), financeController.addAssetLiability);
 
-// Update an asset/liability by ID
-router.put("/assets-liabilities/:id", financeController.updateAssetLiability);
+// Update an asset/liability by ID - L3 and L4 only
+router.put("/assets-liabilities/:id", allowLevels("L3", "L4"), financeController.updateAssetLiability);
 
-// Delete an asset/liability by ID
+// Delete an asset/liability by ID - L3 and L4 only
 router.delete(
   "/assets-liabilities/:id",
+  allowLevels("L3", "L4"),
   financeController.deleteAssetLiability
 );
 

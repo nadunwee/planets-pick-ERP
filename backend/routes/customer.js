@@ -6,22 +6,26 @@ const {
   getAllCustomers,
   getCustomerById,
 } = require("../controllers/customerController.js");
+const requireAuth = require("../middleware/requireAuth");
+const { allowLevels } = require("../middleware/accessControl");
 
 const router = express.Router();
 
-// Create a new customer
-router.post("/create", createCustomer);
+router.use(requireAuth);
 
-// Edit a customer by ID
-router.patch("/edit/:id", editCustomer);
+// Create a new customer - All levels can create
+router.post("/create", allowLevels("L1", "L2", "L3", "L4"), createCustomer);
 
-// Delete a customer by ID
-router.delete("/delete/:id", deleteCustomer);
+// Edit a customer by ID - All levels can edit
+router.patch("/edit/:id", allowLevels("L1", "L2", "L3", "L4"), editCustomer);
 
-// Optional: get all customers
-router.get("/all", getAllCustomers);
+// Delete a customer by ID - L2 and above can delete
+router.delete("/delete/:id", allowLevels("L2", "L3", "L4"), deleteCustomer);
 
-// Optional: get a single customer
-router.get("/:id", getCustomerById);
+// Optional: get all customers - All levels can view
+router.get("/all", allowLevels("L1", "L2", "L3", "L4"), getAllCustomers);
+
+// Optional: get a single customer - All levels can view
+router.get("/:id", allowLevels("L1", "L2", "L3", "L4"), getCustomerById);
 
 module.exports = router;
