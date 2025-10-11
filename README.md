@@ -1,6 +1,70 @@
-# React + TypeScript + Vite
+# Planets Pick ERP
+
+A comprehensive ERP system built with React, TypeScript, and Node.js.
+
+## Quick Start
+
+### Prerequisites
+- Node.js 18+ 
+- MongoDB (optional, uses mock data if unavailable)
+- Python 3.12+ (for AI features)
+
+### Installation
+
+1. **Install Frontend Dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Install Backend Dependencies**
+   ```bash
+   cd backend
+   npm install
+   cd ..
+   ```
+
+3. **Install AI Service Dependencies** (optional)
+   ```bash
+   cd ai-service
+   pip install -r requirements.txt
+   cd ..
+   ```
+
+### Running the Application
+
+1. **Start Backend** (in one terminal)
+   ```bash
+   cd backend
+   npm start
+   # API starts on http://localhost:4000
+   ```
+
+2. **Start Frontend** (in another terminal)
+   ```bash
+   npm run dev
+   # App starts on http://localhost:5173
+   ```
+
+3. **Start AI Service** (optional, in another terminal)
+   ```bash
+   cd ai-service
+   python app.py
+   # Service starts on http://localhost:5001
+   ```
+
+## Development
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+### Troubleshooting
+
+#### "Cannot find module 'puppeteer'" Error
+If you encounter this error when starting the backend:
+1. Make sure you've installed backend dependencies: `cd backend && npm install`
+2. If you're in a restricted environment, use: `PUPPETEER_SKIP_DOWNLOAD=true npm install`
+3. The puppeteer package is used for PDF generation in the reports module
+
+### Available Plugins
 
 Currently, two official plugins are available:
 
