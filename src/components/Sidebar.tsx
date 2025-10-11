@@ -75,6 +75,7 @@ export function Sidebar() {
     "Wastage",
     "Settings",
     "Procurement",
+    "Reports",
   ];
 
   const productionMan = [
