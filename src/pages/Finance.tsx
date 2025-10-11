@@ -436,7 +436,7 @@ export default function Finance() {
       .filter((al) => al.type === "liability")
       .reduce((sum, al) => sum + al.value, 0);
 
-    // Cash account (debit for income and assets, credit for expenses and liabilities)
+    // Cash account (debit for income and liabilities, credit for expenses and assets)
     if (!accountsMap.has("Cash")) {
       accountsMap.set("Cash", {
         _id: "ledger-Cash",
@@ -451,16 +451,16 @@ export default function Finance() {
     }
 
     const cashAccount = accountsMap.get("Cash")!;
-    // Cash increases with income and assets, decreases with expenses and liabilities
-    const cashIncrease = totalIncome + totalAssets;
-    const cashDecrease = totalExpenses + totalLiabilities;
+    // Cash increases with income and liabilities (receive money), decreases with expenses and asset purchases (pay money)
+    const cashIncrease = totalIncome + totalLiabilities;
+    const cashDecrease = totalExpenses + totalAssets;
 
     if (cashIncrease > 0) {
       cashAccount.entries.push({
-        _id: "cash-income-assets",
+        _id: "cash-income-liabilities",
         accountName: "Cash",
         date: new Date().toISOString(),
-        description: "Cash from Income and Assets",
+        description: "Cash from Income and Liabilities",
         reference: "CASH-INC",
         debit: cashIncrease,
         credit: 0,
@@ -472,10 +472,10 @@ export default function Finance() {
 
     if (cashDecrease > 0) {
       cashAccount.entries.push({
-        _id: "cash-expenses-liabilities",
+        _id: "cash-expenses-assets",
         accountName: "Cash",
         date: new Date().toISOString(),
-        description: "Cash for Expenses and Liabilities",
+        description: "Cash for Expenses and Asset Purchases",
         reference: "CASH-EXP",
         debit: 0,
         credit: cashDecrease,
