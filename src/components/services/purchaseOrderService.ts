@@ -20,13 +20,38 @@ export const createPO = async (po: PurchaseOrderPayload): Promise<Ptype> => {
 };
 
 // Update PO
-export const updatePO = async (id: string, updates: Partial<PurchaseOrderPayload>): Promise<Ptype> => {
+export const updatePO = async (
+  id: string,
+  updates: Partial<PurchaseOrderPayload>
+): Promise<Ptype> => {
   const { data } = await api.put<Ptype>(`/purchase-orders/${id}`, updates);
   return data;
 };
 
 // Delete PO
 export const deletePO = async (id: string): Promise<{ message: string }> => {
-  const { data } = await api.delete<{ message: string }>(`/purchase-orders/${id}`);
+  const { data } = await api.delete<{ message: string }>(
+    `/purchase-orders/${id}`
+  );
+  return data;
+};
+
+// Approve PO
+export const approvePO = async (
+  id: string,
+  payload: { approvalNotes?: string } = {}
+): Promise<Ptype> => {
+  const { data } = await api.patch<Ptype>(
+    `/purchase-orders/${id}/approve`,
+    payload
+  );
+  return data;
+};
+
+// Mark Purchase Order as Delivered
+export const markPurchaseOrderDelivered = async (
+  id: string
+): Promise<Ptype> => {
+  const { data } = await api.patch<Ptype>(`/purchase-orders/${id}/deliver`);
   return data;
 };

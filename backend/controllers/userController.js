@@ -2,10 +2,10 @@ const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const User = require("../models/userModel.js");
-const { log } = require("console");
+const { getJwtSecret } = require("../utils/jwtSecret");
 
 const createToken = (_id) => {
-  return jwt.sign({ _id }, process.env.SECRET);
+  return jwt.sign({ _id }, getJwtSecret(), { expiresIn: "2d" });
 };
 
 async function loginUser(req, res) {
@@ -17,8 +17,31 @@ async function loginUser(req, res) {
     const name = user.name;
     const token = createToken(user._id);
     const department = user.department;
-    const level = user.level;
-    res.status(200).json({ email, token, name, department, level });
+    const role = user.role;
+
+    let level = user.level;
+
+    if (!user.approved) {
+      return res.status(403).json({
+        error: "Account pending approval. Please contact an administrator.",
+      });
+    }
+
+    if (!level) {
+      level = "L1";
+      user.level = level;
+      await user.save();
+    }
+    res.status(200).json({
+      email,
+      token,
+      name,
+      department,
+      level,
+      type: role,
+      role,
+      approved: user.approved,
+    });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -137,7 +160,7 @@ async function approveUser(req, res) {
 
     return res.status(200).json(user);
   } catch (error) {
-    console.error("Error approving user:", errorj);
+    console.error("Error approving user:", error);
     res.status(500).json({ error: "Failed to approve user" });
   }
 }

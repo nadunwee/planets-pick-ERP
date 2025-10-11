@@ -21,6 +21,21 @@ export interface PurchaseOrder {
   totalAmount?: number; // optional if needed
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email?: string;
+    level?: string;
+  };
+  approvedBy?: {
+    _id: string;
+    name: string;
+    email?: string;
+    level?: string;
+  };
+  approvedAt?: string;
+  approvalNotes?: string;
+  deliveredAt?: string;
   invoice?: {
     _id: string;
     invoiceNumber: string;
@@ -57,6 +72,10 @@ export interface Invoice {
     _id: string;
     poNumber: string;
     status?: string;
+    createdBy?: {
+      _id: string;
+      name: string;
+    };
   };
   purchaseOrderId?: string;
   supplier?: {
@@ -66,6 +85,7 @@ export interface Invoice {
   };
   supplierId?: string;
   supplierName: string;
+  supplierCode?: string;
   items: InvoiceItem[];
   totalAmount: number;
   status: "Draft" | "Sent" | "Paid" | "Cancelled";

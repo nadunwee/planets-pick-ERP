@@ -1,6 +1,6 @@
-const puppeteer = require('puppeteer');
-const path = require('path');
-const fs = require('fs');
+const puppeteer = require("puppeteer");
+const path = require("path");
+const fs = require("fs");
 
 class PDFService {
   constructor() {
@@ -10,32 +10,32 @@ class PDFService {
   async initialize() {
     if (!this.browser) {
       this.browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        headless: "new",
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
     }
   }
 
   async generatePDF(htmlContent, options = {}) {
     await this.initialize();
-    
+
     const page = await this.browser.newPage();
-    
+
     try {
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-      
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
       const pdfBuffer = await page.pdf({
-        format: 'A4',
+        format: "A4",
         printBackground: true,
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
+          top: "20mm",
+          right: "20mm",
+          bottom: "20mm",
+          left: "20mm",
         },
-        ...options
+        ...options,
       });
-      
+
       return pdfBuffer;
     } finally {
       await page.close();
@@ -43,45 +43,51 @@ class PDFService {
   }
 
   async generateReportPDF(reportData, templateName, outputPath) {
-    console.log('Generating PDF with data:', JSON.stringify(reportData, null, 2));
+    console.log(
+      "Generating PDF with data:",
+      JSON.stringify(reportData, null, 2)
+    );
     const htmlContent = this.generateHTMLFromTemplate(reportData, templateName);
-    console.log('Generated HTML length:', htmlContent.length);
+    console.log("Generated HTML length:", htmlContent.length);
     const pdfBuffer = await this.generatePDF(htmlContent);
-    
+
     // Ensure directory exists
     const dir = path.dirname(outputPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    
+
     // Write PDF to file
     fs.writeFileSync(outputPath, pdfBuffer);
-    
+
     return {
       filePath: outputPath,
       size: pdfBuffer.length,
-      generatedAt: new Date()
+      generatedAt: new Date(),
     };
   }
 
   generateHTMLFromTemplate(data, templateName) {
     let template;
-    
+
     switch (templateName) {
-      case 'procurement-summary':
+      case "procurement-summary":
         template = this.getProcurementSummaryTemplate();
         break;
-      case 'supplier-performance':
+      case "supplier-performance":
         template = this.getSupplierPerformanceTemplate();
         break;
-      case 'purchase-orders':
+      case "purchase-orders":
         template = this.getPurchaseOrdersTemplate();
         break;
-      case 'inventory-report':
+      case "inventory-report":
         template = this.getInventoryReportTemplate();
         break;
-      case 'order-report':
+      case "order-report":
         template = this.getOrderReportTemplate();
+        break;
+      case "invoice":
+        template = this.getInvoiceTemplate();
         break;
       default:
         template = this.getDefaultTemplate();
@@ -296,6 +302,101 @@ class PDFService {
     `;
   }
 
+  getInvoiceTemplate() {
+    return `<!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #2c3e50; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+          .header h1 { margin: 0; font-size: 28px; letter-spacing: 2px; }
+          .meta { text-align: right; }
+          .meta p { margin: 4px 0; }
+          .section { margin-bottom: 24px; }
+          .section h2 { font-size: 16px; margin-bottom: 8px; text-transform: uppercase; color: #7f8c8d; }
+          .section table { width: 100%; border-collapse: collapse; }
+          .section table td { padding: 4px 0; }
+          table.items { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          table.items th, table.items td { border: 1px solid #ecf0f1; padding: 12px; text-align: left; }
+          table.items th { background-color: #f8f9fa; }
+          table.items td.amount { text-align: right; }
+          .totals { margin-top: 16px; float: right; }
+          .totals table { border-collapse: collapse; }
+          .totals td { padding: 6px 16px; }
+          .totals tr:last-child td { font-weight: bold; font-size: 18px; border-top: 2px solid #34495e; }
+          .footer { margin-top: 48px; text-align: center; font-size: 12px; color: #95a5a6; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>INVOICE</h1>
+            <p>Planet's Pick ERP</p>
+          </div>
+          <div class="meta">
+            <p><strong>Invoice #:</strong> {{invoiceNumber}}</p>
+            <p><strong>Date:</strong> {{issuedDate}}</p>
+            <p><strong>Status:</strong> {{status}}</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Bill To</h2>
+          <table>
+            <tr><td><strong>Supplier:</strong> {{supplierName}}</td></tr>
+            <tr><td><strong>Supplier Code:</strong> {{supplierCode}}</td></tr>
+            <tr><td><strong>PO Number:</strong> {{poNumber}}</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <h2>Items</h2>
+          <table class="items">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each invoiceItems}}
+              <tr>
+                <td>{{product}}</td>
+                <td>{{quantity}}</td>
+                <td class="amount">{{unitPrice}}</td>
+                <td class="amount">{{totalPrice}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <table>
+            <tr>
+              <td>Subtotal</td>
+              <td class="amount">{{subtotal}}</td>
+            </tr>
+            <tr>
+              <td>Total</td>
+              <td class="amount">{{totalAmount}}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="clear: both"></div>
+
+        <div class="footer">
+          <p>Generated on {{generatedDate}} via Planet's Pick ERP</p>
+        </div>
+      </body>
+      </html>`;
+  }
+
   getDefaultTemplate() {
     return `
       <!DOCTYPE html>
@@ -324,43 +425,78 @@ class PDFService {
 
   populateTemplate(template, data, templateName) {
     let html = template;
-    
+
     // Debug: log the data being passed
-    console.log('Template data:', JSON.stringify(data, null, 2));
-    
+    console.log("Template data:", JSON.stringify(data, null, 2));
+
     // Replace simple variables
-    Object.keys(data).forEach(key => {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      const value = data[key] !== undefined ? data[key] : '';
+    Object.keys(data).forEach((key) => {
+      const regex = new RegExp(`{{${key}}}`, "g");
+      const value = data[key] !== undefined ? data[key] : "";
       html = html.replace(regex, value);
     });
-    
+
     // Replace generated date
     html = html.replace(/{{generatedDate}}/g, new Date().toLocaleDateString());
-    
-    // Handle arrays (simplified - in production you'd use a proper templating engine)
-    if (templateName === 'procurement-summary' && data.topSuppliers && Array.isArray(data.topSuppliers)) {
-      const suppliersHtml = data.topSuppliers.map(supplier => 
-        `<tr><td>${supplier.name}</td><td>${supplier.orders}</td><td>${supplier.spend}</td><td>${supplier.percentage}%</td></tr>`
-      ).join('');
-      html = html.replace(/{{#each topSuppliers}}[\s\S]*?{{\/each}}/g, suppliersHtml);
-    } else if (templateName === 'supplier-performance' && data.suppliers && Array.isArray(data.suppliers)) {
-      const suppliersHtml = data.suppliers.map(supplier => 
-        `<tr><td>${supplier.name}</td><td>${supplier.onTimeDelivery}%</td><td>${supplier.qualityScore}/100</td><td>${supplier.responsivenessScore}/100</td><td><span class="rating ${supplier.ratingClass}">${supplier.overallRating}</span></td><td>${supplier.totalOrders}</td></tr>`
-      ).join('');
-      html = html.replace(/{{#each suppliers}}[\s\S]*?{{\/each}}/g, suppliersHtml);
-    } else if (templateName === 'purchase-orders' && data.orders && Array.isArray(data.orders)) {
-      const ordersHtml = data.orders.map(order => 
-        `<tr><td>${order.orderId}</td><td>${order.supplierName}</td><td>${order.orderDate}</td><td>${order.totalAmount}</td><td><span class="status ${order.statusClass}">${order.status}</span></td><td>${order.itemCount}</td></tr>`
-      ).join('');
-      html = html.replace(/{{#each orders}}[\s\S]*?{{\/each}}/g, ordersHtml);
-    } else if (templateName === 'order-report' && data.orders && Array.isArray(data.orders)) {
-      const ordersHtml = data.orders.map(order => {
-        const itemsHtml = order.items.map(item =>
-          `<tr><td>${item.productName}</td><td>${item.quantity} ${item.unit}</td><td>LKR ${item.unitPrice}</td><td>LKR ${item.totalPrice}</td></tr>`
-        ).join('');
 
-        return `<div class="order-card">
+    // Handle arrays (simplified - in production you'd use a proper templating engine)
+    if (
+      templateName === "procurement-summary" &&
+      data.topSuppliers &&
+      Array.isArray(data.topSuppliers)
+    ) {
+      const suppliersHtml = data.topSuppliers
+        .map(
+          (supplier) =>
+            `<tr><td>${supplier.name}</td><td>${supplier.orders}</td><td>${supplier.spend}</td><td>${supplier.percentage}%</td></tr>`
+        )
+        .join("");
+      html = html.replace(
+        /{{#each topSuppliers}}[\s\S]*?{{\/each}}/g,
+        suppliersHtml
+      );
+    } else if (
+      templateName === "supplier-performance" &&
+      data.suppliers &&
+      Array.isArray(data.suppliers)
+    ) {
+      const suppliersHtml = data.suppliers
+        .map(
+          (supplier) =>
+            `<tr><td>${supplier.name}</td><td>${supplier.onTimeDelivery}%</td><td>${supplier.qualityScore}/100</td><td>${supplier.responsivenessScore}/100</td><td><span class="rating ${supplier.ratingClass}">${supplier.overallRating}</span></td><td>${supplier.totalOrders}</td></tr>`
+        )
+        .join("");
+      html = html.replace(
+        /{{#each suppliers}}[\s\S]*?{{\/each}}/g,
+        suppliersHtml
+      );
+    } else if (
+      templateName === "purchase-orders" &&
+      data.orders &&
+      Array.isArray(data.orders)
+    ) {
+      const ordersHtml = data.orders
+        .map(
+          (order) =>
+            `<tr><td>${order.orderId}</td><td>${order.supplierName}</td><td>${order.orderDate}</td><td>${order.totalAmount}</td><td><span class="status ${order.statusClass}">${order.status}</span></td><td>${order.itemCount}</td></tr>`
+        )
+        .join("");
+      html = html.replace(/{{#each orders}}[\s\S]*?{{\/each}}/g, ordersHtml);
+    } else if (
+      templateName === "order-report" &&
+      data.orders &&
+      Array.isArray(data.orders)
+    ) {
+      const ordersHtml = data.orders
+        .map((order) => {
+          const itemsHtml = order.items
+            .map(
+              (item) =>
+                `<tr><td>${item.productName}</td><td>${item.quantity} ${item.unit}</td><td>LKR ${item.unitPrice}</td><td>LKR ${item.totalPrice}</td></tr>`
+            )
+            .join("");
+
+          return `<div class="order-card">
             <div class="order-header">
               <strong>Order ID:</strong> ${order.orderId} | <strong>Customer:</strong> ${order.customerName} | <strong>Date:</strong> ${order.orderedOn} | <strong>Status:</strong> ${order.status}
             </div>
@@ -381,17 +517,74 @@ class PDFService {
               </table>
               <p><strong>Total Amount:</strong> LKR ${order.totalAmount}</p>
             </div>
-          </div>`
-      }).join('');
+          </div>`;
+        })
+        .join("");
       html = html.replace(/{{#each orders}}[\s\S]*?{{\/each}}/g, ordersHtml);
-    } else if (templateName === 'inventory-report' && data.items && Array.isArray(data.items)) {
-      const itemsHtml = data.items.map(item => 
-        `<tr><td>${item.name}</td><td>${item.category}</td><td>${item.sku}</td><td>${item.quantity}</td><td>${item.unitPrice}</td><td>${item.totalValue}</td><td><span class="status ${item.statusClass}">${item.status}</span></td></tr>`
-      ).join('');
+    } else if (
+      templateName === "inventory-report" &&
+      data.items &&
+      Array.isArray(data.items)
+    ) {
+      const itemsHtml = data.items
+        .map(
+          (item) =>
+            `<tr><td>${item.name}</td><td>${item.category}</td><td>${item.sku}</td><td>${item.quantity}</td><td>${item.unitPrice}</td><td>${item.totalValue}</td><td><span class="status ${item.statusClass}">${item.status}</span></td></tr>`
+        )
+        .join("");
       html = html.replace(/{{#each items}}[\s\S]*?{{\/each}}/g, itemsHtml);
+    } else if (
+      templateName === "invoice" &&
+      data.invoiceItems &&
+      Array.isArray(data.invoiceItems)
+    ) {
+      const itemsHtml = data.invoiceItems
+        .map(
+          (item) =>
+            `<tr>
+                <td>${item.product}</td>
+                <td>${item.quantity}</td>
+                <td class="amount">${item.unitPrice}</td>
+                <td class="amount">${item.totalPrice}</td>
+              </tr>`
+        )
+        .join("");
+      html = html.replace(
+        /{{#each invoiceItems}}[\s\S]*?{{\/each}}/g,
+        itemsHtml
+      );
     }
-    
+
     return html;
+  }
+
+  async generateInvoicePDF(invoiceDoc) {
+    const invoice = invoiceDoc.toObject
+      ? invoiceDoc.toObject({ getters: true })
+      : invoiceDoc;
+
+    const invoiceData = {
+      invoiceNumber: invoice.invoiceNumber,
+      issuedDate: new Date(
+        invoice.createdAt || Date.now()
+      ).toLocaleDateString(),
+      status: invoice.status,
+      supplierName: invoice.supplier?.name || invoice.supplierName || "N/A",
+      supplierCode: invoice.supplier?.code || "N/A",
+      poNumber:
+        invoice.purchaseOrder?.poNumber || invoice.purchaseOrderId || "N/A",
+      invoiceItems: (invoice.items || []).map((item) => ({
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice || 0).toFixed(2),
+        totalPrice: Number(item.totalPrice || 0).toFixed(2),
+      })),
+      subtotal: Number(invoice.totalAmount || 0).toFixed(2),
+      totalAmount: Number(invoice.totalAmount || 0).toFixed(2),
+    };
+
+    const htmlContent = this.generateHTMLFromTemplate(invoiceData, "invoice");
+    return this.generatePDF(htmlContent, { printBackground: true });
   }
 
   async close() {

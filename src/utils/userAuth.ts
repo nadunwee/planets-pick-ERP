@@ -74,23 +74,67 @@ export const canDownloadReportCategory = (
 /**
  * Map department to relevant report categories
  */
+const departmentCategoryMap: Record<string, string[]> = {
+  Procurement: ["procurement", "suppliers", "orders"],
+  Sales: ["sales", "orders"],
+  Finance: ["finance"],
+  Inventory: ["inventory"],
+  Production: ["production", "orders"],
+  "Human Resources": ["hr"],
+  HR: ["hr"],
+  Administration: [
+    "procurement",
+    "suppliers",
+    "orders",
+    "inventory",
+    "finance",
+  ],
+  Wastage: ["wastage"],
+};
+
 const isReportRelevantToDepartment = (
   department: string,
   reportCategory: string
 ): boolean => {
-  const departmentCategoryMap: Record<string, string[]> = {
-    Sales: ["sales"],
-    Finance: ["finance"],
-    Inventory: ["inventory"],
-    Production: ["production"],
-    "Human Resources": ["hr"],
-    HR: ["hr"],
-    Administration: ["system"],
-    Wastage: ["wastage"],
-  };
-
   const relevantCategories = departmentCategoryMap[department] || [];
   return relevantCategories.includes(reportCategory.toLowerCase());
+};
+
+export const canManageSuppliers = (level: UserLevel): boolean => {
+  return level === "L1" || level === "L2" || level === "L3" || level === "L4";
+};
+
+export const canCreatePurchaseOrders = (level: UserLevel): boolean => {
+  return level === "L1" || level === "L2" || level === "L3" || level === "L4";
+};
+
+export const canApprovePurchaseOrders = (level: UserLevel): boolean => {
+  return level === "L2" || level === "L4";
+};
+
+export const canMarkDelivered = (level: UserLevel): boolean => {
+  return level === "L2" || level === "L3" || level === "L4";
+};
+
+export const canGenerateInvoices = (level: UserLevel): boolean => {
+  return level === "L3" || level === "L4";
+};
+
+export const canViewInvoiceLibrary = (level: UserLevel): boolean => {
+  return level === "L1" || level === "L2" || level === "L3" || level === "L4";
+};
+
+export const canViewReportCategory = (
+  userLevel: UserLevel,
+  department: string,
+  category: string
+): boolean => {
+  if (userLevel === "L4") return true;
+  if (userLevel === "L3") return category.toLowerCase() !== "finance";
+  if (userLevel === "L2") {
+    return isReportRelevantToDepartment(department, category);
+  }
+  return false;
 };
 
 /**

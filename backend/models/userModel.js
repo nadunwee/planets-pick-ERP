@@ -26,7 +26,8 @@ const userSchema = new Schema(
     },
     level: {
       type: String,
-      default: "", // start blank
+      enum: ["L1", "L2", "L3", "L4", ""],
+      default: "", // start blank until admin assigns
     },
     role: {
       type: String,
