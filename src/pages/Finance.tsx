@@ -34,26 +34,27 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
-function PageWithScrollTop() {
-  const [showScrollTop, setShowScrollTop] = useState(false);
+// Unused function - kept for potential future use
+// function PageWithScrollTop() {
+//   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      // show button after scrolling 300px down
-      setShowScrollTop(window.scrollY > 300);
-    };
+//   useEffect(() => {
+//     const handleScroll = () => {
+//       // show button after scrolling 300px down
+//       setShowScrollTop(window.scrollY > 300);
+//     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+//     window.addEventListener("scroll", handleScroll);
+//     return () => window.removeEventListener("scroll", handleScroll);
+//   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth", // smooth scroll animation
-    });
-  };
-}
+//   const scrollToTop = () => {
+//     window.scrollTo({
+//       top: 0,
+//       behavior: "smooth", // smooth scroll animation
+//     });
+//   };
+// }
 
 // --- Register ChartJS components ---
 ChartJS.register(
@@ -277,10 +278,11 @@ export default function Finance() {
     "Marketing",
     "Equipment",
   ];
-  const reportTypes: ReportType[] = [
-    { id: "1", name: "Monthly Report", format: "pdf" },
-    { id: "2", name: "Quarterly Report", format: "excel" },
-  ];
+  // Unused - kept for potential future use
+  // const reportTypes: ReportType[] = [
+  //   { id: "1", name: "Monthly Report", format: "pdf" },
+  //   { id: "2", name: "Quarterly Report", format: "excel" },
+  // ];
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -883,12 +885,14 @@ export default function Finance() {
         return "text-gray-600 bg-gray-100";
     }
   };
-  const getTypeColor = (type: string) =>
-    type === "income" || type === "asset"
-      ? "text-green-600"
-      : type === "expense" || type === "liability"
-      ? "text-red-600"
-      : "text-gray-600";
+
+  // Unused - kept for potential future use
+  // const getTypeColor = (type: string) =>
+  //   type === "income" || type === "asset"
+  //     ? "text-green-600"
+  //     : type === "expense" || type === "liability"
+  //     ? "text-red-600"
+  //     : "text-gray-600";
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
