@@ -18,14 +18,12 @@ import {
   markPurchaseOrderDelivered,
 } from "../services/purchaseOrderService";
 import {
-  generateInvoiceFromPO,
   fetchInvoicePdf,
 } from "../services/invoiceService";
 import {
   getCurrentUser,
   canCreatePurchaseOrders,
   canApprovePurchaseOrders,
-  canGenerateInvoices,
   canMarkDelivered,
 } from "../../utils/userAuth";
 
@@ -40,7 +38,6 @@ const PurchaseOrders: React.FC = () => {
   const userLevel = currentUser?.level;
   const allowCreate = userLevel ? canCreatePurchaseOrders(userLevel) : false;
   const allowApprove = userLevel ? canApprovePurchaseOrders(userLevel) : false;
-  const allowInvoice = userLevel ? canGenerateInvoices(userLevel) : false;
   const allowDeliver = userLevel ? canMarkDelivered(userLevel) : false;
 
   const fetchOrders = async () => {
@@ -182,28 +179,6 @@ const PurchaseOrders: React.FC = () => {
     setTimeout(() => {
       window.URL.revokeObjectURL(blobUrl);
     }, 30_000);
-  };
-
-  const handleGenerateInvoice = async (po: PurchaseOrder) => {
-    if (!po._id) return;
-    if (!allowInvoice) {
-      message.error("Only finance managers or above can generate invoices.");
-      return;
-    }
-
-    try {
-      setActionId(po._id);
-      const invoice = await generateInvoiceFromPO(po._id);
-      message.success(`Invoice ${invoice.invoiceNumber} generated`);
-      fetchOrders();
-    } catch (err: any) {
-      console.error(err);
-      const errorMessage =
-        err?.response?.data?.error || "Failed to generate invoice";
-      message.error(errorMessage);
-    } finally {
-      setActionId(null);
-    }
   };
 
   const handlePreviewInvoice = async (po: PurchaseOrder) => {
@@ -403,20 +378,6 @@ const PurchaseOrders: React.FC = () => {
                 </Button>
               </Tooltip>
             </div>
-          );
-        }
-
-        if (allowInvoice && record.status === "Approved") {
-          return (
-            <Button
-              size="small"
-              type="primary"
-              icon={<FileText size={14} />}
-              onClick={() => handleGenerateInvoice(record)}
-              loading={actionId === record._id}
-            >
-              Generate
-            </Button>
           );
         }
 

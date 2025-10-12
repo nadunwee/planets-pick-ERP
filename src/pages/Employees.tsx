@@ -677,8 +677,6 @@ export default function Employees() {
         benefits: "",
         certifications: "",
       });
-
-      alert("Employee added successfully!");
     } catch (error: any) {
       alert(error.message);
     }
