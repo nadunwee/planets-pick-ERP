@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   BarChart3,
@@ -24,6 +25,7 @@ import {
   generateSupplierPerformancePDF, 
   generatePurchaseOrdersPDF 
 } from "../components/services/reportService";
+import { getCurrentUser } from "@/utils/userAuth";
 
 interface Report {
   id: string;
@@ -286,6 +288,7 @@ const allReports: Report[] = [
 ];
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("general");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -297,6 +300,14 @@ export default function Reports() {
   const currentUser = getCurrentUser();
   const userLevel = currentUser?.level || "L1";
   const userDepartment = currentUser?.department || "";
+
+  // Redirect L1 users - they cannot access reports
+  useEffect(() => {
+    if (!currentUser || currentUser.level === "L1") {
+      alert("Access Denied: Managers (L1) cannot access reports");
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
 
   const categories = ["All", "sales", "finance", "inventory", "production", "hr", "system", "wastage"];
   const formats = ["All", "pdf", "excel", "csv"];

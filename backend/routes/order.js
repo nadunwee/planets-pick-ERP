@@ -6,22 +6,26 @@ const {
   getAllOrders,
   getOrderById,
 } = require("../controllers/orderController.js");
+const requireAuth = require("../middleware/requireAuth");
+const { allowLevels } = require("../middleware/accessControl");
 
 const router = express.Router();
 
-// Create a new order
-router.post("/create", createOrder);
+router.use(requireAuth);
 
-// Edit an order by ID
-router.patch("/edit/:id", editOrder);
+// Create a new order - All levels can create
+router.post("/create", allowLevels("L1", "L2", "L3", "L4"), createOrder);
 
-// Delete an order by ID
-router.delete("/delete/:id", deleteOrder);
+// Edit an order by ID - All levels can edit
+router.patch("/edit/:id", allowLevels("L1", "L2", "L3", "L4"), editOrder);
 
-// Get all orders
-router.get("/all", getAllOrders);
+// Delete an order by ID - L2 and above can delete
+router.delete("/delete/:id", allowLevels("L2", "L3", "L4"), deleteOrder);
 
-// Get a single order
-router.get("/:id", getOrderById);
+// Get all orders - All levels can view
+router.get("/all", allowLevels("L1", "L2", "L3", "L4"), getAllOrders);
+
+// Get a single order - All levels can view
+router.get("/:id", allowLevels("L1", "L2", "L3", "L4"), getOrderById);
 
 module.exports = router;
