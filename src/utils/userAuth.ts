@@ -101,27 +101,48 @@ const isReportRelevantToDepartment = (
 };
 
 export const canManageSuppliers = (level: UserLevel): boolean => {
+  // All levels can add suppliers (L1-L4)
   return level === "L1" || level === "L2" || level === "L3" || level === "L4";
 };
 
+export const canDeleteSuppliers = (level: UserLevel): boolean => {
+  // Only L2 and above can delete suppliers
+  return level === "L2" || level === "L3" || level === "L4";
+};
+
 export const canCreatePurchaseOrders = (level: UserLevel): boolean => {
+  // L1 can create, L2+ can create and approve
   return level === "L1" || level === "L2" || level === "L3" || level === "L4";
 };
 
 export const canApprovePurchaseOrders = (level: UserLevel): boolean => {
+  // Only L2 and L4 can approve (directors and admin)
   return level === "L2" || level === "L4";
 };
 
 export const canMarkDelivered = (level: UserLevel): boolean => {
+  // L2 and above can mark delivered
   return level === "L2" || level === "L3" || level === "L4";
 };
 
 export const canGenerateInvoices = (level: UserLevel): boolean => {
+  // Only L3 (Finance Manager) and L4 (Admin) can generate invoices
   return level === "L3" || level === "L4";
 };
 
 export const canViewInvoiceLibrary = (level: UserLevel): boolean => {
+  // All levels can view invoices
   return level === "L1" || level === "L2" || level === "L3" || level === "L4";
+};
+
+export const canManageUsers = (level: UserLevel): boolean => {
+  // Only L4 (Admin) can add/delete users
+  return level === "L4";
+};
+
+export const canApproveUsers = (level: UserLevel): boolean => {
+  // Only L4 (Admin) can approve/reject user accounts
+  return level === "L4";
 };
 
 export const canViewReportCategory = (
@@ -129,11 +150,17 @@ export const canViewReportCategory = (
   department: string,
   category: string
 ): boolean => {
-  if (userLevel === "L4") return true;
-  if (userLevel === "L3") return category.toLowerCase() !== "finance";
+  // L1 cannot view any reports
+  if (userLevel === "L1") return false;
+  
+  // L3 and L4 can view all reports
+  if (userLevel === "L3" || userLevel === "L4") return true;
+  
+  // L2 can only view reports relevant to their department
   if (userLevel === "L2") {
     return isReportRelevantToDepartment(department, category);
   }
+  
   return false;
 };
 
@@ -155,10 +182,10 @@ export const getUserLevelName = (level: UserLevel): string => {
  */
 export const getUserPermissionsDescription = (level: UserLevel): string => {
   const descriptions: Record<UserLevel, string> = {
-    L1: "Can submit requests, cannot download reports",
-    L2: "Can approve/decline requests, download department reports",
-    L3: "Can download all reports, create transactions",
-    L4: "Full access - can create users, approve/decline anything",
+    L1: "Manager - Can add new entries, cannot approve or download reports",
+    L2: "Director - Can approve submissions and download division reports",
+    L3: "Finance Manager - Can view all reports, cannot manage users",
+    L4: "Admin/Finance Director - Full access including user management",
   };
   return descriptions[level] || "";
 };

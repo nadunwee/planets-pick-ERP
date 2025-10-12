@@ -5,19 +5,23 @@ const {
   updateStock,
   getAllInventory,
 } = require("../controllers/inventoryController");
+const requireAuth = require("../middleware/requireAuth");
+const { allowLevels } = require("../middleware/accessControl");
 
 const router = express.Router();
 
-// Add a new inventory item
-router.post("/add_inventory", addInventoryItem);
+router.use(requireAuth);
 
-// Edit inventory item (name, type, unit price)
-router.put("/edit_inventory/:id", editInventoryItem);
+// Add a new inventory item - All levels can add
+router.post("/add_inventory", allowLevels("L1", "L2", "L3", "L4"), addInventoryItem);
 
-// Update stock (current stock)
-router.put("/update_stock/:id", updateStock);
+// Edit inventory item (name, type, unit price) - All levels can edit
+router.put("/edit_inventory/:id", allowLevels("L1", "L2", "L3", "L4"), editInventoryItem);
 
-// Get all inventory items
-router.get("/all_inventory", getAllInventory);
+// Update stock (current stock) - All levels can update
+router.put("/update_stock/:id", allowLevels("L1", "L2", "L3", "L4"), updateStock);
+
+// Get all inventory items - All levels can view
+router.get("/all_inventory", allowLevels("L1", "L2", "L3", "L4"), getAllInventory);
 
 module.exports = router;

@@ -7,6 +7,8 @@ const {
   updateEmployee,
   deleteEmployee,
 } = require("../controllers/employeeController.js");
+const requireAuth = require("../middleware/requireAuth");
+const { allowLevels } = require("../middleware/accessControl");
 
 const router = express.Router();
 
@@ -14,19 +16,19 @@ const router = express.Router();
  * Employee Routes
  */
 
-// ➕ Create a new employee (with optional linked user account)
-router.post("/", addEmployee);
+// ➕ Create a new employee (with optional linked user account) - only L4 can add employees
+router.post("/", requireAuth, allowLevels("L4"), addEmployee);
 
-// 📋 Get all employees
-router.get("/", getEmployees);
+// 📋 Get all employees - all authenticated users can view
+router.get("/", requireAuth, getEmployees);
 
-// 🔍 Get single employee by ID
-router.get("/:id", getEmployeeById);
+// 🔍 Get single employee by ID - all authenticated users can view
+router.get("/:id", requireAuth, getEmployeeById);
 
-// ✏️ Update employee by ID
-router.put("/:id", updateEmployee);
+// ✏️ Update employee by ID - L4 only can update employees
+router.put("/:id", requireAuth, allowLevels("L4"), updateEmployee);
 
-// ❌ Delete employee by ID
-router.delete("/:id", deleteEmployee);
+// ❌ Delete employee by ID - only L4 can delete employees
+router.delete("/:id", requireAuth, allowLevels("L4"), deleteEmployee);
 
 module.exports = router;

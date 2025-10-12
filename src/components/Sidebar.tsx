@@ -121,6 +121,27 @@ export function Sidebar() {
     filteredMenuItems = menuItems.filter((item) => !HR.includes(item.name));
   }
 
+  // Filter based on user level - only L4 can access Administrator and Employees
+  if (userlevel !== "L4") {
+    filteredMenuItems = filteredMenuItems.filter(
+      (item) => item.name !== "Administrator" && item.name !== "Employees"
+    );
+  }
+
+  // Filter Reports for L1 - they cannot view reports
+  if (userlevel === "L1") {
+    filteredMenuItems = filteredMenuItems.filter(
+      (item) => item.name !== "Reports"
+    );
+  }
+
+  // Filter Finance for non-finance users (only L3 and L4)
+  if (userlevel !== "L3" && userlevel !== "L4") {
+    filteredMenuItems = filteredMenuItems.filter(
+      (item) => item.name !== "Finance"
+    );
+  }
+
   // Logout handler
   const handleLogout = () => {
     const confirmLogout = window.confirm("Are you sure you want to logout?");
