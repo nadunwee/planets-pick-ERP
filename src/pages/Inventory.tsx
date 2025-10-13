@@ -10,11 +10,27 @@ import {
   TrendingUp,
   TrendingDown,
   Download,
+  Upload,
+  RefreshCw,
+  CheckSquare,
+  Square,
+  Trash2,
+  BarChart3,
+  ArrowUpDown,
 } from "lucide-react";
 import AddItemModal from "@/components/inventory/AddItemModal";
 import api from "@/components/services/api";
 
 const categories = ["All", "Raw Materials", "Finished Products", "Packaging"];
+const stockStatusFilters = ["All", "In Stock", "Low Stock", "Out of Stock"];
+const sortOptions = [
+  { value: "name-asc", label: "Name (A-Z)" },
+  { value: "name-desc", label: "Name (Z-A)" },
+  { value: "stock-asc", label: "Stock (Low to High)" },
+  { value: "stock-desc", label: "Stock (High to Low)" },
+  { value: "value-asc", label: "Value (Low to High)" },
+  { value: "value-desc", label: "Value (High to Low)" },
+];
 
 type InventoryReportResponse = {
   downloadUrl: string;
@@ -31,6 +47,13 @@ export default function Inventory() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null); // new
   const [isExporting, setIsExporting] = useState(false);
+  const [stockStatusFilter, setStockStatusFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("name-asc");
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [minValue, setMinValue] = useState<string>("");
+  const [maxValue, setMaxValue] = useState<string>("");
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   async function fetchInventory() {
     try {
@@ -58,14 +81,53 @@ export default function Inventory() {
     fetchInventory(); // call once on mount
   }, []);
 
-  const filteredItems = inventoryData.filter((item) => {
-    const matchesSearch = item.name
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || item.type === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredItems = inventoryData
+    .filter((item) => {
+      const matchesSearch = item.name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "All" || item.type === selectedCategory;
+      
+      // Stock status filter
+      let matchesStockStatus = true;
+      if (stockStatusFilter === "In Stock") {
+        matchesStockStatus = item.currentStock > item.minStock;
+      } else if (stockStatusFilter === "Low Stock") {
+        matchesStockStatus = item.currentStock <= item.minStock && item.currentStock > 0;
+      } else if (stockStatusFilter === "Out of Stock") {
+        matchesStockStatus = item.currentStock === 0;
+      }
+
+      // Value filter
+      const itemValue = item.currentStock * (item.price || item.unitPrice || 0);
+      const matchesMinValue = minValue === "" || itemValue >= parseFloat(minValue);
+      const matchesMaxValue = maxValue === "" || itemValue <= parseFloat(maxValue);
+
+      return matchesSearch && matchesCategory && matchesStockStatus && matchesMinValue && matchesMaxValue;
+    })
+    .sort((a, b) => {
+      const [field, order] = sortBy.split("-");
+      let comparison = 0;
+
+      switch (field) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "stock":
+          comparison = a.currentStock - b.currentStock;
+          break;
+        case "value":
+          const valueA = a.currentStock * (a.price || a.unitPrice || 0);
+          const valueB = b.currentStock * (b.price || b.unitPrice || 0);
+          comparison = valueA - valueB;
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return order === "asc" ? comparison : -comparison;
+    });
 
   const totalValue = inventoryData.reduce(
     (sum, item) =>
@@ -159,6 +221,53 @@ export default function Inventory() {
     }
   };
 
+  const toggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set());
+      setShowBulkActions(false);
+    } else {
+      setSelectedItems(new Set(filteredItems.map((item) => item._id)));
+      setShowBulkActions(true);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedItems.size} items?`)) return;
+    
+    try {
+      // Note: Implement bulk delete API endpoint on backend if needed
+      message.info("Bulk delete functionality requires backend support");
+      setSelectedItems(new Set());
+      setShowBulkActions(false);
+    } catch (err: any) {
+      message.error("Failed to delete items");
+    }
+  };
+
+  const calculateCategoryStats = () => {
+    const stats: Record<string, { count: number; value: number }> = {};
+    inventoryData.forEach((item) => {
+      const category = item.type || "Unknown";
+      if (!stats[category]) {
+        stats[category] = { count: 0, value: 0 };
+      }
+      stats[category].count++;
+      stats[category].value += item.currentStock * (item.price || item.unitPrice || 0);
+    });
+    return stats;
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -172,7 +281,7 @@ export default function Inventory() {
             Manage your stock levels and inventory items
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={exportInventoryReport}
             disabled={isExporting}
@@ -189,6 +298,20 @@ export default function Inventory() {
                 Export Report
               </>
             )}
+          </button>
+          <button
+            onClick={() => message.info("Import functionality requires backend support")}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+          >
+            <Upload size={16} />
+            Import CSV
+          </button>
+          <button
+            onClick={fetchInventory}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition"
+          >
+            <RefreshCw size={16} />
+            Refresh
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -247,7 +370,7 @@ export default function Inventory() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white p-4 rounded-lg shadow border">
+      <div className="bg-white p-4 rounded-lg shadow border space-y-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -283,22 +406,168 @@ export default function Inventory() {
               ))}
             </select>
           </div>
+
+          {/* Stock Status Filter */}
+          <div className="flex items-center gap-2">
+            <Package size={16} className="text-gray-500" />
+            <select
+              value={stockStatusFilter}
+              onChange={(e) => setStockStatusFilter(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Filter by stock status"
+            >
+              {stockStatusFilters.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort */}
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={16} className="text-gray-500" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Sort by"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Advanced Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 pt-4 border-t">
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Min Value (LKR)</label>
+            <input
+              type="number"
+              placeholder="0"
+              value={minValue}
+              onChange={(e) => setMinValue(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">Max Value (LKR)</label>
+            <input
+              type="number"
+              placeholder="No limit"
+              value={maxValue}
+              onChange={(e) => setMaxValue(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <button
+              onClick={toggleSelectAll}
+              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition flex items-center gap-2"
+            >
+              {selectedItems.size === filteredItems.length ? (
+                <CheckSquare size={16} />
+              ) : (
+                <Square size={16} />
+              )}
+              Select All
+            </button>
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition flex items-center gap-2"
+            >
+              <BarChart3 size={16} />
+              {showAnalytics ? "Hide" : "Show"} Analytics
+            </button>
+          </div>
+        </div>
+
+        {/* Results count */}
+        <div className="text-sm text-gray-600">
+          Showing {filteredItems.length} of {inventoryData.length} items
+          {selectedItems.size > 0 && ` (${selectedItems.size} selected)`}
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {showBulkActions && (
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-center justify-between">
+          <span className="text-blue-700 font-medium">
+            {selectedItems.size} items selected
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Delete Selected
+            </button>
+            <button
+              onClick={() => {
+                setSelectedItems(new Set());
+                setShowBulkActions(false);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Section */}
+      {showAnalytics && (
+        <div className="bg-white p-6 rounded-lg shadow border">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 size={20} />
+            Inventory Analytics
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(calculateCategoryStats()).map(([category, stats]) => (
+              <div key={category} className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900">{category}</h4>
+                <p className="text-sm text-gray-600">Items: {stats.count}</p>
+                <p className="text-sm text-gray-600">
+                  Total Value: LKR {stats.value.toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Inventory Grid - Responsive */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredItems.map((item) => (
           <div
             key={item._id}
-            className="bg-white p-4 rounded-lg shadow border hover:shadow-lg transition"
+            className={`bg-white p-4 rounded-lg shadow border hover:shadow-lg transition ${
+              selectedItems.has(item._id) ? "ring-2 ring-blue-500" : ""
+            }`}
           >
             <div className="flex justify-between items-start mb-3">
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg text-gray-900">
-                  {item.name}
-                </h3>
-                <p className="text-sm text-gray-600">{item.type}</p>
+              <div className="flex items-start gap-2 flex-1">
+                <button
+                  onClick={() => toggleItemSelection(item._id)}
+                  className="mt-1 text-gray-400 hover:text-blue-600 transition"
+                >
+                  {selectedItems.has(item._id) ? (
+                    <CheckSquare size={20} className="text-blue-600" />
+                  ) : (
+                    <Square size={20} />
+                  )}
+                </button>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg text-gray-900">
+                    {item.name}
+                  </h3>
+                  <p className="text-sm text-gray-600">{item.type}</p>
+                </div>
               </div>
               <span
                 className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(
@@ -347,16 +616,11 @@ export default function Inventory() {
             </div>
 
             <div className="flex gap-2 mt-4">
-              {/* <button
-                onClick={() => alert(`Update stock for ${item.name}`)}
-                className="flex-1 px-3 py-2 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200 transition"
-              >
-                Update Stock
-              </button> */}
               <button
                 onClick={() => handleEditClick(item)}
-                className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition flex items-center justify-center gap-1"
               >
+                <RefreshCw size={14} />
                 Edit Item
               </button>
             </div>

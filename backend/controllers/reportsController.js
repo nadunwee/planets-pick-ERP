@@ -53,8 +53,9 @@ const REPORT_DEFINITIONS = [
 const departmentCategoryAccess = {
   Procurement: ["Procurement", "Suppliers", "Orders"],
   Finance: ["Finance"],
-  Inventory: ["Inventory"],
-  Production: ["Production", "Orders"],
+  Inventory: ["Inventory", "Orders"],
+  Production: ["Production", "Orders", "Inventory"],
+  Sales: ["Orders", "Inventory"],
   "Human Resources": ["HR"],
   HR: ["HR"],
   Administration: [

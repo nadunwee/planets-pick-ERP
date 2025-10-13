@@ -20,6 +20,13 @@ import {
   Edit,
   Download,
   Trash2,
+  CheckSquare,
+  Square,
+  ArrowUpDown,
+  Calendar,
+  BarChart3,
+  RefreshCw,
+  FileText,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
@@ -52,6 +59,13 @@ export default function OrdersSales() {
   const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const department = localStorage.getItem("department");
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [sortBy, setSortBy] = useState("date-desc");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("All");
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [minAmount, setMinAmount] = useState<string>("");
+  const [maxAmount, setMaxAmount] = useState<string>("");
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -257,18 +271,64 @@ export default function OrdersSales() {
     "cancelled",
   ];
   const priorities = ["All", "low", "medium", "high", "urgent"];
+  const paymentStatuses = ["All", "paid", "partially-paid", "pending", "overdue"];
+  const sortOptions = [
+    { value: "date-desc", label: "Date (Newest)" },
+    { value: "date-asc", label: "Date (Oldest)" },
+    { value: "amount-desc", label: "Amount (High to Low)" },
+    { value: "amount-asc", label: "Amount (Low to High)" },
+    { value: "customer-asc", label: "Customer (A-Z)" },
+    { value: "customer-desc", label: "Customer (Z-A)" },
+  ];
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      selectedStatus === "All" || order.status === selectedStatus;
-    const matchesPriority =
-      selectedPriority === "All" || order.priority === selectedPriority;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+  const filteredOrders = orders
+    .filter((order) => {
+      const matchesSearch =
+        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.company?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        selectedStatus === "All" || order.status === selectedStatus;
+      const matchesPriority =
+        selectedPriority === "All" || order.priority === selectedPriority;
+      const matchesPaymentStatus =
+        paymentStatusFilter === "All" || order.paymentStatus === paymentStatusFilter;
+      
+      // Amount filter
+      const matchesMinAmount = minAmount === "" || order.totalAmount >= parseFloat(minAmount);
+      const matchesMaxAmount = maxAmount === "" || order.totalAmount <= parseFloat(maxAmount);
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPriority &&
+        matchesPaymentStatus &&
+        matchesMinAmount &&
+        matchesMaxAmount
+      );
+    })
+    .sort((a, b) => {
+      const [field, order] = sortBy.split("-");
+      let comparison = 0;
+
+      switch (field) {
+        case "date":
+          const dateA = new Date(a.orderDate || a.orderedOn).getTime();
+          const dateB = new Date(b.orderDate || b.orderedOn).getTime();
+          comparison = dateA - dateB;
+          break;
+        case "amount":
+          comparison = a.totalAmount - b.totalAmount;
+          break;
+        case "customer":
+          comparison = a.customer.name.localeCompare(b.customer.name);
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return order === "asc" ? comparison : -comparison;
+    });
 
   console.log(filteredOrders);
 
@@ -331,6 +391,67 @@ export default function OrdersSales() {
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelected = new Set(selectedOrders);
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId);
+    } else {
+      newSelected.add(orderId);
+    }
+    setSelectedOrders(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === filteredOrders.length) {
+      setSelectedOrders(new Set());
+      setShowBulkActions(false);
+    } else {
+      setSelectedOrders(
+        new Set(filteredOrders.map((order) => order._id || order.id!))
+      );
+      setShowBulkActions(true);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selectedOrders.size} orders?`)) return;
+
+    try {
+      for (const orderId of Array.from(selectedOrders)) {
+        await deleteOrder(orderId);
+      }
+      message.success(`${selectedOrders.size} orders deleted successfully`);
+      setSelectedOrders(new Set());
+      setShowBulkActions(false);
+      fetchOrders();
+    } catch (err: any) {
+      message.error("Failed to delete some orders");
+    }
+  };
+
+  const calculateStatusStats = () => {
+    const stats: Record<string, number> = {};
+    orders.forEach((order) => {
+      const status = order.status || "unknown";
+      stats[status] = (stats[status] || 0) + 1;
+    });
+    return stats;
+  };
+
+  const calculatePaymentStats = () => {
+    const stats: Record<string, { count: number; amount: number }> = {};
+    orders.forEach((order) => {
+      const status = order.paymentStatus || "unknown";
+      if (!stats[status]) {
+        stats[status] = { count: 0, amount: 0 };
+      }
+      stats[status].count++;
+      stats[status].amount += order.totalAmount;
+    });
+    return stats;
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -341,7 +462,7 @@ export default function OrdersSales() {
             Manage orders, track sales, and analyze performance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => {
               setEditingOrder(null);
@@ -377,6 +498,15 @@ export default function OrdersSales() {
                 Export Report
               </>
             )}
+          </button>
+          <button
+            onClick={fetchOrders}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-700 transition"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        </div>
           </button>
         </div>
       </div>
@@ -462,7 +592,7 @@ export default function OrdersSales() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white p-4 rounded-lg shadow border">
+      <div className="bg-white p-4 rounded-lg shadow border space-y-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -482,7 +612,7 @@ export default function OrdersSales() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <Filter className="text-gray-400" size={16} />
               <select
@@ -515,18 +645,158 @@ export default function OrdersSales() {
             </select>
 
             <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
               className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
+              {paymentStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "All"
+                    ? "All Payment Status"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
             </select>
+
+            <div className="flex items-center gap-2">
+              <ArrowUpDown size={16} className="text-gray-500" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
+
+        {/* Advanced Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 pt-4 border-t">
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">
+              Min Amount (LKR)
+            </label>
+            <input
+              type="number"
+              placeholder="0"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm text-gray-600 mb-1">
+              Max Amount (LKR)
+            </label>
+            <input
+              type="number"
+              placeholder="No limit"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <button
+              onClick={toggleSelectAll}
+              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition flex items-center gap-2"
+            >
+              {selectedOrders.size === filteredOrders.length ? (
+                <CheckSquare size={16} />
+              ) : (
+                <Square size={16} />
+              )}
+              Select All
+            </button>
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition flex items-center gap-2"
+            >
+              <BarChart3 size={16} />
+              {showAnalytics ? "Hide" : "Show"} Analytics
+            </button>
+          </div>
+        </div>
+
+        {/* Results count */}
+        <div className="text-sm text-gray-600">
+          Showing {filteredOrders.length} of {orders.length} orders
+          {selectedOrders.size > 0 && ` (${selectedOrders.size} selected)`}
+        </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {showBulkActions && (
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-center justify-between">
+          <span className="text-blue-700 font-medium">
+            {selectedOrders.size} orders selected
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Delete Selected
+            </button>
+            <button
+              onClick={() => {
+                setSelectedOrders(new Set());
+                setShowBulkActions(false);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Section */}
+      {showAnalytics && (
+        <div className="bg-white p-6 rounded-lg shadow border">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 size={20} />
+            Order Analytics
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium mb-3">Status Breakdown</h4>
+              <div className="space-y-2">
+                {Object.entries(calculateStatusStats()).map(([status, count]) => (
+                  <div key={status} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span className="capitalize">{status}</span>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-3">Payment Status</h4>
+              <div className="space-y-2">
+                {Object.entries(calculatePaymentStats()).map(
+                  ([status, data]) => (
+                    <div key={status} className="p-2 bg-gray-50 rounded">
+                      <div className="flex justify-between items-center">
+                        <span className="capitalize">{status}</span>
+                        <span className="font-medium">{data.count} orders</span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Total: LKR {data.amount.toLocaleString()}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Orders List */}
       {loading ? (
@@ -539,11 +809,23 @@ export default function OrdersSales() {
           {filteredOrders.map((order) => (
             <div
               key={order.id || order._id}
-              className="bg-white rounded-lg shadow border"
+              className={`bg-white rounded-lg shadow border ${
+                selectedOrders.has(order._id || order.id!) ? "ring-2 ring-blue-500" : ""
+              }`}
             >
               <div className="p-4">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => toggleOrderSelection(order._id || order.id!)}
+                      className="text-gray-400 hover:text-blue-600 transition"
+                    >
+                      {selectedOrders.has(order._id || order.id!) ? (
+                        <CheckSquare size={20} className="text-blue-600" />
+                      ) : (
+                        <Square size={20} />
+                      )}
+                    </button>
                     <div>
                       <h3 className="font-semibold text-lg">
                         {order.orderNumber || order.orderId}
