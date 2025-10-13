@@ -1,17 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Users,
-  Shield,
-  Settings,
-  UserPlus,
-  UserCheck,
-  UserX,
-  Search,
-  Plus,
-  Activity,
-} from "lucide-react";
+import { message } from "antd";
+import { Users, Shield, UserCheck, UserX, Search } from "lucide-react";
 import { getCurrentUser, canApproveUsers } from "@/utils/userAuth";
+import api from "@/components/services/api";
 
 interface User {
   _id: string;
@@ -20,14 +12,14 @@ interface User {
   role: string;
   department: string;
   level: string;
-  approved: string;
+  approved: boolean;
   createdAt?: string;
 }
 
 export default function Administrator() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  
+
   // Redirect if user doesn't have permission (only L4 can access)
   useEffect(() => {
     if (!currentUser || !canApproveUsers(currentUser.level)) {
@@ -56,21 +48,25 @@ export default function Administrator() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:4000/api/users/");
-      if (!res.ok) throw new Error("Failed to fetch users");
-      const data: User[] = await res.json();
+      const { data } = await api.get<User[]>("/users");
       setAllUsers(data);
       const pendingUsers = data.filter((user) => !user.approved);
 
       setUsers(pendingUsers);
     } catch (err: any) {
-      setError(err.message);
+      console.error("Error fetching users:", err);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to fetch users";
+      setError(messageText);
+      if (status === 401) {
+        message.error("Session expired. Please log in again.");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
   }
-
-  console.log(users);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name
@@ -87,35 +83,35 @@ export default function Administrator() {
     level?: string
   ) {
     try {
-      const res = await fetch(
-        `http://localhost:4000/api/users/approve/${userId}`,
+      const { data: updatedUser } = await api.patch<User>(
+        `/users/approve/${userId}`,
         {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ approved: status, level: level || "L1" }),
+          approved: status,
+          level: level || "L1",
         }
       );
-      if (!res.ok) throw new Error("Failed to update user approval");
-
-      const updatedUser = await res.json();
       setUsers((prev) =>
         prev.map((user) => (user._id === userId ? updatedUser : user))
       );
       await fetchUsers();
+      message.success("User approval updated");
     } catch (err: any) {
-      console.error(err.message);
+      console.error("Error updating user approval:", err);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to update user";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     }
   }
 
   async function handleDelete(userId: string) {
     try {
-      const res = await fetch(`http://localhost:4000/api/user/${userId}`, {
-        method: "DELETE",
-      });
+      await api.delete(`/users/${userId}`);
 
-      if (!res.ok) throw new Error("Failed to delete user");
+      message.success("User deleted successfully");
 
       // Remove user from state
       setUsers((prev) => prev.filter((user) => user._id !== userId));
@@ -123,7 +119,14 @@ export default function Administrator() {
       // Optionally re-fetch users (if you want to be extra sure)
       await fetchUsers();
     } catch (err: any) {
-      console.error(err.message);
+      console.error("Error deleting user:", err);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to delete user";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     }
   }
 

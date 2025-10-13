@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { message } from "antd";
 import {
   ShoppingCart,
   Search,
@@ -29,8 +31,15 @@ import {
   type Order as OrderType,
   type OrderPayload,
 } from "@/components/services/orderService";
+import api from "@/components/services/api";
+
+type CustomerCreateResponse = {
+  message?: string;
+  customer?: unknown;
+};
 
 export default function OrdersSales() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -183,31 +192,37 @@ export default function OrdersSales() {
 
   const handleCreateCustomer = async (data: any) => {
     try {
-      const res = await fetch("http://localhost:4000/api/customers/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      console.log("✅ Customer created:", result);
-    } catch (error) {
+      const { data: result } = await api.post<CustomerCreateResponse>(
+        "/customers/create",
+        data
+      );
+      message.success(result?.message || "Customer created successfully");
+      // Optionally refresh data that depends on customers
+    } catch (error: any) {
       console.error("❌ Error creating customer:", error);
+      const status = error?.response?.status;
+      const messageText =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to create customer";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     }
   };
 
   const exportOrderReportPDF = async () => {
     try {
       setIsExporting(true);
-      const res = await fetch(
-        "http://localhost:4000/api/reports/generate/order-report",
-        {
-          method: "POST",
-        }
-      );
+      const { data: result } = await api.post<{
+        downloadUrl?: string;
+        message?: string;
+      }>("/reports/generate/order-report");
 
-      if (!res.ok) throw new Error("Failed to generate report");
-
-      const result = await res.json();
+      if (!result?.downloadUrl) {
+        throw new Error(result?.message || "Report download link missing");
+      }
 
       // Create a temporary link to trigger the download
       const a = document.createElement("a");
@@ -217,10 +232,16 @@ export default function OrdersSales() {
       a.click();
       document.body.removeChild(a);
 
-      alert("Order report exported successfully!");
+      message.success("Order report exported successfully");
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to export report";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     } finally {
       setIsExporting(false);
     }
@@ -340,7 +361,7 @@ export default function OrdersSales() {
               New Customer
             </button>
           )}
-          <button 
+          <button
             onClick={exportOrderReportPDF}
             disabled={isExporting}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition disabled:opacity-50"

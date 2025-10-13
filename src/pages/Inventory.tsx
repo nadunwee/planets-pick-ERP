@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { message } from "antd";
 import {
   Search,
   Plus,
@@ -10,10 +12,17 @@ import {
   Download,
 } from "lucide-react";
 import AddItemModal from "@/components/inventory/AddItemModal";
+import api from "@/components/services/api";
 
 const categories = ["All", "Raw Materials", "Finished Products", "Packaging"];
 
+type InventoryReportResponse = {
+  downloadUrl: string;
+  message?: string;
+};
+
 export default function Inventory() {
+  const navigate = useNavigate();
   const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -26,14 +35,20 @@ export default function Inventory() {
   async function fetchInventory() {
     try {
       setLoading(true);
-      const res = await fetch(
-        "http://localhost:4000/api/inventory/all_inventory"
-      );
-      if (!res.ok) throw new Error("Failed to fetch inventory");
-      const data = await res.json();
-      setInventoryData(data);
+      const { data } = await api.get("/inventory/all_inventory");
+      setInventoryData(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message);
+      console.error("Error fetching inventory:", err);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Failed to fetch inventory";
+      setError(messageText);
+      if (status === 401) {
+        message.error("Session expired. Please log in again.");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -83,28 +98,25 @@ export default function Inventory() {
   // handle add or edit
   async function handleSaveItem(payload: any) {
     try {
-      let url = "http://localhost:4000/api/inventory/add_inventory";
-      let method = "POST";
-
-      if (editingItem) {
-        url = `http://localhost:4000/api/inventory/edit_inventory/${editingItem._id}`;
-        method = "PUT";
+      if (!editingItem) {
+        await api.post("/inventory/add_inventory", payload);
+      } else {
+        await api.put(`/inventory/edit_inventory/${editingItem._id}`, payload);
       }
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error("Failed to save item");
 
       setIsModalOpen(false);
       setEditingItem(null);
+      message.success("Inventory item saved successfully");
       await fetchInventory();
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to save item";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     }
   }
 
@@ -116,16 +128,13 @@ export default function Inventory() {
   const exportInventoryReport = async () => {
     try {
       setIsExporting(true);
-      const res = await fetch(
-        "http://localhost:4000/api/reports/generate/inventory-report",
-        {
-          method: "POST",
-        }
+      const { data: result } = await api.post<InventoryReportResponse>(
+        "/reports/generate/inventory-report"
       );
 
-      if (!res.ok) throw new Error("Failed to generate report");
-
-      const result = await res.json();
+      if (!result?.downloadUrl) {
+        throw new Error("Report download link not provided");
+      }
 
       // Create a temporary link to trigger the download
       const a = document.createElement("a");
@@ -135,10 +144,16 @@ export default function Inventory() {
       a.click();
       document.body.removeChild(a);
 
-      alert("Inventory report exported successfully!");
+      message.success("Inventory report exported successfully");
     } catch (err: any) {
       console.error(err);
-      alert(err.message);
+      const status = err?.response?.status;
+      const messageText =
+        err?.response?.data?.error || err?.message || "Failed to export report";
+      message.error(messageText);
+      if (status === 401) {
+        navigate("/login");
+      }
     } finally {
       setIsExporting(false);
     }

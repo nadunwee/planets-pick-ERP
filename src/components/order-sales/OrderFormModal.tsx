@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { message } from "antd";
 import type { OrderPayload, Order } from "../services/orderService";
+import api from "../services/api";
 
 interface Customer {
   _id: string;
@@ -124,13 +126,20 @@ export default function OrderFormModal({
 
   useEffect(() => {
     if (isOpen) {
-      fetch("http://localhost:4000/api/customers/all")
-        .then((res) => res.json())
-        .then((data) => {
+      api
+        .get<Customer[]>("/customers/all")
+        .then(({ data }) => {
           setCustomers(Array.isArray(data) ? data : []);
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error("❌ Error fetching customers:", err);
+          const status = err?.response?.status;
+          if (status === 401) {
+            message.error("Session expired. Please log in again.");
+            window.location.href = "/login";
+            return;
+          }
+          message.error("Failed to load customers. Using sample data.");
           // Provide mock data for testing when API is not available
           setCustomers([
             { _id: "1", name: "John Doe", company: "Test Company 1" },

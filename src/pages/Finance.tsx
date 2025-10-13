@@ -223,11 +223,24 @@ const AI_API = axios.create({
 export default function Finance() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      API.defaults.headers.common.Authorization = `Bearer ${token}`;
+      AI_API.defaults.headers.common.Authorization = `Bearer ${token}`;
+    }
+  }, []);
+
   // Redirect if user doesn't have permission (only L3 and L4 can access Finance)
   useEffect(() => {
-    if (!currentUser || (currentUser.level !== "L3" && currentUser.level !== "L4")) {
-      alert("Access Denied: Only Finance Managers and Administrators can access Finance");
+    if (
+      !currentUser ||
+      (currentUser.level !== "L3" && currentUser.level !== "L4")
+    ) {
+      alert(
+        "Access Denied: Only Finance Managers and Administrators can access Finance"
+      );
       navigate("/dashboard");
     }
   }, [currentUser, navigate]);
