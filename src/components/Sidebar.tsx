@@ -89,9 +89,8 @@ export function Sidebar() {
     "Delivery",
     "Finance",
     "Administrator",
-    "Warehouse",
-    "Wastage",
     "Settings",
+    "Orders & Sales",
   ];
 
   const HR = [
