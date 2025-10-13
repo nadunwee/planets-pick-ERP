@@ -112,29 +112,6 @@ interface ProductionAnalytics {
   machineUtilization: number;
 }
 
-interface ProductionReport {
-  reportType: string;
-  period: string;
-  totalProduction: number;
-  efficiency: number;
-  qualityScore: number;
-  topPerformingProducts: Array<{
-    product: string;
-    quantity: number;
-    efficiency: number;
-  }>;
-  operatorPerformance: Array<{
-    operator: string;
-    batchesCompleted: number;
-    averageQuality: number;
-  }>;
-  machinePerformance: Array<{
-    machine: string;
-    utilization: number;
-    downtime: number;
-  }>;
-}
-
 const productionLines: ProductionLine[] = [
   {
     id: "1",
@@ -210,6 +187,9 @@ export default function Production() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [operatorFilter, setOperatorFilter] = useState<string>("all");
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(
+    null
+  );
 
   // Transform backend batch to frontend format
   const transformBackendBatch = (
@@ -719,608 +699,35 @@ export default function Production() {
     }
   };
 
-  // Report generation functions
-  const generateProductionReport = (reportType: string): ProductionReport => {
-    const now = new Date();
-    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}`;
+  const downloadReport = async (reportType: string) => {
+    try {
+      setDownloadingReport(reportType);
+      const blob = await productionService.downloadReport({ reportType });
 
-    const topProducts = Object.entries(
-      productionBatches.reduce((acc, batch) => {
-        acc[batch.productName] = (acc[batch.productName] || 0) + batch.yield;
-        return acc;
-      }, {} as Record<string, number>)
-    )
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([product, quantity]) => ({
-        product,
-        quantity,
-        efficiency: 85 + Math.random() * 15, // Mock efficiency
-      }));
-
-    const operatorStats = Object.entries(
-      productionBatches.reduce((acc, batch) => {
-        if (!acc[batch.operator]) {
-          acc[batch.operator] = { batches: 0, totalQuality: 0 };
-        }
-        acc[batch.operator].batches++;
-        const qualityScore =
-          batch.quality === "excellent"
-            ? 100
-            : batch.quality === "good"
-            ? 80
-            : batch.quality === "fair"
-            ? 60
-            : 40;
-        acc[batch.operator].totalQuality += qualityScore;
-        return acc;
-      }, {} as Record<string, { batches: number; totalQuality: number }>)
-    ).map(([operator, stats]) => ({
-      operator,
-      batchesCompleted: stats.batches,
-      averageQuality: Math.round(stats.totalQuality / stats.batches),
-    }));
-
-    return {
-      reportType,
-      period,
-      totalProduction: productionAnalytics.totalOutput,
-      efficiency: productionAnalytics.averageEfficiency,
-      qualityScore: productionAnalytics.averageQuality,
-      topPerformingProducts: topProducts,
-      operatorPerformance: operatorStats,
-      machinePerformance: productionLines.map((line) => ({
-        machine: line.name,
-        utilization: line.efficiency,
-        downtime: 100 - line.efficiency,
-      })),
-    };
-  };
-
-  const downloadReport = (reportType: string) => {
-    const report = generateProductionReport(reportType);
-    const date = new Date().toISOString().split("T")[0];
-
-    let content = "";
-    let filename = "";
-
-    switch (reportType) {
-      case "summary":
-        content = generateProductionSummaryHTML(report);
-        filename = `Production_Summary_${date}.html`;
-        break;
-      case "efficiency":
-        content = generateEfficiencyReportHTML(report);
-        filename = `Production_Efficiency_Report_${date}.html`;
-        break;
-      case "quality":
-        content = generateQualityReportHTML(report);
-        filename = `Production_Quality_Report_${date}.html`;
-        break;
-      case "operator":
-        content = generateOperatorReportHTML(report);
-        filename = `Operator_Performance_Report_${date}.html`;
-        break;
-    }
-
-    const blob = new Blob([content], { type: "text/html" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    setTimeout(() => {
-      alert(
-        'Report downloaded! To convert to PDF:\n1. Open the downloaded HTML file in your browser\n2. Press Ctrl+P (Cmd+P on Mac)\n3. Select "Save as PDF" as destination\n4. Click Save'
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateSegment = new Date().toISOString().split("T")[0];
+      const sanitizedType =
+        (reportType || "summary")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/gi, "-")
+          .replace(/^-+|-+$/g, "") || "summary";
+      link.href = objectUrl;
+      link.download = `production-${sanitizedType}-report-${dateSegment}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (reportError) {
+      console.error("Failed to download production report:", reportError);
+      setError(
+        reportError instanceof Error
+          ? reportError.message
+          : "Failed to download production report"
       );
-    }, 100);
-  };
-
-  const generateProductionSummaryHTML = (report: ProductionReport) => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Production Summary Report</title>
-  <style>
-    @page { margin: 0.5in; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      margin: 0; 
-      padding: 0;
-      font-size: 12px;
-      line-height: 1.4;
+    } finally {
+      setDownloadingReport(null);
     }
-    .header { 
-      text-align: center; 
-      margin-bottom: 40px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-    }
-    .company-name { 
-      font-size: 28px; 
-      font-weight: bold; 
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-    }
-    .report-title { 
-      font-size: 18px; 
-      font-weight: bold; 
-      margin-bottom: 5px;
-      text-transform: uppercase;
-    }
-    .section { margin: 30px 0; }
-    .section-title { 
-      font-size: 14px; 
-      font-weight: bold; 
-      margin-bottom: 15px;
-      text-decoration: underline;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 10px 0;
-      font-size: 11px;
-    }
-    th, td { 
-      border: 1px solid #000; 
-      padding: 8px 12px; 
-      text-align: left;
-    }
-    th { 
-      background-color: #f0f0f0; 
-      font-weight: bold;
-      text-align: center;
-    }
-    .amount { text-align: right; }
-    .total { 
-      font-weight: bold; 
-      border-top: 2px solid #000;
-      background-color: #f8f8f8;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-    <div class="report-title">Production Summary Report</div>
-    <div>Period: ${report.period}</div>
-    <div>Generated: ${new Date().toLocaleDateString()}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Production Overview</div>
-    <table>
-      <tr>
-        <th>Metric</th>
-        <th class="amount">Value</th>
-      </tr>
-      <tr>
-        <td>Total Production</td>
-        <td class="amount">${report.totalProduction} L</td>
-      </tr>
-      <tr>
-        <td>Overall Efficiency</td>
-        <td class="amount">${report.efficiency}%</td>
-      </tr>
-      <tr>
-        <td>Quality Score</td>
-        <td class="amount">${report.qualityScore}%</td>
-      </tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Top Performing Products</div>
-    <table>
-      <tr>
-        <th>Product</th>
-        <th class="amount">Quantity (L)</th>
-        <th class="amount">Efficiency (%)</th>
-      </tr>
-      ${report.topPerformingProducts
-        .map(
-          (product) => `
-        <tr>
-          <td>${product.product}</td>
-          <td class="amount">${product.quantity.toLocaleString()}</td>
-          <td class="amount">${product.efficiency.toFixed(1)}%</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Machine Performance</div>
-    <table>
-      <tr>
-        <th>Machine</th>
-        <th class="amount">Utilization (%)</th>
-        <th class="amount">Downtime (%)</th>
-      </tr>
-      ${report.machinePerformance
-        .map(
-          (machine) => `
-        <tr>
-          <td>${machine.machine}</td>
-          <td class="amount">${machine.utilization}%</td>
-          <td class="amount">${machine.downtime}%</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </table>
-  </div>
-</body>
-</html>
-    `;
-  };
-
-  const generateEfficiencyReportHTML = (report: ProductionReport) => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Production Efficiency Report</title>
-  <style>
-    @page { margin: 0.5in; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      margin: 0; 
-      padding: 0;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .header { 
-      text-align: center; 
-      margin-bottom: 40px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-    }
-    .company-name { 
-      font-size: 28px; 
-      font-weight: bold; 
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-    }
-    .report-title { 
-      font-size: 18px; 
-      font-weight: bold; 
-      margin-bottom: 5px;
-      text-transform: uppercase;
-    }
-    .section { margin: 30px 0; }
-    .section-title { 
-      font-size: 14px; 
-      font-weight: bold; 
-      margin-bottom: 15px;
-      text-decoration: underline;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 10px 0;
-      font-size: 11px;
-    }
-    th, td { 
-      border: 1px solid #000; 
-      padding: 8px 12px; 
-      text-align: left;
-    }
-    th { 
-      background-color: #f0f0f0; 
-      font-weight: bold;
-      text-align: center;
-    }
-    .amount { text-align: right; }
-    .total { 
-      font-weight: bold; 
-      border-top: 2px solid #000;
-      background-color: #f8f8f8;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-    <div class="report-title">Production Efficiency Report</div>
-    <div>Period: ${report.period}</div>
-    <div>Generated: ${new Date().toLocaleDateString()}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Efficiency Metrics</div>
-    <table>
-      <tr>
-        <th>Metric</th>
-        <th class="amount">Value</th>
-        <th>Status</th>
-      </tr>
-      <tr>
-        <td>Overall Efficiency</td>
-        <td class="amount">${report.efficiency}%</td>
-        <td>${
-          report.efficiency >= 90
-            ? "Excellent"
-            : report.efficiency >= 80
-            ? "Good"
-            : "Needs Improvement"
-        }</td>
-      </tr>
-      <tr>
-        <td>Machine Utilization</td>
-        <td class="amount">${productionAnalytics.machineUtilization}%</td>
-        <td>${
-          productionAnalytics.machineUtilization >= 85
-            ? "Optimal"
-            : "Below Target"
-        }</td>
-      </tr>
-      <tr>
-        <td>On-Time Delivery</td>
-        <td class="amount">${productionAnalytics.onTimeDelivery}%</td>
-        <td>${
-          productionAnalytics.onTimeDelivery >= 95 ? "Excellent" : "Good"
-        }</td>
-      </tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Product Efficiency Analysis</div>
-    <table>
-      <tr>
-        <th>Product</th>
-        <th class="amount">Production Volume</th>
-        <th class="amount">Efficiency</th>
-        <th>Recommendation</th>
-      </tr>
-      ${report.topPerformingProducts
-        .map(
-          (product) => `
-        <tr>
-          <td>${product.product}</td>
-          <td class="amount">${product.quantity.toLocaleString()} L</td>
-          <td class="amount">${product.efficiency.toFixed(1)}%</td>
-          <td>${
-            product.efficiency >= 90
-              ? "Maintain current process"
-              : "Review production parameters"
-          }</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </table>
-  </div>
-</body>
-</html>
-    `;
-  };
-
-  const generateQualityReportHTML = (report: ProductionReport) => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Production Quality Report</title>
-  <style>
-    @page { margin: 0.5in; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      margin: 0; 
-      padding: 0;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .header { 
-      text-align: center; 
-      margin-bottom: 40px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-    }
-    .company-name { 
-      font-size: 28px; 
-      font-weight: bold; 
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-    }
-    .report-title { 
-      font-size: 18px; 
-      font-weight: bold; 
-      margin-bottom: 5px;
-      text-transform: uppercase;
-    }
-    .section { margin: 30px 0; }
-    .section-title { 
-      font-size: 14px; 
-      font-weight: bold; 
-      margin-bottom: 15px;
-      text-decoration: underline;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 10px 0;
-      font-size: 11px;
-    }
-    th, td { 
-      border: 1px solid #000; 
-      padding: 8px 12px; 
-      text-align: left;
-    }
-    th { 
-      background-color: #f0f0f0; 
-      font-weight: bold;
-      text-align: center;
-    }
-    .amount { text-align: right; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-    <div class="report-title">Production Quality Report</div>
-    <div>Period: ${report.period}</div>
-    <div>Generated: ${new Date().toLocaleDateString()}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Quality Control Metrics</div>
-    <table>
-      <tr>
-        <th>Parameter</th>
-        <th>Current Value</th>
-        <th>Target</th>
-        <th>Status</th>
-      </tr>
-      ${qualityMetrics
-        .map(
-          (metric) => `
-        <tr>
-          <td>${metric.parameter}</td>
-          <td class="amount">${metric.value} ${metric.unit}</td>
-          <td class="amount">${metric.target} ${metric.unit}</td>
-          <td>${
-            metric.status.charAt(0).toUpperCase() + metric.status.slice(1)
-          }</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Quality Summary</div>
-    <table>
-      <tr>
-        <th>Metric</th>
-        <th class="amount">Value</th>
-      </tr>
-      <tr>
-        <td>Overall Quality Score</td>
-        <td class="amount">${report.qualityScore}%</td>
-      </tr>
-      <tr>
-        <td>Quality Compliance</td>
-        <td class="amount">${report.qualityScore >= 90 ? "95%" : "85%"}</td>
-      </tr>
-    </table>
-  </div>
-</body>
-</html>
-    `;
-  };
-
-  const generateOperatorReportHTML = (report: ProductionReport) => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Operator Performance Report</title>
-  <style>
-    @page { margin: 0.5in; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      margin: 0; 
-      padding: 0;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    .header { 
-      text-align: center; 
-      margin-bottom: 40px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-    }
-    .company-name { 
-      font-size: 28px; 
-      font-weight: bold; 
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-    }
-    .report-title { 
-      font-size: 18px; 
-      font-weight: bold; 
-      margin-bottom: 5px;
-      text-transform: uppercase;
-    }
-    .section { margin: 30px 0; }
-    .section-title { 
-      font-size: 14px; 
-      font-weight: bold; 
-      margin-bottom: 15px;
-      text-decoration: underline;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 10px 0;
-      font-size: 11px;
-    }
-    th, td { 
-      border: 1px solid #000; 
-      padding: 8px 12px; 
-      text-align: left;
-    }
-    th { 
-      background-color: #f0f0f0; 
-      font-weight: bold;
-      text-align: center;
-    }
-    .amount { text-align: right; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="company-name">PLANETS PICK ERP SYSTEM</div>
-    <div class="report-title">Operator Performance Report</div>
-    <div>Period: ${report.period}</div>
-    <div>Generated: ${new Date().toLocaleDateString()}</div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Operator Performance</div>
-    <table>
-      <tr>
-        <th>Operator</th>
-        <th class="amount">Batches Completed</th>
-        <th class="amount">Average Quality</th>
-        <th>Performance Rating</th>
-      </tr>
-      ${report.operatorPerformance
-        .map(
-          (op) => `
-        <tr>
-          <td>${op.operator}</td>
-          <td class="amount">${op.batchesCompleted}</td>
-          <td class="amount">${op.averageQuality}%</td>
-          <td>${
-            op.averageQuality >= 90
-              ? "Excellent"
-              : op.averageQuality >= 80
-              ? "Good"
-              : "Needs Improvement"
-          }</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </table>
-  </div>
-</body>
-</html>
-    `;
   };
 
   return (
@@ -2396,8 +1803,9 @@ export default function Production() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
-                onClick={() => downloadReport("summary")}
-                className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                onClick={() => void downloadReport("summary")}
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -2408,13 +1816,16 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Complete overview of production metrics and performance
+                  {downloadingReport === "summary"
+                    ? "Preparing PDF report..."
+                    : "Complete overview of production metrics and performance"}
                 </p>
               </button>
 
               <button
-                onClick={() => downloadReport("efficiency")}
-                className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group"
+                onClick={() => void downloadReport("efficiency")}
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
@@ -2425,14 +1836,16 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Detailed analysis of production efficiency and optimization
-                  opportunities
+                  {downloadingReport === "efficiency"
+                    ? "Preparing PDF report..."
+                    : "Detailed analysis of production efficiency and optimization opportunities"}
                 </p>
               </button>
 
               <button
-                onClick={() => downloadReport("quality")}
-                className="p-4 border border-gray-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors group"
+                onClick={() => void downloadReport("quality")}
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-yellow-100 rounded-lg group-hover:bg-yellow-200 transition-colors">
@@ -2443,13 +1856,16 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Quality control metrics and compliance analysis
+                  {downloadingReport === "quality"
+                    ? "Preparing PDF report..."
+                    : "Quality control metrics and compliance analysis"}
                 </p>
               </button>
 
               <button
-                onClick={() => downloadReport("operator")}
-                className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group"
+                onClick={() => void downloadReport("operator")}
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
@@ -2460,7 +1876,9 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Individual operator performance and productivity analysis
+                  {downloadingReport === "operator"
+                    ? "Preparing PDF report..."
+                    : "Individual operator performance and productivity analysis"}
                 </p>
               </button>
             </div>
@@ -2515,11 +1933,12 @@ export default function Production() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
-                onClick={() => {
-                  downloadReport("summary");
+                onClick={async () => {
+                  await downloadReport("summary");
                   setShowReportsModal(false);
                 }}
-                className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -2530,16 +1949,19 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Complete overview of production metrics
+                  {downloadingReport === "summary"
+                    ? "Preparing PDF report..."
+                    : "Complete overview of production metrics"}
                 </p>
               </button>
 
               <button
-                onClick={() => {
-                  downloadReport("efficiency");
+                onClick={async () => {
+                  await downloadReport("efficiency");
                   setShowReportsModal(false);
                 }}
-                className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group"
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
@@ -2550,16 +1972,19 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Production efficiency analysis
+                  {downloadingReport === "efficiency"
+                    ? "Preparing PDF report..."
+                    : "Production efficiency analysis"}
                 </p>
               </button>
 
               <button
-                onClick={() => {
-                  downloadReport("quality");
+                onClick={async () => {
+                  await downloadReport("quality");
                   setShowReportsModal(false);
                 }}
-                className="p-4 border border-gray-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors group"
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-yellow-300 hover:bg-yellow-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-yellow-100 rounded-lg group-hover:bg-yellow-200 transition-colors">
@@ -2569,15 +1994,20 @@ export default function Production() {
                     Quality Report
                   </h3>
                 </div>
-                <p className="text-sm text-gray-600">Quality control metrics</p>
+                <p className="text-sm text-gray-600">
+                  {downloadingReport === "quality"
+                    ? "Preparing PDF report..."
+                    : "Quality control metrics"}
+                </p>
               </button>
 
               <button
-                onClick={() => {
-                  downloadReport("operator");
+                onClick={async () => {
+                  await downloadReport("operator");
                   setShowReportsModal(false);
                 }}
-                className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group"
+                disabled={!!downloadingReport}
+                className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
@@ -2588,7 +2018,9 @@ export default function Production() {
                   </h3>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Operator performance analysis
+                  {downloadingReport === "operator"
+                    ? "Preparing PDF report..."
+                    : "Operator performance analysis"}
                 </p>
               </button>
             </div>
