@@ -14,6 +14,15 @@ const transactionSchema = new mongoose.Schema({
     enum: ["completed", "pending", "failed"],
     default: "completed",
   },
+  approved: { type: Boolean, default: false },
+  approvalStatus: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
+  },
+  createdBy: { type: String },
+  approvedBy: { type: String },
+  approvedAt: { type: Date },
 });
 
 // Account Schema
