@@ -1,15 +1,27 @@
-const Supplier = require('../models/Supplier');
-const { validationResult } = require('express-validator');
+const Supplier = require("../models/Supplier");
+const { validationResult } = require("express-validator");
+const {
+  ensureProcurementRequester,
+} = require("./procurementApprovalController");
 
 // Create supplier
 exports.createSupplier = async (req, res, next) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit supplier changes for director approval.",
+      });
+    }
+
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
 
     const { code } = req.body;
     const exists = await Supplier.findOne({ code });
-    if (exists) return res.status(409).json({ message: 'Supplier code already exists' });
+    if (exists)
+      return res.status(409).json({ message: "Supplier code already exists" });
 
     const supplier = new Supplier(req.body);
     await supplier.save();
@@ -28,23 +40,31 @@ exports.getSuppliers = async (req, res, next) => {
     const filter = { deleted: false };
     if (q) {
       filter.$or = [
-        { name: new RegExp(q, 'i') },
-        { code: new RegExp(q, 'i') },
-        { contactPerson: new RegExp(q, 'i') },
+        { name: new RegExp(q, "i") },
+        { code: new RegExp(q, "i") },
+        { contactPerson: new RegExp(q, "i") },
       ];
     }
 
     const sortOption = {};
-    if (sort === 'spend') sortOption.totalSpend = -1;
-    else if (sort === 'name') sortOption.name = 1;
+    if (sort === "spend") sortOption.totalSpend = -1;
+    else if (sort === "name") sortOption.name = 1;
     else sortOption.updatedAt = -1;
 
     const [items, total] = await Promise.all([
-      Supplier.find(filter).sort(sortOption).skip(Number(skip)).limit(Number(limit)),
+      Supplier.find(filter)
+        .sort(sortOption)
+        .skip(Number(skip))
+        .limit(Number(limit)),
       Supplier.countDocuments(filter),
     ]);
 
-    res.json({ items, total, page: Number(page), pages: Math.ceil(total / limit) });
+    res.json({
+      items,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+    });
   } catch (err) {
     next(err);
   }
@@ -54,7 +74,8 @@ exports.getSuppliers = async (req, res, next) => {
 exports.getSupplierById = async (req, res, next) => {
   try {
     const supplier = await Supplier.findById(req.params.id);
-    if (!supplier || supplier.deleted) return res.status(404).json({ message: 'Supplier not found' });
+    if (!supplier || supplier.deleted)
+      return res.status(404).json({ message: "Supplier not found" });
     res.json(supplier);
   } catch (err) {
     next(err);
@@ -64,11 +85,20 @@ exports.getSupplierById = async (req, res, next) => {
 // Update supplier
 exports.updateSupplier = async (req, res, next) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit supplier changes for director approval.",
+      });
+    }
+
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
 
     const supplier = await Supplier.findById(req.params.id);
-    if (!supplier || supplier.deleted) return res.status(404).json({ message: 'Supplier not found' });
+    if (!supplier || supplier.deleted)
+      return res.status(404).json({ message: "Supplier not found" });
 
     Object.assign(supplier, req.body, { updatedAt: Date.now() });
     await supplier.save();
@@ -81,13 +111,21 @@ exports.updateSupplier = async (req, res, next) => {
 // Soft-delete supplier
 exports.deleteSupplier = async (req, res, next) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit supplier changes for director approval.",
+      });
+    }
+
     const supplier = await Supplier.findById(req.params.id);
-    if (!supplier || supplier.deleted) return res.status(404).json({ message: 'Supplier not found' });
+    if (!supplier || supplier.deleted)
+      return res.status(404).json({ message: "Supplier not found" });
 
     supplier.deleted = true;
     supplier.updatedAt = Date.now();
     await supplier.save();
-    res.json({ message: 'Supplier deleted' });
+    res.json({ message: "Supplier deleted" });
   } catch (err) {
     next(err);
   }
@@ -104,12 +142,12 @@ exports.getSupplierRankings = async (req, res, next) => {
 
     const suppliers = await Supplier.find({ deleted: false });
 
-    const ranked = suppliers.map(s => {
+    const ranked = suppliers.map((s) => {
       const onTime = Math.max(0, Math.min(100, s.onTimeDeliveryRate || 0));
       const quality = Math.max(0, Math.min(100, s.qualityScore || 0));
       const response = Math.max(0, Math.min(100, s.responsivenessScore || 0));
 
-      const score = (onTime * w1) + (quality * w2) + (response * w3);
+      const score = onTime * w1 + quality * w2 + response * w3;
 
       return { supplier: s, score: Number(score.toFixed(2)) };
     });

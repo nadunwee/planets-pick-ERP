@@ -88,3 +88,73 @@ export const deleteSupplier = (id: string) => {
     method: "DELETE",
   });
 };
+
+export interface ProcurementChangeRequestInput {
+  entityType: "supplier" | "purchaseOrder";
+  actionType: "create" | "update" | "delete";
+  targetId?: string | null;
+  payload?: Record<string, unknown>;
+  reason?: string | null;
+}
+
+export const submitProcurementChangeRequest = (
+  request: ProcurementChangeRequestInput
+) => {
+  return authFetch<{ message: string }>("/procurement-requests", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+};
+
+export interface ProcurementChangeRequest {
+  _id: string;
+  entityType: "supplier" | "purchaseOrder";
+  actionType: "create" | "update" | "delete";
+  status: "pending" | "approved" | "rejected";
+  targetId?: string | null;
+  payload?: Record<string, unknown>;
+  reason?: string | null;
+  approvalNote?: string | null;
+  requestedByName: string;
+  requestedByLevel: string;
+  requestedByDepartment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const fetchProcurementChangeRequests = (params?: {
+  status?: string;
+}) => {
+  const query = params?.status
+    ? `?status=${encodeURIComponent(params.status)}`
+    : "";
+  return authFetch<{ requests: ProcurementChangeRequest[] }>(
+    `/procurement-requests${query}`
+  );
+};
+
+export const approveProcurementChangeRequest = (
+  id: string,
+  approvalNote?: string
+) => {
+  const body = approvalNote?.trim()
+    ? JSON.stringify({ approvalNote })
+    : JSON.stringify({});
+  return authFetch<{ message: string }>(`/procurement-requests/${id}/approve`, {
+    method: "POST",
+    body,
+  });
+};
+
+export const rejectProcurementChangeRequest = (
+  id: string,
+  approvalNote?: string
+) => {
+  const body = approvalNote?.trim()
+    ? JSON.stringify({ approvalNote })
+    : JSON.stringify({});
+  return authFetch<{ message: string }>(`/procurement-requests/${id}/reject`, {
+    method: "POST",
+    body,
+  });
+};

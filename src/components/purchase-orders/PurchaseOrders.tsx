@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Table, Tag, Tooltip, message } from "antd";
 import {
   DownloadCloud,
@@ -17,15 +17,20 @@ import {
   approvePO,
   markPurchaseOrderDelivered,
 } from "../services/purchaseOrderService";
-import {
-  fetchInvoicePdf,
-} from "../services/invoiceService";
+import { fetchInvoicePdf } from "../services/invoiceService";
 import {
   getCurrentUser,
   canCreatePurchaseOrders,
   canApprovePurchaseOrders,
   canMarkDelivered,
 } from "../../utils/userAuth";
+import {
+  submitProcurementChangeRequest,
+  fetchProcurementChangeRequests,
+  approveProcurementChangeRequest,
+  rejectProcurementChangeRequest,
+  type ProcurementChangeRequest,
+} from "../../utils/api";
 
 const PurchaseOrders: React.FC = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -33,14 +38,54 @@ const PurchaseOrders: React.FC = () => {
   const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<
+    ProcurementChangeRequest[]
+  >([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [requestActionId, setRequestActionId] = useState<string | null>(null);
 
   const currentUser = useMemo(() => getCurrentUser(), []);
   const userLevel = currentUser?.level;
   const allowCreate = userLevel ? canCreatePurchaseOrders(userLevel) : false;
   const allowApprove = userLevel ? canApprovePurchaseOrders(userLevel) : false;
   const allowDeliver = userLevel ? canMarkDelivered(userLevel) : false;
+  const isProcurementManagerL1 =
+    currentUser?.level === "L1" && currentUser?.department === "Procurement";
+  const isProcurementDirector =
+    currentUser?.department === "Procurement" && currentUser?.level === "L2";
 
-  const fetchOrders = async () => {
+  const loadPendingRequests = useCallback(async () => {
+    setRequestsLoading(true);
+    setRequestsError(null);
+    try {
+      const result = await fetchProcurementChangeRequests({
+        status: "pending",
+      });
+      setPendingRequests(result.requests || []);
+    } catch (err) {
+      console.error(err);
+      const errorMessage =
+        ((err as any)?.data as any)?.message ||
+        (err as any)?.message ||
+        "Failed to load pending requests";
+      setRequestsError(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load pending requests"
+      );
+    } finally {
+      setRequestsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isProcurementDirector) {
+      loadPendingRequests();
+    }
+  }, [isProcurementDirector, loadPendingRequests]);
+
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listPOs();
@@ -68,11 +113,11 @@ const PurchaseOrders: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   const handleCreate = () => {
     if (!allowCreate) {
@@ -97,6 +142,37 @@ const PurchaseOrders: React.FC = () => {
       return;
     }
     if (!window.confirm("Are you sure you want to delete this order?")) return;
+
+    if (isProcurementManagerL1) {
+      const reason = window.prompt(
+        "Provide a note for your Procurement Director (optional):",
+        ""
+      );
+      if (reason === null) {
+        return;
+      }
+      try {
+        setActionId(po._id);
+        await submitProcurementChangeRequest({
+          entityType: "purchaseOrder",
+          actionType: "delete",
+          targetId: po._id,
+          reason,
+        });
+        message.success(
+          "Purchase order deletion request submitted for approval."
+        );
+      } catch (err) {
+        console.error(err);
+        message.error(
+          (err as any)?.message ||
+            "Failed to submit purchase order delete request"
+        );
+      } finally {
+        setActionId(null);
+      }
+      return;
+    }
 
     try {
       setActionId(po._id);
@@ -225,6 +301,130 @@ const PurchaseOrders: React.FC = () => {
     }
   };
 
+  const handleApproveRequest = useCallback(
+    async (request: ProcurementChangeRequest) => {
+      const approvalNote = window.prompt(
+        "Add approval note for this request (optional):",
+        ""
+      );
+      if (approvalNote === null) {
+        return;
+      }
+
+      try {
+        setRequestActionId(request._id);
+        await approveProcurementChangeRequest(
+          request._id,
+          approvalNote || undefined
+        );
+        message.success("Request approved successfully");
+        await loadPendingRequests();
+        await fetchOrders();
+      } catch (err) {
+        console.error(err);
+        message.error(
+          (err as any)?.message || "Failed to approve procurement request"
+        );
+      } finally {
+        setRequestActionId(null);
+      }
+    },
+    [fetchOrders, loadPendingRequests]
+  );
+
+  const handleRejectRequest = useCallback(
+    async (request: ProcurementChangeRequest) => {
+      const rejectionReason = window.prompt(
+        "Provide a reason for rejection (optional):",
+        ""
+      );
+      if (rejectionReason === null) {
+        return;
+      }
+
+      try {
+        setRequestActionId(request._id);
+        await rejectProcurementChangeRequest(
+          request._id,
+          rejectionReason || undefined
+        );
+        message.success("Request rejected");
+        await loadPendingRequests();
+      } catch (err) {
+        console.error(err);
+        message.error(
+          (err as any)?.message || "Failed to reject procurement request"
+        );
+      } finally {
+        setRequestActionId(null);
+      }
+    },
+    [loadPendingRequests]
+  );
+
+  const requestColumns = useMemo(
+    () => [
+      {
+        title: "Item",
+        key: "entityType",
+        render: (_: unknown, record: ProcurementChangeRequest) => {
+          const entityLabel =
+            record.entityType === "supplier" ? "Supplier" : "Purchase Order";
+          const actionLabel = `${record.actionType
+            .charAt(0)
+            .toUpperCase()}${record.actionType.slice(1)}`;
+          return `${entityLabel} • ${actionLabel}`;
+        },
+      },
+      {
+        title: "Requested By",
+        dataIndex: "requestedByName",
+        key: "requestedByName",
+        render: (_: string, record: ProcurementChangeRequest) =>
+          `${record.requestedByName} (${record.requestedByLevel})`,
+      },
+      {
+        title: "Reason / Notes",
+        dataIndex: "reason",
+        key: "reason",
+        render: (value: string | null) => value || "—",
+      },
+      {
+        title: "Submitted",
+        dataIndex: "createdAt",
+        key: "createdAt",
+        render: (value: string) =>
+          value ? new Date(value).toLocaleString() : "-",
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        render: (_: unknown, record: ProcurementChangeRequest) => (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="small"
+              type="primary"
+              icon={<ShieldCheck size={14} />}
+              onClick={() => handleApproveRequest(record)}
+              loading={requestActionId === record._id}
+            >
+              Approve
+            </Button>
+            <Button
+              size="small"
+              danger
+              onClick={() => handleRejectRequest(record)}
+              disabled={requestActionId === record._id}
+            >
+              Reject
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [handleApproveRequest, handleRejectRequest, requestActionId]
+  );
+
   const handleFormSubmit = async (po: PurchaseOrder): Promise<void> => {
     // Validate that all required fields are present
     if (!po.supplierId) {
@@ -274,16 +474,37 @@ const PurchaseOrders: React.FC = () => {
     };
 
     try {
-      console.log("Sending payload to backend:", payload);
+      if (isProcurementManagerL1) {
+        const reason = window.prompt(
+          "Provide a note for your Procurement Director (optional):",
+          ""
+        );
+        if (reason === null) {
+          return;
+        }
 
-      if (editingOrder?._id) {
-        await updatePO(editingOrder._id, payload);
-        message.success("Purchase order updated");
+        await submitProcurementChangeRequest({
+          entityType: "purchaseOrder",
+          actionType: editingOrder?._id ? "update" : "create",
+          targetId: editingOrder?._id,
+          payload: payload as unknown as Record<string, unknown>,
+          reason,
+        });
+        message.success(
+          editingOrder?._id
+            ? "Purchase order update request submitted for approval."
+            : "Purchase order creation request submitted for approval."
+        );
       } else {
-        await createPO(payload);
-        message.success("Purchase order created");
+        if (editingOrder?._id) {
+          await updatePO(editingOrder._id, payload);
+          message.success("Purchase order updated");
+        } else {
+          await createPO(payload);
+          message.success("Purchase order created");
+        }
+        fetchOrders();
       }
-      fetchOrders();
     } catch (err) {
       console.error("Error details:", err);
       message.error("Failed to save purchase order");
@@ -460,6 +681,30 @@ const PurchaseOrders: React.FC = () => {
         loading={loading}
         rowKey={(record) => record._id || record.poNumber}
       />
+
+      {isProcurementDirector && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">
+              Pending Procurement Requests
+            </h3>
+            <Button onClick={loadPendingRequests} loading={requestsLoading}>
+              Refresh
+            </Button>
+          </div>
+          {requestsError && (
+            <div className="mb-3 text-sm text-red-600">{requestsError}</div>
+          )}
+          <Table
+            dataSource={pendingRequests}
+            columns={requestColumns}
+            loading={requestsLoading}
+            rowKey={(record) => record._id}
+            pagination={{ pageSize: 5 }}
+            locale={{ emptyText: "No pending requests" }}
+          />
+        </div>
+      )}
 
       {showForm && (
         <PurchaseOrderForm

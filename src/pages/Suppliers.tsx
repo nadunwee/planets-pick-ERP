@@ -9,6 +9,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  submitProcurementChangeRequest,
 } from "../utils/api";
 
 import PurchaseOrders from "../components/purchase-orders/PurchaseOrders";
@@ -38,6 +39,8 @@ export default function Procurement() {
 
   const currentUser = useMemo(() => getCurrentUser(), []);
   const userLevel = currentUser?.level;
+  const isProcurementManagerL1 =
+    currentUser?.level === "L1" && currentUser?.department === "Procurement";
   const allowSupplierManagement = userLevel
     ? canManageSuppliers(userLevel)
     : false;
@@ -109,6 +112,41 @@ export default function Procurement() {
   const handleDelete = async (_id?: string) => {
     if (!_id) return;
     if (confirm("Are you sure you want to delete this supplier?")) {
+      if (isProcurementManagerL1) {
+        try {
+          const reason = window.prompt(
+            "Provide a note for your Procurement Director (optional):",
+            ""
+          );
+          if (reason === null) {
+            return;
+          }
+
+          const response = await submitProcurementChangeRequest({
+            entityType: "supplier",
+            actionType: "delete",
+            targetId: _id,
+            reason,
+          });
+
+          message.success(
+            response.message ||
+              "Supplier deletion request submitted for approval."
+          );
+        } catch (err: any) {
+          console.error("Error submitting delete request:", err);
+          if (err?.status === 401) {
+            message.error(err.message || "Unauthorized. Please log in again.");
+            navigate("/login");
+          } else {
+            message.error(
+              err?.message || "Failed to submit supplier delete request."
+            );
+          }
+        }
+        return;
+      }
+
       try {
         await deleteSupplier(_id);
         setSuppliers((prev) => prev.filter((s) => s._id !== _id));
@@ -129,6 +167,31 @@ export default function Procurement() {
 
   const handleFormSubmit = async (data: SupplierType) => {
     try {
+      if (isProcurementManagerL1) {
+        const reason = window.prompt(
+          "Provide a note for your Procurement Director (optional):",
+          ""
+        );
+        if (reason === null) {
+          return;
+        }
+
+        const response = await submitProcurementChangeRequest({
+          entityType: "supplier",
+          actionType: editingSupplier?._id ? "update" : "create",
+          targetId: editingSupplier?._id || undefined,
+          payload: data as unknown as Record<string, unknown>,
+          reason,
+        });
+
+        message.success(
+          response.message || "Supplier change request submitted for approval."
+        );
+        setShowForm(false);
+        setEditingSupplier(null);
+        return;
+      }
+
       if (editingSupplier?._id) {
         const updated = await updateSupplier(editingSupplier._id, data);
         setSuppliers((prev) =>

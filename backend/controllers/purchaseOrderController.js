@@ -1,5 +1,8 @@
 const PurchaseOrder = require("../models/PurchaseOrder");
 const { hasLevelAtLeast } = require("../middleware/accessControl");
+const {
+  ensureProcurementRequester,
+} = require("./procurementApprovalController");
 
 // Helper to calculate total amount
 const calculateTotal = (items = []) =>
@@ -46,6 +49,13 @@ const getPO = async (req, res) => {
 // Create PO
 const createPO = async (req, res) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit purchase order changes for director approval.",
+      });
+    }
+
     const { poNumber, supplier, items, status, notes = "" } = req.body || {};
 
     if (!poNumber || !supplier || !Array.isArray(items) || items.length === 0) {
@@ -98,6 +108,13 @@ const createPO = async (req, res) => {
 // Update PO
 const updatePO = async (req, res) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit purchase order changes for director approval.",
+      });
+    }
+
     const updates = { ...req.body };
 
     if (Object.prototype.hasOwnProperty.call(updates, "invoice")) {
@@ -187,6 +204,13 @@ const updatePO = async (req, res) => {
 // Delete PO
 const deletePO = async (req, res) => {
   try {
+    if (ensureProcurementRequester(req.user)) {
+      return res.status(403).json({
+        error:
+          "Procurement managers (L1) must submit purchase order changes for director approval.",
+      });
+    }
+
     const po = await PurchaseOrder.findById(req.params.id);
     if (!po) {
       return res.status(404).json({ error: "Purchase order not found" });

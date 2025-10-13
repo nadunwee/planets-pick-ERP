@@ -40,6 +40,10 @@ app.use("/api/invoices", require("./routes/invoice.js"));
 app.use("/api/reports", require("./routes/reportRoutes.js"));
 app.use("/api/suppliers", require("./routes/supplierRoutes.js"));
 app.use("/api/purchase-orders", require("./routes/purchaseOrderRoutes.js"));
+app.use(
+  "/api/procurement-requests",
+  require("./routes/procurementApprovalRoutes.js")
+);
 
 // Procurement Reports routes
 app.use(

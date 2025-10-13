@@ -63,6 +63,10 @@ export function Sidebar() {
   // Get user type from localStorage
   const userDepartment = localStorage.getItem("department");
   const userlevel = localStorage.getItem("level");
+  const isProcurementDirector =
+    userlevel === "L2" && userDepartment === "Procurement";
+  const isProcurementManager =
+    userlevel === "L1" && userDepartment === "Procurement";
 
   const inventoryMan = [
     "Dashboard",
@@ -104,6 +108,14 @@ export function Sidebar() {
   ];
 
   let filteredMenuItems = menuItems;
+
+  if (isProcurementDirector) {
+    filteredMenuItems = menuItems.filter((item) =>
+      ["Procurement", "Reports"].includes(item.name)
+    );
+  } else if (isProcurementManager) {
+    filteredMenuItems = menuItems.filter((item) => item.name === "Procurement");
+  }
 
   if (userDepartment === "Inventory") {
     filteredMenuItems = menuItems.filter(
