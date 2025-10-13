@@ -74,9 +74,8 @@ export default function Inventory() {
   }, []);
 
   const filteredItems = inventoryData.filter((item) => {
-    const matchesSearch = item.name
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.batchNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
@@ -85,25 +84,43 @@ export default function Inventory() {
       selectedLocation === "All" || item.location?.zone === selectedLocation;
     const matchesSupplier =
       selectedSupplier === "All" || item.supplier?.name === selectedSupplier;
-    
+
     let matchesExpiry = true;
     if (expiryFilter === "Expiring Soon" && item.expiryDate) {
       const expiryDate = new Date(item.expiryDate);
       const today = new Date();
-      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntilExpiry = Math.ceil(
+        (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
       matchesExpiry = daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
     } else if (expiryFilter === "Expired" && item.expiryDate) {
       const expiryDate = new Date(item.expiryDate);
       const today = new Date();
       matchesExpiry = expiryDate < today;
     }
-    
-    return matchesSearch && matchesCategory && matchesLocation && matchesSupplier && matchesExpiry;
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesLocation &&
+      matchesSupplier &&
+      matchesExpiry
+    );
   });
 
   // Get unique locations and suppliers for filters
-  const uniqueLocations = ["All", ...new Set(inventoryData.map(item => item.location?.zone).filter(Boolean))];
-  const uniqueSuppliers = ["All", ...new Set(inventoryData.map(item => item.supplier?.name).filter(Boolean))];
+  const uniqueLocations = [
+    "All",
+    ...new Set(
+      inventoryData.map((item) => item.location?.zone).filter(Boolean)
+    ),
+  ];
+  const uniqueSuppliers = [
+    "All",
+    ...new Set(
+      inventoryData.map((item) => item.supplier?.name).filter(Boolean)
+    ),
+  ];
 
   const totalValue = inventoryData.reduce(
     (sum, item) =>
@@ -120,7 +137,9 @@ export default function Inventory() {
     if (!item.expiryDate) return false;
     const expiryDate = new Date(item.expiryDate);
     const today = new Date();
-    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilExpiry = Math.ceil(
+      (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
     return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
   }).length;
   const reorderNeeded = inventoryData.filter(
@@ -148,13 +167,32 @@ export default function Inventory() {
     try {
       if (!editingItem) {
         await api.post("/inventory/add_inventory", payload);
+        // Show notification for new item
+        message.success({
+          content: (
+            <div>
+              <strong>✅ New Inventory Item Added!</strong>
+              <br />
+              <span className="text-sm">
+                {payload.name} ({payload.currentStock} {payload.unit})
+              </span>
+            </div>
+          ),
+          duration: 4,
+          style: {
+            marginTop: "20px",
+          },
+        });
       } else {
         await api.put(`/inventory/edit_inventory/${editingItem._id}`, payload);
+        message.success({
+          content: `✏️ Inventory item "${payload.name}" updated successfully`,
+          duration: 3,
+        });
       }
 
       setIsModalOpen(false);
       setEditingItem(null);
-      message.success("Inventory item saved successfully");
       await fetchInventory();
     } catch (err: any) {
       console.error(err);
@@ -337,7 +375,7 @@ export default function Inventory() {
           {/* Filters Row */}
           <div className="flex flex-wrap items-center gap-2">
             <Filter size={16} className="text-gray-500" />
-            
+
             {/* Category Filter */}
             <select
               value={selectedCategory}
@@ -446,7 +484,9 @@ export default function Inventory() {
                       if (e.target.checked) {
                         setSelectedItems([...selectedItems, item._id]);
                       } else {
-                        setSelectedItems(selectedItems.filter(id => id !== item._id));
+                        setSelectedItems(
+                          selectedItems.filter((id) => id !== item._id)
+                        );
                       }
                     }}
                     className="rounded border-gray-300 text-green-600 focus:ring-green-500"
@@ -494,7 +534,8 @@ export default function Inventory() {
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Min / Max Stock:</span>
                 <span className="font-medium">
-                  {item.minStock} / {item.maxStock || "N/A"} {item.unit || "units"}
+                  {item.minStock} / {item.maxStock || "N/A"}{" "}
+                  {item.unit || "units"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -537,13 +578,19 @@ export default function Inventory() {
               {item.expiryDate && (
                 <div className="flex items-center gap-2 text-xs">
                   <Calendar size={12} />
-                  <span className={
-                    new Date(item.expiryDate) < new Date()
-                      ? "text-red-600 font-medium"
-                      : Math.ceil((new Date(item.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) <= 30
-                      ? "text-orange-600 font-medium"
-                      : "text-gray-600"
-                  }>
+                  <span
+                    className={
+                      new Date(item.expiryDate) < new Date()
+                        ? "text-red-600 font-medium"
+                        : Math.ceil(
+                            (new Date(item.expiryDate).getTime() -
+                              new Date().getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          ) <= 30
+                        ? "text-orange-600 font-medium"
+                        : "text-gray-600"
+                    }
+                  >
                     Exp: {new Date(item.expiryDate).toLocaleDateString()}
                     {new Date(item.expiryDate) < new Date() && " (Expired)"}
                   </span>
@@ -564,19 +611,20 @@ export default function Inventory() {
                 </div>
               )}
 
-              {item.currentStock <= (item.reorderPoint || item.minStock) && item.currentStock > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
-                  <p className="text-xs text-yellow-800 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    <strong>Reorder Alert:</strong> Stock below reorder point
-                  </p>
-                  {item.supplier?.contact && (
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Contact: {item.supplier.contact}
+              {item.currentStock <= (item.reorderPoint || item.minStock) &&
+                item.currentStock > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
+                    <p className="text-xs text-yellow-800 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      <strong>Reorder Alert:</strong> Stock below reorder point
                     </p>
-                  )}
-                </div>
-              )}
+                    {item.supplier?.contact && (
+                      <p className="text-xs text-yellow-700 mt-1">
+                        Contact: {item.supplier.contact}
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
 
             <div className="flex gap-2 mt-4">

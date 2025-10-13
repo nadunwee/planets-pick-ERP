@@ -140,11 +140,15 @@ export default function OrdersSales() {
     try {
       await deleteOrder(orderId);
       console.log("✅ Order deleted successfully");
+      message.success({
+        content: "🗑️ Order deleted successfully",
+        duration: 2,
+      });
       // Refresh the orders list
       fetchOrders();
     } catch (error) {
       console.error("❌ Error deleting order:", error);
-      alert("Failed to delete order. Please try again.");
+      message.error("Failed to delete order. Please try again.");
     }
   };
 
@@ -159,16 +163,40 @@ export default function OrdersSales() {
         // Update existing order
         await updateOrder(editingOrder._id || editingOrder.id!, data);
         console.log("✅ Order updated successfully");
+        message.success({
+          content: `✏️ Order "${data.orderId}" updated successfully`,
+          duration: 3,
+        });
       } else {
         // Create new order
         await createOrder(data);
         console.log("✅ Order created successfully");
+        // Show notification for new order
+        message.success({
+          content: (
+            <div>
+              <strong>✅ New Order Created!</strong>
+              <br />
+              <span className="text-sm">
+                Order #{data.orderId}
+                <br />
+                Total: LKR {data.totalAmount?.toLocaleString() || "0"} •{" "}
+                {data.items.length} item(s)
+              </span>
+            </div>
+          ),
+          duration: 5,
+          style: {
+            marginTop: "20px",
+          },
+        });
       }
       // Refresh the orders list after creation/update
       fetchOrders();
       setEditingOrder(null); // Reset editing state
     } catch (error) {
       console.error("❌ Error saving order:", error);
+      message.error("Failed to save order. Please try again.");
     }
   };
 
@@ -191,11 +219,19 @@ export default function OrdersSales() {
       await updateOrder(order._id || order.id!, updateData);
       console.log("✅ Order marked as processing");
 
+      // Show notification
+      message.success({
+        content: `🚀 Order ${
+          order.orderNumber || order.orderId
+        } is now being processed`,
+        duration: 3,
+      });
+
       // Refresh the orders list to show updated status
       fetchOrders();
     } catch (error) {
       console.error("❌ Error processing order:", error);
-      alert("Failed to process order. Please try again.");
+      message.error("Failed to process order. Please try again.");
     }
   };
 
@@ -287,7 +323,13 @@ export default function OrdersSales() {
       paymentFilter === "All" || order.paymentStatus === paymentFilter;
     const matchesApproval =
       approvalFilter === "All" || order.approvalStatus === approvalFilter;
-    return matchesSearch && matchesStatus && matchesPriority && matchesPayment && matchesApproval;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesPriority &&
+      matchesPayment &&
+      matchesApproval
+    );
   });
 
   console.log(filteredOrders);
@@ -351,8 +393,12 @@ export default function OrdersSales() {
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const paidOrders = orders.filter((o) => o.paymentStatus === "paid").length;
-  const pendingApprovals = orders.filter((o) => o.approvalStatus === "pending").length;
-  const shippedOrders = orders.filter((o) => o.status === "shipped" || o.status === "delivered").length;
+  const pendingApprovals = orders.filter(
+    (o) => o.approvalStatus === "pending"
+  ).length;
+  const shippedOrders = orders.filter(
+    (o) => o.status === "shipped" || o.status === "delivered"
+  ).length;
 
   return (
     <div className="p-4 space-y-6">
@@ -405,7 +451,7 @@ export default function OrdersSales() {
       </div>
 
       {/* AI Sales Assistant */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+      {/* <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
         <div className="flex items-center gap-3">
           <div className="bg-green-500 text-white p-2 rounded-lg">
             <Bot size={20} />
@@ -423,7 +469,7 @@ export default function OrdersSales() {
             View Analytics
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Sales Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -434,10 +480,10 @@ export default function OrdersSales() {
               <p className="text-2xl font-bold text-green-600">
                 LKR {totalRevenue.toLocaleString()}
               </p>
-              <p className="text-sm text-green-600 flex items-center gap-1">
+              {/* <p className="text-sm text-green-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +18.7% from last month
-              </p>
+              </p> */}
             </div>
             <DollarSign className="text-green-500" size={24} />
           </div>
@@ -447,10 +493,10 @@ export default function OrdersSales() {
             <div>
               <p className="text-sm text-gray-600">Total Orders</p>
               <p className="text-2xl font-bold text-blue-600">{totalOrders}</p>
-              <p className="text-sm text-blue-600 flex items-center gap-1">
+              {/* <p className="text-sm text-blue-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +15.5% from last week
-              </p>
+              </p> */}
             </div>
             <ShoppingCart className="text-blue-500" size={24} />
           </div>
@@ -462,10 +508,10 @@ export default function OrdersSales() {
               <p className="text-2xl font-bold text-purple-600">
                 LKR {Math.round(averageOrderValue).toLocaleString()}
               </p>
-              <p className="text-sm text-purple-600 flex items-center gap-1">
+              {/* <p className="text-sm text-purple-600 flex items-center gap-1">
                 <TrendingUp size={14} />
                 +8.2% from last month
-              </p>
+              </p> */}
             </div>
             <TrendingUp className="text-purple-500" size={24} />
           </div>
@@ -531,7 +577,7 @@ export default function OrdersSales() {
           {/* Filters */}
           <div className="flex flex-wrap gap-2 items-center">
             <Filter className="text-gray-400" size={16} />
-            
+
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -694,8 +740,12 @@ export default function OrdersSales() {
                             : "bg-yellow-100 text-yellow-700"
                         }`}
                       >
-                        {order.approvalStatus === "approved" && <CheckCircle size={10} className="inline mr-1" />}
-                        {order.approvalStatus === "rejected" && <XCircle size={10} className="inline mr-1" />}
+                        {order.approvalStatus === "approved" && (
+                          <CheckCircle size={10} className="inline mr-1" />
+                        )}
+                        {order.approvalStatus === "rejected" && (
+                          <XCircle size={10} className="inline mr-1" />
+                        )}
                         {order.approvalStatus}
                       </span>
                     )}
@@ -799,7 +849,9 @@ export default function OrdersSales() {
                       )}
                       {order.tax > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Tax ({order.taxRate}%):</span>
+                          <span className="text-gray-600">
+                            Tax ({order.taxRate}%):
+                          </span>
                           <span>LKR {order.tax.toLocaleString()}</span>
                         </div>
                       )}
@@ -810,7 +862,9 @@ export default function OrdersSales() {
                         </div>
                       )}
                       <div className="flex justify-between border-t pt-2">
-                        <span className="text-gray-600 font-medium">Total Amount:</span>
+                        <span className="text-gray-600 font-medium">
+                          Total Amount:
+                        </span>
                         <span className="font-bold text-lg text-green-600">
                           LKR {order.totalAmount.toLocaleString()}
                         </span>
@@ -831,19 +885,29 @@ export default function OrdersSales() {
                           {order.paymentMethod?.replace("-", " ") || "N/A"}
                         </span>
                       </div>
-                      {order.paymentRecords && order.paymentRecords.length > 0 && (
-                        <div className="border-t pt-2 mt-2">
-                          <p className="text-xs text-gray-600 font-medium mb-1">Payment History:</p>
-                          {order.paymentRecords.map((record, idx) => (
-                            <div key={idx} className="text-xs text-gray-600 flex justify-between">
-                              <span>{new Date(record.date).toLocaleDateString()}</span>
-                              <span>LKR {record.amount.toLocaleString()}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {order.paymentRecords &&
+                        order.paymentRecords.length > 0 && (
+                          <div className="border-t pt-2 mt-2">
+                            <p className="text-xs text-gray-600 font-medium mb-1">
+                              Payment History:
+                            </p>
+                            {order.paymentRecords.map((record, idx) => (
+                              <div
+                                key={idx}
+                                className="text-xs text-gray-600 flex justify-between"
+                              >
+                                <span>
+                                  {new Date(record.date).toLocaleDateString()}
+                                </span>
+                                <span>
+                                  LKR {record.amount.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                     </div>
-                    
+
                     <h4 className="font-medium mb-2 flex items-center gap-2 mt-4">
                       <Truck size={16} />
                       Shipping Info
@@ -858,15 +922,23 @@ export default function OrdersSales() {
                       {order.trackingNumber && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Tracking:</span>
-                          <span className="font-mono text-xs">{order.trackingNumber}</span>
+                          <span className="font-mono text-xs">
+                            {order.trackingNumber}
+                          </span>
                         </div>
                       )}
                       {order.shippingAddress && (
                         <div className="bg-gray-50 p-2 rounded text-xs">
                           <p className="font-medium mb-1">Shipping Address:</p>
                           <p>{order.shippingAddress.street}</p>
-                          <p>{order.shippingAddress.city}, {order.shippingAddress.state}</p>
-                          <p>{order.shippingAddress.zipCode}, {order.shippingAddress.country}</p>
+                          <p>
+                            {order.shippingAddress.city},{" "}
+                            {order.shippingAddress.state}
+                          </p>
+                          <p>
+                            {order.shippingAddress.zipCode},{" "}
+                            {order.shippingAddress.country}
+                          </p>
                         </div>
                       )}
                       {order.actualDelivery && (
@@ -890,14 +962,21 @@ export default function OrdersSales() {
                     </h4>
                     <div className="space-y-2">
                       {order.orderHistory.map((event, idx) => (
-                        <div key={idx} className="flex items-start gap-3 text-sm">
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 text-sm"
+                        >
                           <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
                               <div>
-                                <span className="font-medium capitalize">{event.status}</span>
+                                <span className="font-medium capitalize">
+                                  {event.status}
+                                </span>
                                 {event.updatedBy && (
-                                  <span className="text-gray-600 ml-2">by {event.updatedBy}</span>
+                                  <span className="text-gray-600 ml-2">
+                                    by {event.updatedBy}
+                                  </span>
                                 )}
                               </div>
                               <span className="text-gray-500 text-xs">
@@ -905,7 +984,9 @@ export default function OrdersSales() {
                               </span>
                             </div>
                             {event.notes && (
-                              <p className="text-gray-600 text-xs mt-1">{event.notes}</p>
+                              <p className="text-gray-600 text-xs mt-1">
+                                {event.notes}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -915,19 +996,28 @@ export default function OrdersSales() {
                 )}
 
                 {/* Approval Information */}
-                {order.approvalStatus && order.approvalStatus !== "pending" && order.approvedBy && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p className="text-sm text-blue-800 flex items-center gap-2">
-                      <CheckCircle size={14} />
-                      <strong>Approval:</strong> {order.approvalStatus} by {order.approvedBy}
-                      {order.approvalDate && ` on ${new Date(order.approvalDate).toLocaleDateString()}`}
-                    </p>
-                  </div>
-                )}
+                {order.approvalStatus &&
+                  order.approvalStatus !== "pending" &&
+                  order.approvedBy && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-sm text-blue-800 flex items-center gap-2">
+                        <CheckCircle size={14} />
+                        <strong>Approval:</strong> {order.approvalStatus} by{" "}
+                        {order.approvedBy}
+                        {order.approvalDate &&
+                          ` on ${new Date(
+                            order.approvalDate
+                          ).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                  )}
 
                 {order.notes && (
                   <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start gap-2">
-                    <MessageSquare size={14} className="text-yellow-800 mt-0.5" />
+                    <MessageSquare
+                      size={14}
+                      className="text-yellow-800 mt-0.5"
+                    />
                     <p className="text-sm text-yellow-800">
                       <strong>Notes:</strong> {order.notes}
                     </p>
@@ -944,7 +1034,11 @@ export default function OrdersSales() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => setExpandedOrder(expandedOrder === order._id ? null : order._id)}
+                      onClick={() =>
+                        setExpandedOrder(
+                          expandedOrder === order._id ? null : order._id
+                        )
+                      }
                       className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition flex items-center gap-1"
                       title="View Details"
                     >
