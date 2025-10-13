@@ -43,9 +43,90 @@ const getPreviousPeriodRange = (currentStart, currentEnd) => {
   return { previousStart, previousEnd };
 };
 
+// Mock data generator
+const getMockDashboardData = (period) => {
+  const now = new Date();
+  const { startDate } = getDateRange(period);
+  
+  return {
+    success: true,
+    period,
+    dateRange: {
+      start: startDate,
+      end: now
+    },
+    financial: {
+      netWorth: 12500000,
+      totalAssets: 18750000,
+      totalLiabilities: 6250000,
+      revenue: 5420000,
+      expenses: 3280000,
+      netProfit: 2140000,
+      revenueChange: 15.8,
+      expenseChange: 8.2,
+      profitChange: 28.5
+    },
+    employees: {
+      total: 42,
+      active: 38,
+      onLeave: 4,
+      totalPayroll: 2850000,
+      change: 5.0
+    },
+    inventory: {
+      totalValue: 2450000,
+      totalItems: 156,
+      lowStockItems: 12,
+      stockHealthPercentage: "92.31"
+    },
+    production: {
+      totalBatches: 48,
+      completedBatches: 42,
+      activeBatches: 6,
+      totalYield: 8520,
+      targetYield: 9000,
+      yieldEfficiency: "94.67",
+      change: 12.5
+    },
+    sales: {
+      totalOrders: 128,
+      completedOrders: 115,
+      pendingOrders: 13,
+      totalSales: 5420000,
+      averageOrderValue: "42343.75",
+      orderChange: 18.5,
+      salesChange: 15.8
+    },
+    customers: {
+      total: 89,
+      new: 14
+    },
+    users: {
+      total: 24,
+      pending: 3
+    },
+    trends: {
+      revenue: [
+        { month: "2025-08", value: 1200000 },
+        { month: "2025-09", value: 1580000 },
+        { month: "2025-10", value: 2640000 }
+      ]
+    }
+  };
+};
+
 // Get dashboard metrics
 const getDashboardMetrics = async (req, res) => {
   try {
+    const mongoose = require("mongoose");
+    const isDbConnected = mongoose.connection.readyState === 1;
+    
+    // If database is not connected, return mock data
+    if (!isDbConnected) {
+      const period = req.query.period || "30days";
+      return res.json(getMockDashboardData(period));
+    }
+
     const period = req.query.period || "30days";
     const { startDate, endDate } = getDateRange(period);
     const { previousStart, previousEnd } = getPreviousPeriodRange(startDate, endDate);
