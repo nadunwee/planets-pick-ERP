@@ -20,6 +20,16 @@ import {
   Edit,
   Download,
   Trash2,
+  CheckCircle,
+  XCircle,
+  Truck,
+  FileText,
+  CreditCard,
+  Calendar,
+  BarChart3,
+  History,
+  Tag,
+  MessageSquare,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
 import OrderFormModal from "@/components/order-sales/OrderFormModal";
@@ -46,6 +56,10 @@ export default function OrdersSales() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedPriority, setSelectedPriority] = useState("All");
   const [dateRange, setDateRange] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("All");
+  const [approvalFilter, setApprovalFilter] = useState("All");
+  const [viewMode, setViewMode] = useState<"detailed" | "compact">("detailed");
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [userLevel, setUserLevel] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -257,6 +271,8 @@ export default function OrdersSales() {
     "cancelled",
   ];
   const priorities = ["All", "low", "medium", "high", "urgent"];
+  const paymentStatuses = ["All", "paid", "unpaid", "partial", "overdue"];
+  const approvalStatuses = ["All", "pending", "approved", "rejected"];
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -267,7 +283,11 @@ export default function OrdersSales() {
       selectedStatus === "All" || order.status === selectedStatus;
     const matchesPriority =
       selectedPriority === "All" || order.priority === selectedPriority;
-    return matchesSearch && matchesStatus && matchesPriority;
+    const matchesPayment =
+      paymentFilter === "All" || order.paymentStatus === paymentFilter;
+    const matchesApproval =
+      approvalFilter === "All" || order.approvalStatus === approvalFilter;
+    return matchesSearch && matchesStatus && matchesPriority && matchesPayment && matchesApproval;
   });
 
   console.log(filteredOrders);
@@ -330,6 +350,9 @@ export default function OrdersSales() {
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const paidOrders = orders.filter((o) => o.paymentStatus === "paid").length;
+  const pendingApprovals = orders.filter((o) => o.approvalStatus === "pending").length;
+  const shippedOrders = orders.filter((o) => o.status === "shipped" || o.status === "delivered").length;
 
   return (
     <div className="p-4 space-y-6">
@@ -403,7 +426,7 @@ export default function OrdersSales() {
       </div>
 
       {/* Sales Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="flex items-center justify-between">
             <div>
@@ -459,11 +482,35 @@ export default function OrdersSales() {
             <AlertTriangle className="text-yellow-500" size={24} />
           </div>
         </div>
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Payment Status</p>
+              <p className="text-2xl font-bold text-green-600">
+                {paidOrders}/{totalOrders}
+              </p>
+              <p className="text-sm text-gray-600">Paid orders</p>
+            </div>
+            <CreditCard className="text-green-500" size={24} />
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Shipped/Delivered</p>
+              <p className="text-2xl font-bold text-indigo-600">
+                {shippedOrders}
+              </p>
+              <p className="text-sm text-gray-600">Fulfilled orders</p>
+            </div>
+            <Truck className="text-indigo-500" size={24} />
+          </div>
+        </div>
       </div>
 
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow border">
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
@@ -482,28 +529,27 @@ export default function OrdersSales() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2">
-              <Filter className="text-gray-400" size={16} />
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status === "All"
-                      ? "All Status"
-                      : status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Filter className="text-gray-400" size={16} />
+            
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+            >
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "All"
+                    ? "All Status"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
 
             <select
               value={selectedPriority}
               onChange={(e) => setSelectedPriority(e.target.value)}
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
             >
               {priorities.map((priority) => (
                 <option key={priority} value={priority}>
@@ -515,15 +561,69 @@ export default function OrdersSales() {
             </select>
 
             <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value)}
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+            >
+              {paymentStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "All"
+                    ? "All Payment"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={approvalFilter}
+              onChange={(e) => setApprovalFilter(e.target.value)}
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+            >
+              {approvalStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "All"
+                    ? "All Approval"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
             </select>
+
+            {/* View Mode Toggle */}
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => setViewMode("detailed")}
+                className={`px-3 py-2 rounded-lg text-sm transition ${
+                  viewMode === "detailed"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Detailed
+              </button>
+              <button
+                onClick={() => setViewMode("compact")}
+                className={`px-3 py-2 rounded-lg text-sm transition ${
+                  viewMode === "compact"
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Compact
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -545,16 +645,31 @@ export default function OrdersSales() {
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <h3 className="font-semibold text-lg">
-                        {order.orderNumber || order.orderId}
-                      </h3>
-                      <p className="text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">
+                          {order.orderNumber || order.orderId}
+                        </h3>
+                        {order.trackingNumber && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex items-center gap-1">
+                            <Truck size={10} />
+                            Tracking: {order.trackingNumber}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 flex items-center gap-2">
+                        <Calendar size={12} />
                         Ordered on {order.orderDate || order.orderedOn} •
                         Expected: {order.expectedDelivery || order.expectedDate}
                       </p>
+                      {order.actualDelivery && (
+                        <p className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle size={12} />
+                          Delivered: {order.actualDelivery}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(
                         order.priority
@@ -569,6 +684,21 @@ export default function OrdersSales() {
                     >
                       {order.status}
                     </span>
+                    {order.approvalStatus && (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          order.approvalStatus === "approved"
+                            ? "bg-green-100 text-green-700"
+                            : order.approvalStatus === "rejected"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {order.approvalStatus === "approved" && <CheckCircle size={10} className="inline mr-1" />}
+                        {order.approvalStatus === "rejected" && <XCircle size={10} className="inline mr-1" />}
+                        {order.approvalStatus}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -652,12 +782,36 @@ export default function OrdersSales() {
                   <div>
                     <h4 className="font-medium mb-2 flex items-center gap-2">
                       <DollarSign size={16} />
-                      Payment & Shipping
+                      Financial Details
                     </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Amount:</span>
-                        <span className="font-bold text-lg">
+                    <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
+                      {order.subtotal && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Subtotal:</span>
+                          <span>LKR {order.subtotal.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {order.discount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Discount ({order.discountType}):</span>
+                          <span>-LKR {order.discount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {order.tax > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tax ({order.taxRate}%):</span>
+                          <span>LKR {order.tax.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {order.shippingCost > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Shipping:</span>
+                          <span>LKR {order.shippingCost.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-gray-600 font-medium">Total Amount:</span>
+                        <span className="font-bold text-lg text-green-600">
                           LKR {order.totalAmount.toLocaleString()}
                         </span>
                       </div>
@@ -677,12 +831,44 @@ export default function OrdersSales() {
                           {order.paymentMethod?.replace("-", " ") || "N/A"}
                         </span>
                       </div>
+                      {order.paymentRecords && order.paymentRecords.length > 0 && (
+                        <div className="border-t pt-2 mt-2">
+                          <p className="text-xs text-gray-600 font-medium mb-1">Payment History:</p>
+                          {order.paymentRecords.map((record, idx) => (
+                            <div key={idx} className="text-xs text-gray-600 flex justify-between">
+                              <span>{new Date(record.date).toLocaleDateString()}</span>
+                              <span>LKR {record.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h4 className="font-medium mb-2 flex items-center gap-2 mt-4">
+                      <Truck size={16} />
+                      Shipping Info
+                    </h4>
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Shipping:</span>
                         <span className="capitalize">
                           {order.shippingMethod || "N/A"}
                         </span>
                       </div>
+                      {order.trackingNumber && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tracking:</span>
+                          <span className="font-mono text-xs">{order.trackingNumber}</span>
+                        </div>
+                      )}
+                      {order.shippingAddress && (
+                        <div className="bg-gray-50 p-2 rounded text-xs">
+                          <p className="font-medium mb-1">Shipping Address:</p>
+                          <p>{order.shippingAddress.street}</p>
+                          <p>{order.shippingAddress.city}, {order.shippingAddress.state}</p>
+                          <p>{order.shippingAddress.zipCode}, {order.shippingAddress.country}</p>
+                        </div>
+                      )}
                       {order.actualDelivery && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Delivered:</span>
@@ -695,8 +881,53 @@ export default function OrdersSales() {
                   </div>
                 </div>
 
+                {/* Order Timeline/History */}
+                {order.orderHistory && order.orderHistory.length > 0 && (
+                  <div className="mt-4 border-t pt-4">
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <History size={16} />
+                      Order Timeline
+                    </h4>
+                    <div className="space-y-2">
+                      {order.orderHistory.map((event, idx) => (
+                        <div key={idx} className="flex items-start gap-3 text-sm">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="font-medium capitalize">{event.status}</span>
+                                {event.updatedBy && (
+                                  <span className="text-gray-600 ml-2">by {event.updatedBy}</span>
+                                )}
+                              </div>
+                              <span className="text-gray-500 text-xs">
+                                {new Date(event.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                            {event.notes && (
+                              <p className="text-gray-600 text-xs mt-1">{event.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Approval Information */}
+                {order.approvalStatus && order.approvalStatus !== "pending" && order.approvedBy && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm text-blue-800 flex items-center gap-2">
+                      <CheckCircle size={14} />
+                      <strong>Approval:</strong> {order.approvalStatus} by {order.approvedBy}
+                      {order.approvalDate && ` on ${new Date(order.approvalDate).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                )}
+
                 {order.notes && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded flex items-start gap-2">
+                    <MessageSquare size={14} className="text-yellow-800 mt-0.5" />
                     <p className="text-sm text-yellow-800">
                       <strong>Notes:</strong> {order.notes}
                     </p>
@@ -711,7 +942,22 @@ export default function OrdersSales() {
                       ? new Date(order.updatedAt).toLocaleString()
                       : "N/A"}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setExpandedOrder(expandedOrder === order._id ? null : order._id)}
+                      className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition flex items-center gap-1"
+                      title="View Details"
+                    >
+                      <FileText size={14} />
+                      {expandedOrder === order._id ? "Hide" : "Details"}
+                    </button>
+                    <button
+                      className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition flex items-center gap-1"
+                      title="Generate Invoice"
+                    >
+                      <FileText size={14} />
+                      Invoice
+                    </button>
                     <button
                       onClick={() => handleEditOrder(order)}
                       className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 transition flex items-center gap-1"
