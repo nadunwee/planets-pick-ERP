@@ -5,6 +5,7 @@ export type Report = {
   id: string;
   title: string;
   category: string;
+  format?: string;
   date: string;
   fileUrl: string;
   downloadUrl?: string;
@@ -50,14 +51,16 @@ export const getReportsDashboard = async (): Promise<Report[]> => {
   }
 };
 
-
 // PDF Generation functions
 export const generateProcurementSummaryPDF = async (params?: {
   startDate?: string;
   endDate?: string;
 }): Promise<{ success: boolean; downloadUrl?: string; message?: string }> => {
   try {
-    const { data } = await api.post("/reports/generate/procurement-summary", params);
+    const { data } = await api.post(
+      "/reports/generate/procurement-summary",
+      params
+    );
     return data as { success: boolean; downloadUrl?: string; message?: string };
   } catch (error) {
     console.error("Error generating procurement summary PDF:", error);
@@ -65,7 +68,11 @@ export const generateProcurementSummaryPDF = async (params?: {
   }
 };
 
-export const generateSupplierPerformancePDF = async (): Promise<{ success: boolean; downloadUrl?: string; message?: string }> => {
+export const generateSupplierPerformancePDF = async (): Promise<{
+  success: boolean;
+  downloadUrl?: string;
+  message?: string;
+}> => {
   try {
     const { data } = await api.post("/reports/generate/supplier-performance");
     return data as { success: boolean; downloadUrl?: string; message?: string };
@@ -81,10 +88,41 @@ export const generatePurchaseOrdersPDF = async (params?: {
   status?: string;
 }): Promise<{ success: boolean; downloadUrl?: string; message?: string }> => {
   try {
-    const { data } = await api.post("/reports/generate/purchase-orders", params);
+    const { data } = await api.post(
+      "/reports/generate/purchase-orders",
+      params
+    );
     return data as { success: boolean; downloadUrl?: string; message?: string };
   } catch (error) {
     console.error("Error generating purchase orders PDF:", error);
+    return { success: false, message: "Failed to generate PDF" };
+  }
+};
+
+export const generateInventoryReportPDF = async (): Promise<{
+  success: boolean;
+  downloadUrl?: string;
+  message?: string;
+}> => {
+  try {
+    const { data } = await api.post("/reports/generate/inventory-report");
+    return data as { success: boolean; downloadUrl?: string; message?: string };
+  } catch (error) {
+    console.error("Error generating inventory report PDF:", error);
+    return { success: false, message: "Failed to generate PDF" };
+  }
+};
+
+export const generateOrderReportPDF = async (): Promise<{
+  success: boolean;
+  downloadUrl?: string;
+  message?: string;
+}> => {
+  try {
+    const { data } = await api.post("/reports/generate/order-report");
+    return data as { success: boolean; downloadUrl?: string; message?: string };
+  } catch (error) {
+    console.error("Error generating order report PDF:", error);
     return { success: false, message: "Failed to generate PDF" };
   }
 };

@@ -24,7 +24,7 @@ import {
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getCurrentUser, canManageUsers } from "@/utils/userAuth";
+import { getCurrentUser } from "@/utils/userAuth";
 
 // For employees already in system
 interface Employee {
@@ -130,6 +130,15 @@ interface PayrollRecord {
   netSalary: number;
   status: "pending" | "processed" | "paid";
   paymentDate?: string;
+}
+
+type ChangeRequestAction = "create" | "update" | "delete";
+
+interface EmployeeChangeRequestPayload {
+  actionType: ChangeRequestAction;
+  employeeId?: string | null;
+  payload?: Record<string, unknown>;
+  reason?: string | null;
 }
 const initialEmployees: Employee[] = [
   {
@@ -448,14 +457,22 @@ const payrollRecords: PayrollRecord[] = [
 export default function Employees() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
+  const isAdmin = currentUser?.level === "L4";
+  const isHRDirector =
+    currentUser?.level === "L2" && currentUser.department === "Human Resources";
+  const isHRManagerL1 =
+    currentUser?.level === "L1" && currentUser.department === "Human Resources";
+  const canAccessEmployees = isAdmin || isHRDirector || isHRManagerL1;
 
-  // Redirect if user doesn't have permission (only L4 can access)
+  // Redirect if user doesn't have permission (admins, HR directors, or HR managers only)
   useEffect(() => {
-    if (!currentUser || !canManageUsers(currentUser.level)) {
-      alert("Access Denied: Only administrators can manage employees");
+    if (!canAccessEmployees) {
+      alert(
+        "Access Denied: Only administrators or HR directors can manage employees"
+      );
       navigate("/dashboard");
     }
-  }, [currentUser, navigate]);
+  }, [canAccessEmployees, navigate]);
 
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [searchTerm, setSearchTerm] = useState("");
@@ -609,8 +626,6 @@ export default function Employees() {
 
   const handleAddEmployee = async () => {
     try {
-      const employeeId = `EMP${String(employees.length + 1).padStart(3, "0")}`;
-
       const token = localStorage.getItem("token");
       if (!token) {
         alert("Session expired. Please log in again.");
@@ -618,7 +633,6 @@ export default function Employees() {
         return;
       }
 
-      // Prepare employee data for backend
       const employeeData = {
         name: newEmployee.name,
         email: newEmployee.email,
@@ -635,11 +649,59 @@ export default function Employees() {
         skills: newEmployee.skills,
         benefits: newEmployee.benefits,
         certifications: newEmployee.certifications,
-        createUser: newEmployee.createUser, // This tells backend to create user
+        createUser: newEmployee.createUser,
         overtimeEligible: newEmployee.overtimeEligible,
       };
 
-      // Send POST request to backend
+      if (isHRManagerL1) {
+        const reason = window.prompt(
+          "Provide a note for your HR Director (optional):",
+          ""
+        );
+
+        if (reason === null) {
+          return;
+        }
+
+        const requestResponse = await submitEmployeeChangeRequest(token, {
+          actionType: "create",
+          payload: employeeData,
+          reason,
+        });
+
+        if (requestResponse) {
+          const feedbackMessage =
+            requestResponse.warning ||
+            requestResponse.message ||
+            "Employee change request submitted for approval.";
+          alert(feedbackMessage);
+          setShowAddModal(false);
+          setNewEmployee({
+            name: "",
+            email: "",
+            phone: "",
+            position: "",
+            department: "Production",
+            salary: "",
+            shift: "morning",
+            emergencyContact: "",
+            address: "",
+            contractType: "full-time",
+            workLocation: "",
+            workingHours: "40",
+            overtimeEligible: true,
+            createUser: false,
+            skills: "",
+            benefits: "",
+            certifications: "",
+          });
+        }
+
+        return;
+      }
+
+      const employeeId = `EMP${String(employees.length + 1).padStart(3, "0")}`;
+
       const response = await fetch("http://localhost:4000/api/employees", {
         method: "POST",
         headers: {
@@ -660,7 +722,6 @@ export default function Employees() {
         throw new Error(data.error || "Failed to add employee");
       }
 
-      // Update local state with the employee returned from backend
       const newEmployeeForUI: Employee = {
         ...data.employee,
         id: data.employee._id,
@@ -682,7 +743,6 @@ export default function Employees() {
 
       setEmployees((prev) => [...prev, newEmployeeForUI]);
 
-      // Show appropriate message
       if (data.message) {
         alert(data.message);
       } else if (data.warning) {
@@ -691,7 +751,6 @@ export default function Employees() {
         alert("Employee added successfully!");
       }
 
-      // Reset form and close modal
       setShowAddModal(false);
       setNewEmployee({
         name: "",
@@ -707,7 +766,7 @@ export default function Employees() {
         workLocation: "",
         workingHours: "40",
         overtimeEligible: true,
-        createUser: false, // ✅ added this
+        createUser: false,
         skills: "",
         benefits: "",
         certifications: "",
@@ -720,6 +779,53 @@ export default function Employees() {
   // --- State for checkbox ---
   const [createUserChecked, setCreateUserChecked] = useState(false);
   const [createUserDisabled, setCreateUserDisabled] = useState(false);
+
+  const submitEmployeeChangeRequest = async (
+    token: string,
+    { actionType, employeeId, payload, reason }: EmployeeChangeRequestPayload
+  ) => {
+    const requestBody: Record<string, unknown> = {
+      actionType,
+    };
+
+    if (employeeId) {
+      requestBody.employeeId = employeeId;
+    }
+
+    if (payload && Object.keys(payload).length > 0) {
+      requestBody.payload = payload;
+    }
+
+    const trimmedReason = reason?.trim();
+    if (trimmedReason) {
+      requestBody.reason = trimmedReason;
+    }
+
+    const response = await fetch(
+      "http://localhost:4000/api/employees/requests",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        alert(data.error || "Unauthorized. Please log in again.");
+        navigate("/login");
+        return null;
+      }
+      throw new Error(data.error || "Failed to submit change request");
+    }
+
+    return data as { message?: string; warning?: string } | null;
+  };
 
   // --- Open Edit Modal ---
   const handleEditEmployee = (employee: Employee) => {
@@ -762,6 +868,38 @@ export default function Employees() {
         ...editingEmployee,
         createUser: createUserChecked && !editingEmployee.userId, // Only set if not already a user
       };
+
+      if (isHRManagerL1) {
+        const reason = window.prompt(
+          "Provide a note for your HR Director (optional):",
+          ""
+        );
+
+        if (reason === null) {
+          return;
+        }
+
+        const requestResponse = await submitEmployeeChangeRequest(token, {
+          actionType: "update",
+          employeeId,
+          payload: updateData,
+          reason,
+        });
+
+        if (requestResponse) {
+          const feedbackMessage =
+            requestResponse.warning ||
+            requestResponse.message ||
+            "Employee change request submitted for approval.";
+          alert(feedbackMessage);
+          setShowEditModal(false);
+          setEditingEmployee(null);
+          setCreateUserChecked(false);
+          setCreateUserDisabled(false);
+        }
+
+        return;
+      }
 
       // Send PUT request to backend
       const response = await fetch(
@@ -839,6 +977,35 @@ export default function Employees() {
       if (!token) {
         alert("Session expired. Please log in again.");
         navigate("/login");
+        return;
+      }
+
+      if (isHRManagerL1) {
+        const reason = window.prompt(
+          "Provide a note for your HR Director (optional):",
+          ""
+        );
+
+        if (reason === null) {
+          return;
+        }
+
+        const requestResponse = await submitEmployeeChangeRequest(token, {
+          actionType: "delete",
+          employeeId,
+          reason,
+        });
+
+        if (requestResponse) {
+          const feedbackMessage =
+            requestResponse.warning ||
+            requestResponse.message ||
+            "Employee change request submitted for approval.";
+          alert(feedbackMessage);
+          setShowDeleteModal(false);
+          setDeletingEmployee(null);
+        }
+
         return;
       }
 

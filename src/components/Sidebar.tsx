@@ -13,7 +13,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
-import React, { use, useState } from "react";
+import { useState } from "react";
 import type { JSX } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -121,17 +121,32 @@ export function Sidebar() {
     filteredMenuItems = menuItems.filter((item) => !HR.includes(item.name));
   }
 
-  // Filter based on user level - only L4 can access Administrator and Employees
+  // Restrict sensitive sections, but allow HR directors (L2) into Employees
   if (userlevel !== "L4") {
-    filteredMenuItems = filteredMenuItems.filter(
-      (item) => item.name !== "Administrator" && item.name !== "Employees"
-    );
+    filteredMenuItems = filteredMenuItems.filter((item) => {
+      if (item.name === "Administrator") {
+        return false;
+      }
+      if (item.name === "Employees") {
+        return (
+          (userlevel === "L2" || userlevel === "L1") &&
+          userDepartment === "Human Resources"
+        );
+      }
+      return true;
+    });
   }
 
   // Filter Reports for L1 - they cannot view reports
   if (userlevel === "L1") {
     filteredMenuItems = filteredMenuItems.filter(
       (item) => item.name !== "Reports"
+    );
+  }
+
+  if (userlevel === "L1" && userDepartment === "Human Resources") {
+    filteredMenuItems = filteredMenuItems.filter(
+      (item) => item.name !== "Warehouse"
     );
   }
 

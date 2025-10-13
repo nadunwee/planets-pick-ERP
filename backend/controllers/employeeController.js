@@ -2,9 +2,21 @@ const Employee = require("../models/employeeModel.js");
 const User = require("../models/userModel.js");
 const mongoose = require("mongoose");
 
+const isHRDepartment = (department = "") => {
+  const normalized = department.trim().toLowerCase();
+  return normalized === "human resources" || normalized === "hr";
+};
+
 // Add a new employee
 async function addEmployee(req, res) {
   try {
+    const user = req.user;
+    if (user && user.level === "L2" && !isHRDepartment(user.department)) {
+      return res.status(403).json({
+        error: "Only HR Directors can add employees at director level",
+      });
+    }
+
     const employeeData = req.body;
 
     // Create employee first
@@ -57,6 +69,13 @@ async function updateEmployee(req, res) {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const user = req.user;
+
+    if (user && user.level === "L2" && !isHRDepartment(user.department)) {
+      return res.status(403).json({
+        error: "Only HR Directors can update employees at director level",
+      });
+    }
 
     if (!id) return res.status(400).json({ error: "Missing employee ID" });
 
@@ -122,7 +141,7 @@ async function updateEmployee(req, res) {
           user.department = employee.department || user.department;
           user.role = employee.position || user.role;
           await user.save();
-          
+
           return res.status(200).json({
             employee,
             message: "Employee and user account updated successfully",
@@ -148,6 +167,13 @@ async function updateEmployee(req, res) {
 async function deleteEmployee(req, res) {
   try {
     const { id } = req.params;
+    const user = req.user;
+
+    if (user && user.level === "L2" && !isHRDepartment(user.department)) {
+      return res.status(403).json({
+        error: "Only HR Directors can delete employees at director level",
+      });
+    }
 
     if (!id) return res.status(400).json({ error: "Missing employee ID" });
 
@@ -216,4 +242,3 @@ module.exports = {
   updateEmployee,
   deleteEmployee,
 };
- 

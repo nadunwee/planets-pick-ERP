@@ -13,6 +13,7 @@ const REPORT_DEFINITIONS = [
     title: "Monthly Procurement Summary",
     category: "Procurement",
     filename: "procurement-summary.pdf",
+    format: "pdf",
     description: "Comprehensive analysis of monthly procurement activities",
   },
   {
@@ -20,6 +21,7 @@ const REPORT_DEFINITIONS = [
     title: "Supplier Performance Report",
     category: "Suppliers",
     filename: "supplier-performance.pdf",
+    format: "pdf",
     description: "Performance metrics and rankings for all suppliers",
   },
   {
@@ -27,6 +29,7 @@ const REPORT_DEFINITIONS = [
     title: "Purchase Order Analysis",
     category: "Orders",
     filename: "purchase-orders.pdf",
+    format: "pdf",
     description: "Detailed analysis of purchase orders and trends",
   },
   {
@@ -34,6 +37,7 @@ const REPORT_DEFINITIONS = [
     title: "Inventory Status Report",
     category: "Inventory",
     filename: "inventory-report.pdf",
+    format: "pdf",
     description: "Current stock levels, values, and statuses.",
   },
   {
@@ -41,6 +45,7 @@ const REPORT_DEFINITIONS = [
     title: "Order Summary Report",
     category: "Orders",
     filename: "order-report.pdf",
+    format: "pdf",
     description: "A summary of all orders.",
   },
 ];
@@ -113,6 +118,7 @@ exports.getReportsDashboard = async (req, res) => {
           id: report.id,
           title: report.title,
           category: report.category,
+          format: report.format || "pdf",
           date: stats.mtime.toISOString().split("T")[0],
           fileUrl: `/api/reports/view/${report.id}`,
           downloadUrl: `/api/reports/download/${report.id}`,
@@ -126,6 +132,7 @@ exports.getReportsDashboard = async (req, res) => {
           id: report.id,
           title: report.title,
           category: report.category,
+          format: report.format || "pdf",
           date: new Date().toISOString().split("T")[0],
           fileUrl: `/api/reports/view/${report.id}`,
           downloadUrl: `/api/reports/download/${report.id}`,
