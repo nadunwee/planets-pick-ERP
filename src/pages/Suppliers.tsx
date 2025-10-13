@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { message } from "antd";
 import { Plus, Users, AlertCircle, FileText, ShoppingCart } from "lucide-react";
 import SupplierForm from "../components/suppliers/SupplierForm";
 import type { Supplier as SupplierType } from "../types";
@@ -21,6 +23,7 @@ import {
 const categories = ["All", "Raw Materials", "Packaging", "Finished Products"];
 
 export default function Procurement() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
     "suppliers" | "purchaseOrders" | "reports"
   >("suppliers");
@@ -48,19 +51,32 @@ export default function Procurement() {
     const loadSuppliers = async () => {
       try {
         const data = await fetchSuppliers();
-        const normalized = data.items.map((s: SupplierType) => ({
+        const items = Array.isArray((data as any)?.items)
+          ? ((data as any).items as SupplierType[])
+          : Array.isArray(data)
+          ? (data as SupplierType[])
+          : [];
+        const normalized = items.map((s: SupplierType) => ({
           ...s,
           _id: s._id,
         }));
         setSuppliers(normalized);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching suppliers:", err);
+        if (err?.status === 401) {
+          message.error(
+            err.message || "Your session expired. Please log in again."
+          );
+          navigate("/login");
+        } else {
+          message.error(err?.message || "Failed to load suppliers.");
+        }
       } finally {
         setLoading(false);
       }
     };
     loadSuppliers();
-  }, []);
+  }, [navigate]);
 
   // Filters
   const filteredSuppliers = suppliers.filter((s) => {
@@ -96,8 +112,17 @@ export default function Procurement() {
       try {
         await deleteSupplier(_id);
         setSuppliers((prev) => prev.filter((s) => s._id !== _id));
+        message.success("Supplier deleted successfully");
       } catch (err) {
         console.error("Error deleting supplier:", err);
+        if ((err as any)?.status === 401) {
+          message.error(
+            (err as any).message || "Unauthorized. Please log in again."
+          );
+          navigate("/login");
+        } else {
+          message.error((err as any)?.message || "Failed to delete supplier.");
+        }
       }
     }
   };
@@ -109,14 +134,24 @@ export default function Procurement() {
         setSuppliers((prev) =>
           prev.map((s) => (s._id === updated._id ? updated : s))
         );
+        message.success("Supplier updated successfully");
       } else {
         const created = await createSupplier(data);
         setSuppliers((prev) => [...prev, created]);
+        message.success("Supplier created successfully");
       }
       setShowForm(false);
       setEditingSupplier(null);
     } catch (err) {
       console.error("Error saving supplier:", err);
+      if ((err as any)?.status === 401) {
+        message.error(
+          (err as any).message || "Unauthorized. Please log in again."
+        );
+        navigate("/login");
+      } else {
+        message.error((err as any)?.message || "Failed to save supplier.");
+      }
       throw err; // Re-throw to let the form handle the error
     }
   };

@@ -2,29 +2,89 @@ import type { Supplier } from "../types";
 
 const API_URL = "http://localhost:4000/api";
 
-export const fetchSuppliers = async () => {
-  const res = await fetch(`${API_URL}/suppliers`);
-  return res.json();
+type AuthFetchOptions = RequestInit & {
+  headers?: Record<string, string>;
 };
 
-export const createSupplier = async (supplier: Supplier) => {
-  const res = await fetch(`${API_URL}/suppliers`, {
+type ApiError = Error & {
+  status?: number;
+  data?: unknown;
+};
+
+const parseJson = async (res: Response) => {
+  try {
+    return await res.json();
+  } catch (error) {
+    return null;
+  }
+};
+
+const authFetch = async <T>(
+  endpoint: string,
+  options: AuthFetchOptions = {}
+): Promise<T> => {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const headers: Record<string, string> = {
+    ...(options.headers || {}),
+  };
+
+  if (options.body && !(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  const data = await parseJson(response);
+
+  if (!response.ok) {
+    const message =
+      (data as any)?.error ||
+      (data as any)?.message ||
+      response.statusText ||
+      "Request failed";
+    const error = new Error(message) as ApiError;
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data as T;
+};
+
+export const fetchSuppliers = () => {
+  return authFetch<{
+    items: Supplier[];
+    total: number;
+    page: number;
+    pages: number;
+  }>("/suppliers");
+};
+
+export const createSupplier = (supplier: Supplier) => {
+  return authFetch<Supplier>("/suppliers", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(supplier),
   });
-  return res.json();
 };
 
-export const updateSupplier = async (id: string, supplier: Supplier) => {
-  const res = await fetch(`${API_URL}/suppliers/${id}`, {
+export const updateSupplier = (id: string, supplier: Supplier) => {
+  return authFetch<Supplier>(`/suppliers/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(supplier),
   });
-  return res.json();
 };
 
-export const deleteSupplier = async (id: string) => {
-  await fetch(`${API_URL}/suppliers/${id}`, { method: "DELETE" });
+export const deleteSupplier = (id: string) => {
+  return authFetch<{ message: string }>(`/suppliers/${id}`, {
+    method: "DELETE",
+  });
 };
