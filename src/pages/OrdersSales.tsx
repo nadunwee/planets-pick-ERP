@@ -507,8 +507,6 @@ export default function OrdersSales() {
             Refresh
           </button>
         </div>
-          </button>
-        </div>
       </div>
 
       {/* AI Sales Assistant */}
