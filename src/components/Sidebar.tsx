@@ -135,6 +135,12 @@ export function Sidebar() {
     );
   }
 
+  if (userlevel === "L2") {
+    filteredMenuItems = filteredMenuItems.filter(
+      (item) => item.name !== "Inventory"
+    );
+  }
+
   // Filter Finance for non-finance users (only L3 and L4)
   if (userlevel !== "L3" && userlevel !== "L4") {
     filteredMenuItems = filteredMenuItems.filter(
