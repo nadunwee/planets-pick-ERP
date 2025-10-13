@@ -19,7 +19,7 @@ This document details the implementation of a four-level user access control sys
 ### Level 2 (L2) - Director
 **Permissions:**
 - All L1 permissions
-- Can approve purchase orders and other submissions
+- Can approve purchase orders and other submissions from their department
 - Can view and download reports relevant to their division/department
 - Can delete entries (suppliers, customers, orders, production batches)
 - Can mark purchase orders as delivered
@@ -27,15 +27,22 @@ This document details the implementation of a four-level user access control sys
   - View all reports (only division-specific)
   - Access Finance module
   - Manage users or employees
+  - Approve transactions (finance is L4 only)
 
 ### Level 3 (L3) - Finance Manager
 **Permissions:**
-- All L1 and L2 permissions
-- Can view and download ALL reports (not restricted by division)
+- All L1 permissions (create entries)
+- Can view and download ALL reports EXCEPT Finance reports (Finance reports are L4 only)
 - Can access Finance module (transactions, accounts, budgets, assets/liabilities)
+- Can add transactions (requires L4 approval before finalization)
 - Can generate invoices
 - Can use Finance AI predictions
 - **Cannot:**
+  - Approve purchase orders or other department submissions (only L2 and L4 can approve)
+  - Delete suppliers, customers, orders, or production batches (only L2 and L4 can delete)
+  - Mark purchase orders as delivered (only L2 and L4 can)
+  - View or download Finance reports (L4 only)
+  - Approve transactions (L4 only)
   - Add or delete users
   - Add or delete employees
   - Approve user accounts
@@ -43,6 +50,11 @@ This document details the implementation of a four-level user access control sys
 ### Level 4 (L4) - Admin/Finance Director
 **Permissions:**
 - All permissions from L1, L2, and L3
+- Can approve purchase orders and all department submissions
+- Can delete any entries (suppliers, customers, orders, production batches)
+- Can mark purchase orders as delivered
+- Can view and download ALL reports including Finance reports
+- Can approve or reject transactions before they are finalized in the system
 - Can add, edit, and delete users
 - Can approve/reject user account requests
 - Can add, edit, and delete employees
@@ -138,10 +150,15 @@ Added access control checks to:
 |---------|----|----|----|----|
 | Create Suppliers/POs/Inventory | ✅ | ✅ | ✅ | ✅ |
 | Approve POs | ❌ | ✅ | ❌ | ✅ |
-| Delete Suppliers/Customers | ❌ | ✅ | ✅ | ✅ |
-| View Reports | ❌ | ✅ (Division) | ✅ (All) | ✅ (All) |
-| Download Reports | ❌ | ✅ (Division) | ✅ (All) | ✅ (All) |
+| Delete Suppliers/Customers/Orders | ❌ | ✅ | ❌ | ✅ |
+| Mark PO as Delivered | ❌ | ✅ | ❌ | ✅ |
+| View Reports (Department) | ❌ | ✅ | ✅ | ✅ |
+| View Reports (All except Finance) | ❌ | ❌ | ✅ | ✅ |
+| View Finance Reports | ❌ | ❌ | ❌ | ✅ |
+| Download Reports | ❌ | ✅ (Dept) | ✅ (All except Finance) | ✅ (All) |
 | Access Finance Module | ❌ | ❌ | ✅ | ✅ |
+| Add Transactions | ❌ | ❌ | ✅ (Needs L4 approval) | ✅ (Auto-approved) |
+| Approve Transactions | ❌ | ❌ | ❌ | ✅ |
 | Generate Invoices | ❌ | ❌ | ✅ | ✅ |
 | Finance AI | ❌ | ❌ | ✅ | ✅ |
 | Manage Users | ❌ | ❌ | ❌ | ✅ |

@@ -51,6 +51,15 @@ exports.addTransaction = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Get user level from request
+    const userLevel = req.user ? req.user.level : null;
+    const userName = req.user ? req.user.name : "Unknown";
+
+    // L3 users need L4 approval, L4 users can directly create approved transactions
+    const needsApproval = userLevel === "L3";
+    const approvalStatus = needsApproval ? "pending" : "approved";
+    const approved = !needsApproval;
+
     if (!isDatabaseConnected()) {
       console.log("⚠️ Database not connected, using mock data");
       const mockTransaction = {
@@ -62,7 +71,12 @@ exports.addTransaction = async (req, res) => {
         account,
         reference,
         date: new Date(date).toISOString(),
-        status: "completed",
+        status: approved ? "completed" : "pending",
+        approved,
+        approvalStatus,
+        createdBy: userName,
+        approvedBy: approved ? userName : null,
+        approvedAt: approved ? new Date().toISOString() : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -81,7 +95,12 @@ exports.addTransaction = async (req, res) => {
       account,
       reference,
       date: new Date(date),
-      status: "completed",
+      status: approved ? "completed" : "pending",
+      approved,
+      approvalStatus,
+      createdBy: userName,
+      approvedBy: approved ? userName : null,
+      approvedAt: approved ? new Date() : null,
     });
 
     await newTransaction.save();
@@ -131,6 +150,68 @@ exports.deleteTransaction = async (req, res) => {
     res.json({ message: "Transaction deleted successfully" });
   } catch (err) {
     console.error("❌ Delete transaction error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Approve or reject a transaction (L4 only)
+exports.approveTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approve } = req.body; // true to approve, false to reject
+    
+    const userName = req.user ? req.user.name : "Unknown";
+    
+    if (!isDatabaseConnected()) {
+      const transactionIndex = mockTransactions.findIndex(t => t._id === id);
+      if (transactionIndex === -1) {
+        return res.status(404).json({ error: "Transaction not found" });
+      }
+      
+      if (approve) {
+        mockTransactions[transactionIndex].approvalStatus = "approved";
+        mockTransactions[transactionIndex].approved = true;
+        mockTransactions[transactionIndex].status = "completed";
+        mockTransactions[transactionIndex].approvedBy = userName;
+        mockTransactions[transactionIndex].approvedAt = new Date().toISOString();
+      } else {
+        mockTransactions[transactionIndex].approvalStatus = "rejected";
+        mockTransactions[transactionIndex].status = "failed";
+        mockTransactions[transactionIndex].approvedBy = userName;
+        mockTransactions[transactionIndex].approvedAt = new Date().toISOString();
+      }
+      
+      return res.json(mockTransactions[transactionIndex]);
+    }
+
+    const transaction = await Transaction.findById(id);
+    
+    if (!transaction) {
+      return res.status(404).json({ error: "Transaction not found" });
+    }
+    
+    if (transaction.approvalStatus !== "pending") {
+      return res.status(400).json({ error: "Transaction has already been processed" });
+    }
+    
+    if (approve) {
+      transaction.approvalStatus = "approved";
+      transaction.approved = true;
+      transaction.status = "completed";
+      transaction.approvedBy = userName;
+      transaction.approvedAt = new Date();
+    } else {
+      transaction.approvalStatus = "rejected";
+      transaction.status = "failed";
+      transaction.approvedBy = userName;
+      transaction.approvedAt = new Date();
+    }
+    
+    await transaction.save();
+    console.log(`✅ Transaction ${approve ? 'approved' : 'rejected'}:`, transaction._id);
+    res.json(transaction);
+  } catch (err) {
+    console.error("❌ Approve transaction error:", err);
     res.status(500).json({ error: err.message });
   }
 };
