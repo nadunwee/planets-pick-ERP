@@ -448,7 +448,7 @@ const payrollRecords: PayrollRecord[] = [
 export default function Employees() {
   const navigate = useNavigate();
   const currentUser = getCurrentUser();
-  
+
   // Redirect if user doesn't have permission (only L4 can access)
   useEffect(() => {
     if (!currentUser || !canManageUsers(currentUser.level)) {
@@ -521,17 +521,37 @@ export default function Employees() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const res = await fetch("http://localhost:4000/api/employees");
+        const token = localStorage.getItem("token");
+        if (!token) {
+          alert("Session expired. Please log in again.");
+          navigate("/login");
+          return;
+        }
+
+        const res = await fetch("http://localhost:4000/api/employees", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch employees");
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            alert(data.error || "Unauthorized. Please log in again.");
+            navigate("/login");
+            return;
+          }
+          throw new Error(data.error || "Failed to fetch employees");
+        }
+
         setEmployees(data);
       } catch (error: any) {
         console.error(error);
-        alert(error.message);
+        alert(error.message || "Failed to fetch employees");
       }
     };
     fetchEmployees();
-  }, []);
+  }, [navigate]);
 
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch =
@@ -591,6 +611,13 @@ export default function Employees() {
     try {
       const employeeId = `EMP${String(employees.length + 1).padStart(3, "0")}`;
 
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
       // Prepare employee data for backend
       const employeeData = {
         name: newEmployee.name,
@@ -615,13 +642,21 @@ export default function Employees() {
       // Send POST request to backend
       const response = await fetch("http://localhost:4000/api/employees", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(employeeData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          alert(data.error || "Unauthorized. Please log in again.");
+          navigate("/login");
+          return;
+        }
         throw new Error(data.error || "Failed to add employee");
       }
 
@@ -645,7 +680,7 @@ export default function Employees() {
         },
       };
 
-      setEmployees([...employees, newEmployeeForUI]);
+      setEmployees((prev) => [...prev, newEmployeeForUI]);
 
       // Show appropriate message
       if (data.message) {
@@ -715,6 +750,13 @@ export default function Employees() {
         return;
       }
 
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
       // Prepare update data
       const updateData = {
         ...editingEmployee,
@@ -726,7 +768,10 @@ export default function Employees() {
         `http://localhost:4000/api/employees/${employeeId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(updateData),
         }
       );
@@ -734,6 +779,11 @@ export default function Employees() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          alert(data.error || "Unauthorized. Please log in again.");
+          navigate("/login");
+          return;
+        }
         throw new Error(data.error || "Failed to update employee");
       }
 
@@ -785,18 +835,33 @@ export default function Employees() {
         return;
       }
 
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
       // Call backend DELETE API
       const res = await fetch(
         `http://localhost:4000/api/employees/${employeeId}`,
         {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 401) {
+          alert(data.error || "Unauthorized. Please log in again.");
+          navigate("/login");
+          return;
+        }
         throw new Error(data.error || "Failed to delete employee");
       }
 
