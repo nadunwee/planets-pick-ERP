@@ -1543,52 +1543,7 @@ export default function Production() {
               </div>
             </div>
 
-            {/* Quality Control & AI Section */}
             <div className="space-y-6">
-              {/* AI Production Assistant */}
-              {/* <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-            <div className="p-4 border-b border-purple-200">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Bot className="text-purple-600" size={20} />
-                AI Production Assistant
-              </h2>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">
-                  Optimization Suggestion
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Increase VCO extraction temperature by 2°C to improve yield by
-                  8%
-                </p>
-                <button className="mt-2 text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition">
-                  Apply
-                </button>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">
-                  Predictive Maintenance
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Line A filter replacement recommended in 3 days
-                </p>
-                <button className="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition">
-                  Schedule
-                </button>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <h4 className="font-medium text-sm mb-1">Quality Alert</h4>
-                <p className="text-xs text-gray-600">
-                  Color values trending above target - adjust processing time
-                </p>
-                <button className="mt-2 text-xs bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 transition">
-                  Investigate
-                </button>
-              </div>
-            </div>
-          </div> */}
-
               {/* Quality Metrics */}
               <div className="bg-white rounded-lg shadow border">
                 <div className="p-4 border-b">
