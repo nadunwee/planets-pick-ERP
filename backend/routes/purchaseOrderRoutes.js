@@ -36,7 +36,7 @@ router.delete("/:id", allowLevels("L1", "L2", "L3", "L4"), deletePO);
 // Approve
 router.patch("/:id/approve", allowLevels("L2", "L4"), approvePO);
 
-// Mark delivered
-router.patch("/:id/deliver", requireLevelAtLeast("L2"), markDelivered);
+// Mark delivered - Only L2 and L4 can mark delivered (not L3)
+router.patch("/:id/deliver", allowLevels("L2", "L4"), markDelivered);
 
 module.exports = router;

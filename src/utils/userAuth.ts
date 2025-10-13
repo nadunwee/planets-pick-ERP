@@ -58,9 +58,14 @@ export const canDownloadReportCategory = (
     return false;
   }
 
-  // Level 3 and 4 can download everything
-  if (userLevel === "L3" || userLevel === "L4") {
+  // Level 4 can download everything including Finance reports
+  if (userLevel === "L4") {
     return true;
+  }
+
+  // Level 3 can download all reports EXCEPT Finance (Finance reports are L4 only)
+  if (userLevel === "L3") {
+    return reportCategory.toLowerCase() !== "finance";
   }
 
   // Level 2 can only download reports relevant to their department/function
@@ -106,8 +111,9 @@ export const canManageSuppliers = (level: UserLevel): boolean => {
 };
 
 export const canDeleteSuppliers = (level: UserLevel): boolean => {
-  // Only L2 and above can delete suppliers
-  return level === "L2" || level === "L3" || level === "L4";
+  // Only L2 (Director) and L4 (Admin) can delete suppliers
+  // L3 (Finance Manager) cannot delete items from other departments
+  return level === "L2" || level === "L4";
 };
 
 export const canCreatePurchaseOrders = (level: UserLevel): boolean => {
@@ -116,13 +122,15 @@ export const canCreatePurchaseOrders = (level: UserLevel): boolean => {
 };
 
 export const canApprovePurchaseOrders = (level: UserLevel): boolean => {
-  // Only L2 and L4 can approve (directors and admin)
+  // Only L2 (Director) and L4 (Admin) can approve purchase orders
+  // L3 (Finance Manager) cannot approve other department items
   return level === "L2" || level === "L4";
 };
 
 export const canMarkDelivered = (level: UserLevel): boolean => {
-  // L2 and above can mark delivered
-  return level === "L2" || level === "L3" || level === "L4";
+  // L2 (Director) and L4 (Admin) can mark delivered
+  // L3 (Finance Manager) cannot mark delivered for other department items
+  return level === "L2" || level === "L4";
 };
 
 export const canGenerateInvoices = (level: UserLevel): boolean => {
@@ -145,6 +153,11 @@ export const canApproveUsers = (level: UserLevel): boolean => {
   return level === "L4";
 };
 
+export const canApproveTransactions = (level: UserLevel): boolean => {
+  // Only L4 (Finance Director/Admin) can approve transactions
+  return level === "L4";
+};
+
 export const canViewReportCategory = (
   userLevel: UserLevel,
   department: string,
@@ -153,8 +166,13 @@ export const canViewReportCategory = (
   // L1 cannot view any reports
   if (userLevel === "L1") return false;
   
-  // L3 and L4 can view all reports
-  if (userLevel === "L3" || userLevel === "L4") return true;
+  // L4 can view all reports including Finance
+  if (userLevel === "L4") return true;
+  
+  // L3 can view all reports EXCEPT Finance reports (Finance reports are L4 only)
+  if (userLevel === "L3") {
+    return category.toLowerCase() !== "finance";
+  }
   
   // L2 can only view reports relevant to their department
   if (userLevel === "L2") {
@@ -182,10 +200,10 @@ export const getUserLevelName = (level: UserLevel): string => {
  */
 export const getUserPermissionsDescription = (level: UserLevel): string => {
   const descriptions: Record<UserLevel, string> = {
-    L1: "Manager - Can add new entries, cannot approve or download reports",
-    L2: "Director - Can approve submissions and download division reports",
-    L3: "Finance Manager - Can view all reports, cannot manage users",
-    L4: "Admin/Finance Director - Full access including user management",
+    L1: "Manager - Can add new entries, cannot approve or view reports",
+    L2: "Director - Can approve department submissions and view/download department reports",
+    L3: "Finance Manager - Can view all reports except Finance, add transactions (requires L4 approval)",
+    L4: "Admin/Finance Director - Full access including Finance reports and transaction approval",
   };
   return descriptions[level] || "";
 };

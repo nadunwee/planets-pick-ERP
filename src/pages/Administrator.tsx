@@ -343,7 +343,7 @@ export default function Administrator() {
                               }
                               className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                              {["L1", "L2", "L3", "L4", "L5"].map((level) => (
+                              {["L1", "L2", "L3", "L4"].map((level) => (
                                 <option key={level} value={level}>
                                   Level {level}
                                 </option>

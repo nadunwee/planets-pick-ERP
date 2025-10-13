@@ -58,7 +58,7 @@ router.put(
 );
 router.delete(
   "/:id",
-  allowLevels("L2", "L3", "L4"),
+  allowLevels("L2", "L4"),
   supplierController.deleteSupplier
 );
 

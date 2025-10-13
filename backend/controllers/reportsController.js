@@ -62,12 +62,15 @@ const departmentCategoryAccess = {
 };
 
 const isReportCategoryAllowed = (level, department, category) => {
+  // L4 can view all reports including Finance
   if (level === "L4") return true;
 
+  // L3 can view all reports EXCEPT Finance (Finance reports are L4 only)
   if (level === "L3") {
     return category !== "Finance";
   }
 
+  // L2 can only view reports relevant to their department
   if (level === "L2") {
     const allowed = departmentCategoryAccess[department] || [];
     if (!allowed.length) {
@@ -77,6 +80,7 @@ const isReportCategoryAllowed = (level, department, category) => {
     return allowed.includes(category);
   }
 
+  // L1 cannot view any reports
   return false;
 };
 

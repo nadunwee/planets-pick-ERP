@@ -13,6 +13,9 @@ router.get("/transactions", allowLevels("L3", "L4"), financeController.getTransa
 // Add a new transaction - L3 and L4 only
 router.post("/transactions", allowLevels("L3", "L4"), financeController.addTransaction);
 
+// Approve or reject a transaction - L4 only
+router.patch("/transactions/:id/approve", allowLevels("L4"), financeController.approveTransaction);
+
 // Edit/update a transaction by ID - L3 and L4 only
 router.put("/transactions/:id", allowLevels("L3", "L4"), financeController.updateTransaction);
 
