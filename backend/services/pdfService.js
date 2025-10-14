@@ -235,7 +235,7 @@ class PDFService {
                 <td>{{totalValue}}</td>
                 <td><span class="status {{statusClass}}">{{status}}</span></td>
               </tr>
-              {{/each}
+              {{/each}}
             </tbody>
           </table>
         </div>

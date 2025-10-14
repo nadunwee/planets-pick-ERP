@@ -18,7 +18,6 @@ import {
   FileText,
   Archive,
   Tag,
-  Users,
 } from "lucide-react";
 import AddItemModal from "@/components/inventory/AddItemModal";
 import api from "@/components/services/api";
@@ -142,10 +141,6 @@ export default function Inventory() {
     );
     return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
   }).length;
-  const reorderNeeded = inventoryData.filter(
-    (item) => item.currentStock <= (item.reorderPoint || item.minStock)
-  ).length;
-
   const getStatusColor = (item: any) => {
     if (item.currentStock === 0) return "text-red-600 bg-red-100";
     if (item.currentStock <= item.minStock)
@@ -211,6 +206,19 @@ export default function Inventory() {
     setIsModalOpen(true);
   };
 
+  const downloadReportFile = async (downloadUrl: string, filename: string) => {
+    const endpoint = downloadUrl.replace(/^\/api/, "");
+    const response = await api.get<Blob>(endpoint, { responseType: "blob" });
+    const blobUrl = window.URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  };
+
   const exportInventoryReport = async () => {
     try {
       setIsExporting(true);
@@ -222,13 +230,7 @@ export default function Inventory() {
         throw new Error("Report download link not provided");
       }
 
-      // Create a temporary link to trigger the download
-      const a = document.createElement("a");
-      a.href = `http://localhost:4000${result.downloadUrl}`;
-      a.download = "inventory-report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await downloadReportFile(result.downloadUrl, "inventory-report.pdf");
 
       message.success("Inventory report exported successfully");
     } catch (err: any) {

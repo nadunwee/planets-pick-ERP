@@ -58,6 +58,36 @@ export interface Order {
     | string;
   shippingMethod: "standard" | "express" | "overnight" | "pickup" | string;
   notes?: string;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvalDate?: string;
+  trackingNumber?: string;
+  shippingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  subtotal?: number;
+  discount?: number;
+  discountType?: "percentage" | "fixed" | string;
+  tax?: number;
+  taxRate?: number;
+  shippingCost?: number;
+  paymentRecords?: Array<{
+    amount?: number;
+    method?: string;
+    reference?: string;
+    date?: string;
+    notes?: string;
+  }>;
+  orderHistory?: Array<{
+    status?: string;
+    updatedBy?: string;
+    timestamp?: string;
+    notes?: string;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }

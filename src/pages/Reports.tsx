@@ -33,6 +33,7 @@ import {
   canViewReportCategory,
   getUserLevelName,
 } from "@/utils/userAuth";
+import api from "@/components/services/api";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
@@ -540,23 +541,42 @@ export default function Reports() {
     }
   };
 
+  const downloadReportFile = useCallback(
+    async (downloadUrl: string, filename: string) => {
+      if (downloadUrl.startsWith("http")) {
+        window.open(downloadUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      const endpoint = downloadUrl.replace(/^\/api/, "");
+      const response = await api.get<Blob>(endpoint, {
+        responseType: "blob",
+      });
+      const blobUrl = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    },
+    []
+  );
+
   const handleDownloadReport = async (report: Report) => {
     console.log(`Generating PDF for ${report.name}`);
     setGeneratingPDF(report.id);
 
     try {
       if (report.downloadUrl) {
-        const link = document.createElement("a");
-        link.href = report.downloadUrl.startsWith("http")
-          ? report.downloadUrl
-          : `${API_BASE_URL}${report.downloadUrl}`;
-        link.download = `${report.name.replace(/\s+/g, "_")}.${
+        const filename = `${report.name.replace(/\s+/g, "_")}.${
           report.format === "pdf" ? "pdf" : report.format
         }`;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const absoluteUrl = report.downloadUrl.startsWith("http")
+          ? report.downloadUrl
+          : `${API_BASE_URL}${report.downloadUrl}`;
+        await downloadReportFile(absoluteUrl, filename);
         return;
       }
 
@@ -597,14 +617,10 @@ export default function Reports() {
       }
 
       if (result?.success && result.downloadUrl) {
-        // Create a proper download link for the PDF
-        const link = document.createElement("a");
-        link.href = `http://localhost:4000${result.downloadUrl}`;
-        link.download = `${report.name.replace(/\s+/g, "_")}.pdf`;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        await downloadReportFile(
+          result.downloadUrl,
+          `${report.name.replace(/\s+/g, "_")}.pdf`
+        );
       } else {
         console.error("PDF generation failed:", result?.message);
         alert("Failed to generate PDF. Please try again.");

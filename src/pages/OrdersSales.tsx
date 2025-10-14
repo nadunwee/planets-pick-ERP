@@ -11,7 +11,6 @@ import {
   Package,
   Clock,
   AlertTriangle,
-  Bot,
   Globe,
   User,
   MapPin,
@@ -26,9 +25,7 @@ import {
   FileText,
   CreditCard,
   Calendar,
-  BarChart3,
   History,
-  Tag,
   MessageSquare,
 } from "lucide-react";
 import CustomerFormModal from "@/components/order-sales/CustomerFormModal";
@@ -66,6 +63,15 @@ export default function OrdersSales() {
   const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const department = localStorage.getItem("department");
+
+  const getOrderIdentifier = (order: OrderType) =>
+    order._id ?? order.id ?? order.orderId;
+  const formatCurrency = (value?: number) =>
+    typeof value === "number" ? value.toLocaleString() : "0";
+  const formatDate = (value?: string | Date) =>
+    value ? new Date(value).toLocaleDateString() : "N/A";
+  const formatDateTime = (value?: string | Date) =>
+    value ? new Date(value).toLocaleString() : "N/A";
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -262,6 +268,19 @@ export default function OrdersSales() {
     }
   };
 
+  const downloadReportFile = async (downloadUrl: string, filename: string) => {
+    const endpoint = downloadUrl.replace(/^\/api/, "");
+    const response = await api.get<Blob>(endpoint, { responseType: "blob" });
+    const blobUrl = window.URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  };
+
   const exportOrderReportPDF = async () => {
     try {
       setIsExporting(true);
@@ -274,13 +293,7 @@ export default function OrdersSales() {
         throw new Error(result?.message || "Report download link missing");
       }
 
-      // Create a temporary link to trigger the download
-      const a = document.createElement("a");
-      a.href = `http://localhost:4000${result.downloadUrl}`;
-      a.download = "order-report.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await downloadReportFile(result.downloadUrl, "order-report.pdf");
 
       message.success("Order report exported successfully");
     } catch (err: any) {
@@ -393,9 +406,6 @@ export default function OrdersSales() {
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   const paidOrders = orders.filter((o) => o.paymentStatus === "paid").length;
-  const pendingApprovals = orders.filter(
-    (o) => o.approvalStatus === "pending"
-  ).length;
   const shippedOrders = orders.filter(
     (o) => o.status === "shipped" || o.status === "delivered"
   ).length;
@@ -704,13 +714,17 @@ export default function OrdersSales() {
                       </div>
                       <p className="text-sm text-gray-600 flex items-center gap-2">
                         <Calendar size={12} />
-                        Ordered on {order.orderDate || order.orderedOn} •
-                        Expected: {order.expectedDelivery || order.expectedDate}
+                        Ordered on{" "}
+                        {formatDate(order.orderDate || order.orderedOn)} •
+                        Expected:{" "}
+                        {formatDate(
+                          order.expectedDelivery || order.expectedDate
+                        )}
                       </p>
                       {order.actualDelivery && (
                         <p className="text-sm text-green-600 flex items-center gap-1">
                           <CheckCircle size={12} />
-                          Delivered: {order.actualDelivery}
+                          Delivered: {formatDate(order.actualDelivery)}
                         </p>
                       )}
                     </div>
@@ -835,30 +849,30 @@ export default function OrdersSales() {
                       Financial Details
                     </h4>
                     <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
-                      {order.subtotal && (
+                      {typeof order.subtotal === "number" && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Subtotal:</span>
-                          <span>LKR {order.subtotal.toLocaleString()}</span>
+                          <span>LKR {formatCurrency(order.subtotal)}</span>
                         </div>
                       )}
-                      {order.discount > 0 && (
+                      {(order.discount ?? 0) > 0 && (
                         <div className="flex justify-between text-green-600">
                           <span>Discount ({order.discountType}):</span>
-                          <span>-LKR {order.discount.toLocaleString()}</span>
+                          <span>-LKR {formatCurrency(order.discount)}</span>
                         </div>
                       )}
-                      {order.tax > 0 && (
+                      {(order.tax ?? 0) > 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">
                             Tax ({order.taxRate}%):
                           </span>
-                          <span>LKR {order.tax.toLocaleString()}</span>
+                          <span>LKR {formatCurrency(order.tax)}</span>
                         </div>
                       )}
-                      {order.shippingCost > 0 && (
+                      {(order.shippingCost ?? 0) > 0 && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Shipping:</span>
-                          <span>LKR {order.shippingCost.toLocaleString()}</span>
+                          <span>LKR {formatCurrency(order.shippingCost)}</span>
                         </div>
                       )}
                       <div className="flex justify-between border-t pt-2">
@@ -885,27 +899,22 @@ export default function OrdersSales() {
                           {order.paymentMethod?.replace("-", " ") || "N/A"}
                         </span>
                       </div>
-                      {order.paymentRecords &&
-                        order.paymentRecords.length > 0 && (
-                          <div className="border-t pt-2 mt-2">
-                            <p className="text-xs text-gray-600 font-medium mb-1">
-                              Payment History:
-                            </p>
-                            {order.paymentRecords.map((record, idx) => (
-                              <div
-                                key={idx}
-                                className="text-xs text-gray-600 flex justify-between"
-                              >
-                                <span>
-                                  {new Date(record.date).toLocaleDateString()}
-                                </span>
-                                <span>
-                                  LKR {record.amount.toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      {(order.paymentRecords?.length ?? 0) > 0 && (
+                        <div className="border-t pt-2 mt-2">
+                          <p className="text-xs text-gray-600 font-medium mb-1">
+                            Payment History:
+                          </p>
+                          {order.paymentRecords?.map((record, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-gray-600 flex justify-between"
+                            >
+                              <span>{formatDate(record?.date)}</span>
+                              <span>LKR {formatCurrency(record?.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <h4 className="font-medium mb-2 flex items-center gap-2 mt-4">
@@ -930,14 +939,22 @@ export default function OrdersSales() {
                       {order.shippingAddress && (
                         <div className="bg-gray-50 p-2 rounded text-xs">
                           <p className="font-medium mb-1">Shipping Address:</p>
-                          <p>{order.shippingAddress.street}</p>
+                          <p>{order.shippingAddress.street || ""}</p>
                           <p>
-                            {order.shippingAddress.city},{" "}
-                            {order.shippingAddress.state}
+                            {[
+                              order.shippingAddress.city,
+                              order.shippingAddress.state,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
                           </p>
                           <p>
-                            {order.shippingAddress.zipCode},{" "}
-                            {order.shippingAddress.country}
+                            {[
+                              order.shippingAddress.zipCode,
+                              order.shippingAddress.country,
+                            ]
+                              .filter(Boolean)
+                              .join(", ")}
                           </p>
                         </div>
                       )}
@@ -945,7 +962,7 @@ export default function OrdersSales() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">Delivered:</span>
                           <span className="text-green-600">
-                            {order.actualDelivery}
+                            {formatDate(order.actualDelivery)}
                           </span>
                         </div>
                       )}
@@ -954,14 +971,14 @@ export default function OrdersSales() {
                 </div>
 
                 {/* Order Timeline/History */}
-                {order.orderHistory && order.orderHistory.length > 0 && (
+                {(order.orderHistory?.length ?? 0) > 0 && (
                   <div className="mt-4 border-t pt-4">
                     <h4 className="font-medium mb-3 flex items-center gap-2">
                       <History size={16} />
                       Order Timeline
                     </h4>
                     <div className="space-y-2">
-                      {order.orderHistory.map((event, idx) => (
+                      {order.orderHistory?.map((event, idx) => (
                         <div
                           key={idx}
                           className="flex items-start gap-3 text-sm"
@@ -980,7 +997,7 @@ export default function OrdersSales() {
                                 )}
                               </div>
                               <span className="text-gray-500 text-xs">
-                                {new Date(event.timestamp).toLocaleString()}
+                                {formatDateTime(event?.timestamp)}
                               </span>
                             </div>
                             {event.notes && (
@@ -1035,15 +1052,19 @@ export default function OrdersSales() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() =>
-                        setExpandedOrder(
-                          expandedOrder === order._id ? null : order._id
+                        setExpandedOrder((prev) =>
+                          prev === getOrderIdentifier(order)
+                            ? null
+                            : getOrderIdentifier(order)
                         )
                       }
                       className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition flex items-center gap-1"
                       title="View Details"
                     >
                       <FileText size={14} />
-                      {expandedOrder === order._id ? "Hide" : "Details"}
+                      {expandedOrder === getOrderIdentifier(order)
+                        ? "Hide"
+                        : "Details"}
                     </button>
                     <button
                       className="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition flex items-center gap-1"
