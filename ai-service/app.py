@@ -5,12 +5,28 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from datetime import datetime, timedelta
 import requests
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 # Configuration
-BACKEND_URL = "http://localhost:4000/api/finance"
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:4000/api/finance")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Configure Gemini AI
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel('gemini-pro')
+    print("✅ Gemini AI configured successfully")
+else:
+    gemini_model = None
+    print("⚠️ Gemini API key not found. AI features will use fallback mode.")
 
 def fetch_transactions():
     """Fetch transaction data from backend"""
@@ -222,42 +238,101 @@ def predict():
 
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
-    """AI Chatbot endpoint for intelligent responses"""
+    """AI Chatbot endpoint for intelligent responses using Gemini AI"""
     try:
         data = request.get_json()
-        user_message = data.get('message', '').lower()
+        user_message = data.get('message', '')
         metrics = data.get('metrics', {})
         
-        # Fetch transaction data for predictions
-        transactions = fetch_transactions()
-        monthly_data, df = prepare_data(transactions)
-        
-        response_text = ""
-        include_predictions = False
-        predictions = []
-        
         # Check if user is asking about future predictions
-        if any(keyword in user_message for keyword in ['predict', 'future', 'forecast', 'next month', 'coming months', 'projection', 'trend', 'what will', 'will be']):
-            include_predictions = True
+        user_message_lower = user_message.lower()
+        is_prediction_query = any(keyword in user_message_lower for keyword in 
+                                ['predict', 'future', 'forecast', 'next month', 'coming months', 
+                                 'projection', 'trend', 'what will', 'will be'])
+        
+        # If asking about predictions, fetch transaction data
+        predictions = []
+        insights = []
+        if is_prediction_query:
+            try:
+                transactions = fetch_transactions()
+                monthly_data, df = prepare_data(transactions)
+                income_model, expense_model = train_model(monthly_data)
+                predictions = predict_future(income_model, expense_model, monthly_data, months_ahead=3)
+                insights = calculate_insights(predictions, monthly_data)
+            except Exception as pred_error:
+                print(f"Prediction error: {pred_error}")
+                predictions = generate_dummy_predictions()
+                insights = ["Using estimated projections."]
+        
+        # Use Gemini AI if available
+        if gemini_model:
+            try:
+                # Prepare context for Gemini
+                context = f"""You are an AI assistant for a business ERP system. 
+You help users understand their business metrics and provide insights.
+
+Current Business Metrics:
+- Financial: Revenue: LKR {metrics.get('financial', {}).get('revenue', 0):,.2f}, 
+  Net Profit: LKR {metrics.get('financial', {}).get('netProfit', 0):,.2f},
+  Expenses: LKR {metrics.get('financial', {}).get('expenses', 0):,.2f}
+- Employees: {metrics.get('employees', {}).get('active', 0)} active employees
+- Inventory: {metrics.get('inventory', {}).get('totalItems', 0)} items, Stock Health: {metrics.get('inventory', {}).get('stockHealthPercentage', '0')}%
+- Sales: {metrics.get('sales', {}).get('totalOrders', 0)} orders, Total Sales: LKR {metrics.get('sales', {}).get('totalSales', 0):,.2f}
+- Production: Yield Efficiency: {metrics.get('production', {}).get('yieldEfficiency', '0')}%
+
+User Question: {user_message}
+"""
+
+                # Add prediction data if available
+                if is_prediction_query and predictions:
+                    context += f"\n\nFinancial Predictions for Next 3 Months:\n"
+                    for pred in predictions:
+                        context += f"- {pred['month']}: Income: LKR {pred['predicted_income']:,.2f}, "
+                        context += f"Expense: LKR {pred['predicted_expense']:,.2f}, "
+                        context += f"Profit: LKR {pred['predicted_profit']:,.2f}\n"
+                    
+                    if insights:
+                        context += f"\nAI Insights: {', '.join(insights)}\n"
+                
+                context += """\n\nProvide a helpful, concise response (max 250 words). 
+Use bullet points for clarity. Include relevant numbers from the metrics.
+If the question is about predictions, use the prediction data provided.
+Use emojis sparingly for better readability."""
+
+                # Generate response using Gemini
+                response = gemini_model.generate_content(context)
+                response_text = response.text
+                
+                return jsonify({
+                    'success': True,
+                    'response': response_text,
+                    'predictions': predictions if is_prediction_query else [],
+                    'ai_powered': True
+                })
+                
+            except Exception as gemini_error:
+                print(f"Gemini AI error: {gemini_error}")
+                # Fall back to rule-based responses
+                pass
+        
+        # Fallback: Rule-based responses for prediction queries
+        if is_prediction_query and predictions:
+            response_text = ""
             
-            # Train model and generate predictions
-            income_model, expense_model = train_model(monthly_data)
-            predictions = predict_future(income_model, expense_model, monthly_data, months_ahead=3)
-            insights = calculate_insights(predictions, monthly_data)
-            
-            if 'revenue' in user_message or 'income' in user_message or 'earnings' in user_message:
+            if 'revenue' in user_message_lower or 'income' in user_message_lower or 'earnings' in user_message_lower:
                 response_text = f"📊 **Revenue Forecast for Next 3 Months:**\n\n"
                 for pred in predictions:
                     response_text += f"• {pred['month']}: LKR {pred['predicted_income']:,.2f}\n"
                 response_text += f"\n💡 **Insights:** {insights[0] if insights else 'Maintain current practices.'}"
                 
-            elif 'expense' in user_message or 'cost' in user_message or 'spending' in user_message:
+            elif 'expense' in user_message_lower or 'cost' in user_message_lower or 'spending' in user_message_lower:
                 response_text = f"💸 **Expense Forecast for Next 3 Months:**\n\n"
                 for pred in predictions:
                     response_text += f"• {pred['month']}: LKR {pred['predicted_expense']:,.2f}\n"
                 response_text += f"\n💡 **Insights:** {insights[1] if len(insights) > 1 else 'Monitor expenses regularly.'}"
                 
-            elif 'profit' in user_message:
+            elif 'profit' in user_message_lower:
                 response_text = f"💰 **Profit Forecast for Next 3 Months:**\n\n"
                 for pred in predictions:
                     margin = (pred['predicted_profit'] / pred['predicted_income'] * 100) if pred['predicted_income'] > 0 else 0
@@ -281,21 +356,22 @@ def chatbot():
                     response_text += f"• {pred['month']}: Profit LKR {pred['predicted_profit']:,.2f}\n"
                 
                 response_text += f"\n💡 **AI Insights:**\n"
-                for insight in insights[:3]:  # Show top 3 insights
+                for insight in insights[:3]:
                     response_text += f"• {insight}\n"
-        
-        # If no prediction-specific response, return None to let frontend handle it
-        if not response_text:
+            
             return jsonify({
                 'success': True,
-                'response': None,  # Let frontend handle non-prediction queries
-                'predictions': []
+                'response': response_text,
+                'predictions': predictions,
+                'ai_powered': False
             })
         
+        # For non-prediction queries, return None to let frontend handle with built-in responses
         return jsonify({
             'success': True,
-            'response': response_text,
-            'predictions': predictions if include_predictions else []
+            'response': None,
+            'predictions': [],
+            'ai_powered': False
         })
     
     except Exception as e:
@@ -306,7 +382,8 @@ def chatbot():
         return jsonify({
             'success': False,
             'error': str(e),
-            'response': "I'm having trouble processing that request. Please try asking about future predictions, revenue forecasts, or expense projections."
+            'response': "I'm having trouble processing that request. Please try asking about your business metrics or future predictions.",
+            'ai_powered': False
         })
 
 @app.route('/health', methods=['GET'])

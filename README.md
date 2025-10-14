@@ -4,11 +4,13 @@ A comprehensive ERP system built with React, TypeScript, and Node.js.
 
 ## Features
 
-### 🤖 AI-Powered Chatbot
-- Intelligent dashboard assistant with future prediction capabilities
-- Revenue, expense, and profit forecasting
-- Natural language queries for business metrics
-- Real-time AI insights and recommendations
+### 🤖 AI-Powered Chatbot (✨ NEW: Gemini AI Integration!)
+- **Intelligent dashboard assistant** powered by Google Gemini AI
+- Natural language understanding for any business question
+- Context-aware responses based on your metrics
+- Revenue, expense, and profit forecasting with ML models
+- Real-time AI insights and actionable recommendations
+- See [GEMINI_QUICK_START.md](GEMINI_QUICK_START.md) for setup
 - See [AI_CHATBOT_DOCUMENTATION.md](AI_CHATBOT_DOCUMENTATION.md) for details
 
 ### 📊 Financial Management
@@ -59,10 +61,19 @@ A comprehensive ERP system built with React, TypeScript, and Node.js.
    cd ..
    ```
 
-3. **Install AI Service Dependencies** (optional)
+3. **Install AI Service Dependencies** (required for AI chatbot)
    ```bash
    cd ai-service
    pip install -r requirements.txt
+   cd ..
+   ```
+
+4. **Configure Gemini AI** (for intelligent chatbot)
+   ```bash
+   cd ai-service
+   cp .env.example .env
+   # Edit .env and add your Gemini API key
+   # Get key from: https://makersuite.google.com/app/apikey
    cd ..
    ```
 
@@ -81,11 +92,12 @@ A comprehensive ERP system built with React, TypeScript, and Node.js.
    # App starts on http://localhost:5173
    ```
 
-3. **Start AI Service** (optional, in another terminal)
+3. **Start AI Service** (required for AI chatbot, in another terminal)
    ```bash
    cd ai-service
    python app.py
    # Service starts on http://localhost:5001
+   # You should see: ✅ Gemini AI configured successfully
    ```
 
 ## Development
