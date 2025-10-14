@@ -36,6 +36,9 @@ ai-service/venv/
 ai-service/__pycache__/
 *.pyc
 
+# Environment variables
+ai-service/.env
+
 # Test files
 test-*.cjs
 test-*.js
