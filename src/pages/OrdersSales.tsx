@@ -274,13 +274,21 @@ export default function OrdersSales() {
         throw new Error(result?.message || "Report download link missing");
       }
 
-      // Create a temporary link to trigger the download
+      // Download the PDF through axios with authentication
+      const response = await api.get(result.downloadUrl, {
+        responseType: "blob",
+      });
+
+      // Create a blob URL and trigger the download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = `http://localhost:4000${result.downloadUrl}`;
+      a.href = url;
       a.download = "order-report.pdf";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
 
       message.success("Order report exported successfully");
     } catch (err: any) {
