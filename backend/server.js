@@ -12,6 +12,7 @@ const customerRoutes = require("./routes/customer.js");
 const orderRoutes = require("./routes/order.js");
 const financeRoutes = require("./routes/finance.js");
 const productionRoutes = require("./routes/production.js");
+const dashboardRoutes = require("./routes/dashboard.js");
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
 });
 
 // ✅ Routes (RESTful and consistent)
+app.use("/api/dashboard", dashboardRoutes); // Dashboard endpoints
 app.use("/api/finance", financeRoutes); // Finance endpoints
 app.use("/api/users", userRoutes); // User endpoints
 app.use("/api/employees", employeeRoutes); // Employee endpoints
