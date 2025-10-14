@@ -15,6 +15,7 @@ import {
   Target,
   UserCheck,
 } from "lucide-react";
+import DashboardChatbot from "@/components/DashboardChatbot";
 
 interface DashboardMetrics {
   period: string;
@@ -665,6 +666,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Dashboard Chatbot */}
+      {metrics && <DashboardChatbot metrics={metrics} period={period} />}
     </>
   );
 }
