@@ -14,9 +14,9 @@ const {
 
 router.use(requireAuth);
 
-router.get("/", allowLevels("L1", "L2", "L3", "L4"), listInvoices);
-router.get("/:id/pdf", allowLevels("L1", "L2", "L3", "L4"), streamInvoicePdf);
-router.get("/:id", allowLevels("L1", "L2", "L3", "L4"), getInvoice);
+router.get("/", allowLevels("L1", "L2", "L3", "L4", "L5"), listInvoices);
+router.get("/:id/pdf", allowLevels("L1", "L2", "L3", "L4", "L5"), streamInvoicePdf);
+router.get("/:id", allowLevels("L1", "L2", "L3", "L4", "L5"), getInvoice);
 router.post("/from-po/:poId", requireLevelAtLeast("L3"), generateInvoiceFromPO);
 
 module.exports = router;

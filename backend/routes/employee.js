@@ -22,8 +22,8 @@ const router = express.Router();
  * Employee Routes
  */
 
-// ➕ Create a new employee (with optional linked user account) - HR Directors (L2) and Admins (L4)
-router.post("/", requireAuth, allowLevels("L2", "L4"), addEmployee);
+// ➕ Create a new employee (with optional linked user account) - HR Directors (L2), Admins (L4), and Super Admins (L5)
+router.post("/", requireAuth, allowLevels("L2", "L4", "L5"), addEmployee);
 
 // 📋 Get all employees - all authenticated users can view
 router.get("/", requireAuth, getEmployees);
@@ -31,25 +31,25 @@ router.get("/", requireAuth, getEmployees);
 // 🔍 Get single employee by ID - all authenticated users can view
 router.get("/:id", requireAuth, getEmployeeById);
 
-// ✏️ Update employee by ID - HR Directors (L2) and Admins (L4)
-router.put("/:id", requireAuth, allowLevels("L2", "L4"), updateEmployee);
+// ✏️ Update employee by ID - HR Directors (L2), Admins (L4), and Super Admins (L5)
+router.put("/:id", requireAuth, allowLevels("L2", "L4", "L5"), updateEmployee);
 
-// ❌ Delete employee by ID - HR Directors (L2) and Admins (L4)
-router.delete("/:id", requireAuth, allowLevels("L2", "L4"), deleteEmployee);
+// ❌ Delete employee by ID - HR Directors (L2), Admins (L4), and Super Admins (L5)
+router.delete("/:id", requireAuth, allowLevels("L2", "L4", "L5"), deleteEmployee);
 
 // 📨 Change request workflow for HR Managers (L1)
 router.post(
   "/requests",
   requireAuth,
-  allowLevels("L1", "L2", "L4"),
+  allowLevels("L1", "L2", "L4", "L5"),
   submitEmployeeChangeRequest
 );
 
-// 📥 List change requests - L1 see own, L2/L4 see all
+// 📥 List change requests - L1 see own, L2/L4/L5 see all
 router.get(
   "/requests",
   requireAuth,
-  allowLevels("L1", "L2", "L4"),
+  allowLevels("L1", "L2", "L4", "L5"),
   getEmployeeChangeRequests
 );
 
@@ -57,7 +57,7 @@ router.get(
 router.post(
   "/requests/:id/approve",
   requireAuth,
-  allowLevels("L2", "L4"),
+  allowLevels("L2", "L4", "L5"),
   approveEmployeeChangeRequest
 );
 
@@ -65,7 +65,7 @@ router.post(
 router.post(
   "/requests/:id/reject",
   requireAuth,
-  allowLevels("L2", "L4"),
+  allowLevels("L2", "L4", "L5"),
   rejectEmployeeChangeRequest
 );
 
