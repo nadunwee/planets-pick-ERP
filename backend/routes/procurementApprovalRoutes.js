@@ -11,19 +11,19 @@ const {
 
 router.use(requireAuth);
 
-router.post("/", allowLevels("L1", "L2", "L4"), submitProcurementChangeRequest);
+router.post("/", allowLevels("L1", "L2", "L4", "L5"), submitProcurementChangeRequest);
 
-router.get("/", allowLevels("L1", "L2", "L4"), getProcurementChangeRequests);
+router.get("/", allowLevels("L1", "L2", "L4", "L5"), getProcurementChangeRequests);
 
 router.post(
   "/:id/approve",
-  allowLevels("L2", "L4"),
+  allowLevels("L2", "L4", "L5"),
   approveProcurementChangeRequest
 );
 
 router.post(
   "/:id/reject",
-  allowLevels("L2", "L4"),
+  allowLevels("L2", "L4", "L5"),
   rejectProcurementChangeRequest
 );
 

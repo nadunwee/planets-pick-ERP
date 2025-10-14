@@ -31,34 +31,34 @@ router.use(requireAuth);
 
 router.post(
   "/",
-  allowLevels("L1", "L2", "L3", "L4"),
+  allowLevels("L1", "L2", "L3", "L4", "L5"),
   createValidation,
   supplierController.createSupplier
 );
 router.get(
   "/",
-  allowLevels("L1", "L2", "L3", "L4"),
+  allowLevels("L1", "L2", "L3", "L4", "L5"),
   supplierController.getSuppliers
 );
 router.get(
   "/rankings",
-  allowLevels("L1", "L2", "L3", "L4"),
+  allowLevels("L1", "L2", "L3", "L4", "L5"),
   supplierController.getSupplierRankings
 );
 router.get(
   "/:id",
-  allowLevels("L1", "L2", "L3", "L4"),
+  allowLevels("L1", "L2", "L3", "L4", "L5"),
   supplierController.getSupplierById
 );
 router.put(
   "/:id",
-  allowLevels("L1", "L2", "L3", "L4"),
+  allowLevels("L1", "L2", "L3", "L4", "L5"),
   updateValidation,
   supplierController.updateSupplier
 );
 router.delete(
   "/:id",
-  allowLevels("L2", "L4"),
+  allowLevels("L2", "L4", "L5"),
   supplierController.deleteSupplier
 );
 

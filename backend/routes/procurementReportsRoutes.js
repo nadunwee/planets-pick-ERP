@@ -31,14 +31,14 @@ const validateSpendingAnalytics = [
   body('groupBy').optional().isIn(['month', 'year']).withMessage('Group by must be either month or year')
 ];
 
-// Report generation routes - L2, L3, L4 can generate procurement reports
-router.post('/supplier-ranking', allowLevels("L2", "L3", "L4"), validateSupplierRanking, procurementReportsController.generateSupplierRanking);
-router.post('/spending-analytics', allowLevels("L2", "L3", "L4"), validateSpendingAnalytics, procurementReportsController.generateSpendingAnalytics);
-router.post('/orders-by-supplier', allowLevels("L2", "L3", "L4"), validateDateRange, procurementReportsController.generateOrdersBySupplier);
-router.post('/procurement-cycle', allowLevels("L2", "L3", "L4"), validateDateRange, procurementReportsController.generateProcurementCycle);
+// Report generation routes - L2, L3, L4, and L5 can generate procurement reports
+router.post('/supplier-ranking', allowLevels("L2", "L3", "L4", "L5"), validateSupplierRanking, procurementReportsController.generateSupplierRanking);
+router.post('/spending-analytics', allowLevels("L2", "L3", "L4", "L5"), validateSpendingAnalytics, procurementReportsController.generateSpendingAnalytics);
+router.post('/orders-by-supplier', allowLevels("L2", "L3", "L4", "L5"), validateDateRange, procurementReportsController.generateOrdersBySupplier);
+router.post('/procurement-cycle', allowLevels("L2", "L3", "L4", "L5"), validateDateRange, procurementReportsController.generateProcurementCycle);
 
-// Report management routes - L2, L3, L4 can view reports
-router.get('/', allowLevels("L2", "L3", "L4"), [
+// Report management routes - L2, L3, L4, and L5 can view reports
+router.get('/', allowLevels("L2", "L3", "L4", "L5"), [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   query('reportType').optional().isIn([
@@ -54,11 +54,11 @@ router.get('/', allowLevels("L2", "L3", "L4"), [
   query('endDate').optional().isISO8601().withMessage('End date must be a valid ISO date')
 ], procurementReportsController.getReports);
 
-router.get('/:id', allowLevels("L2", "L3", "L4"), [
+router.get('/:id', allowLevels("L2", "L3", "L4", "L5"), [
   param('id').isMongoId().withMessage('Invalid report ID')
 ], procurementReportsController.getReport);
 
-router.delete('/:id', allowLevels("L3", "L4"), [
+router.delete('/:id', allowLevels("L3", "L4", "L5"), [
   param('id').isMongoId().withMessage('Invalid report ID')
 ], procurementReportsController.deleteReport);
 
