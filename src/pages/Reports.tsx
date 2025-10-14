@@ -33,6 +33,7 @@ import {
   canViewReportCategory,
   getUserLevelName,
 } from "@/utils/userAuth";
+import api from "@/components/services/api";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
@@ -546,17 +547,28 @@ export default function Reports() {
 
     try {
       if (report.downloadUrl) {
+        // Download through axios with authentication
+        const response = await api.get(
+          report.downloadUrl.startsWith("http")
+            ? report.downloadUrl
+            : report.downloadUrl,
+          {
+            responseType: "blob",
+          }
+        );
+
+        // Create blob URL and trigger download
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = report.downloadUrl.startsWith("http")
-          ? report.downloadUrl
-          : `${API_BASE_URL}${report.downloadUrl}`;
+        link.href = url;
         link.download = `${report.name.replace(/\s+/g, "_")}.${
           report.format === "pdf" ? "pdf" : report.format
         }`;
-        link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
         return;
       }
 
@@ -597,14 +609,21 @@ export default function Reports() {
       }
 
       if (result?.success && result.downloadUrl) {
-        // Create a proper download link for the PDF
+        // Download through axios with authentication
+        const response = await api.get(result.downloadUrl, {
+          responseType: "blob",
+        });
+
+        // Create blob URL and trigger download
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = `http://localhost:4000${result.downloadUrl}`;
+        link.href = url;
         link.download = `${report.name.replace(/\s+/g, "_")}.pdf`;
-        link.target = "_blank";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
       } else {
         console.error("PDF generation failed:", result?.message);
         alert("Failed to generate PDF. Please try again.");
