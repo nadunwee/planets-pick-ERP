@@ -1,7 +1,7 @@
 # AI-Powered Chatbot Feature
 
 ## Overview
-The Dashboard Chatbot has been enhanced with AI capabilities to provide intelligent responses and future financial predictions. The chatbot leverages the existing AI service to forecast revenue, expenses, and profit trends.
+The Dashboard Chatbot has been enhanced with Google Gemini AI to provide intelligent, context-aware responses and future financial predictions. The chatbot combines Gemini's natural language understanding with machine learning forecasts for comprehensive business insights.
 
 ## Architecture
 
@@ -15,11 +15,22 @@ Backend API (Node.js/Express) :4000
 AI Service (Python/Flask) :5001
   /chatbot endpoint
        ↓
-Machine Learning Models
-  (LinearRegression)
+  ┌─────────────────┬──────────────────────┐
+  │                 │                      │
+  │  Gemini AI      │  ML Models          │
+  │  (Natural       │  (LinearRegression) │
+  │   Language)     │  (Predictions)      │
+  └─────────────────┴──────────────────────┘
 ```
 
 ## Features
+
+### 🤖 Gemini AI Integration (NEW!)
+- **Natural Language Understanding**: Understands any business question naturally
+- **Context-Aware Responses**: Analyzes current metrics to provide relevant insights
+- **Intelligent Recommendations**: Suggests actionable steps to improve business
+- **Conversational Tone**: Friendly, helpful responses with emojis
+- **Adaptive Learning**: Better understanding through Google's advanced AI
 
 ### 🔮 AI-Powered Predictions
 - **Future Revenue Forecasts**: Predict revenue for the next 3 months
@@ -38,11 +49,12 @@ Machine Learning Models
 - Customer base analytics
 
 ### ✨ Smart Features
-- **Hybrid Responses**: AI predictions + built-in responses
-- **Graceful Fallback**: Works even if AI service is unavailable
+- **Hybrid Responses**: Gemini AI + ML predictions + built-in responses
+- **Graceful Fallback**: Works even if Gemini API is unavailable
 - **Visual Indicators**: Shows "AI Response" badge for AI-generated answers
 - **Loading States**: Real-time feedback while AI processes requests
 - **Context-Aware**: Uses current dashboard metrics for personalized responses
+- **Secure**: API keys stored securely in environment variables
 
 ## API Reference
 
