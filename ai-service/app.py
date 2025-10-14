@@ -220,6 +220,95 @@ def predict():
             'error': str(e)
         })
 
+@app.route('/chatbot', methods=['POST'])
+def chatbot():
+    """AI Chatbot endpoint for intelligent responses"""
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').lower()
+        metrics = data.get('metrics', {})
+        
+        # Fetch transaction data for predictions
+        transactions = fetch_transactions()
+        monthly_data, df = prepare_data(transactions)
+        
+        response_text = ""
+        include_predictions = False
+        predictions = []
+        
+        # Check if user is asking about future predictions
+        if any(keyword in user_message for keyword in ['predict', 'future', 'forecast', 'next month', 'coming months', 'projection', 'trend', 'what will', 'will be']):
+            include_predictions = True
+            
+            # Train model and generate predictions
+            income_model, expense_model = train_model(monthly_data)
+            predictions = predict_future(income_model, expense_model, monthly_data, months_ahead=3)
+            insights = calculate_insights(predictions, monthly_data)
+            
+            if 'revenue' in user_message or 'income' in user_message or 'earnings' in user_message:
+                response_text = f"📊 **Revenue Forecast for Next 3 Months:**\n\n"
+                for pred in predictions:
+                    response_text += f"• {pred['month']}: LKR {pred['predicted_income']:,.2f}\n"
+                response_text += f"\n💡 **Insights:** {insights[0] if insights else 'Maintain current practices.'}"
+                
+            elif 'expense' in user_message or 'cost' in user_message or 'spending' in user_message:
+                response_text = f"💸 **Expense Forecast for Next 3 Months:**\n\n"
+                for pred in predictions:
+                    response_text += f"• {pred['month']}: LKR {pred['predicted_expense']:,.2f}\n"
+                response_text += f"\n💡 **Insights:** {insights[1] if len(insights) > 1 else 'Monitor expenses regularly.'}"
+                
+            elif 'profit' in user_message:
+                response_text = f"💰 **Profit Forecast for Next 3 Months:**\n\n"
+                for pred in predictions:
+                    margin = (pred['predicted_profit'] / pred['predicted_income'] * 100) if pred['predicted_income'] > 0 else 0
+                    response_text += f"• {pred['month']}: LKR {pred['predicted_profit']:,.2f} ({margin:.1f}% margin)\n"
+                response_text += f"\n💡 **Insights:** {insights[0] if insights else 'Good financial health projected.'}"
+                
+            else:
+                # General prediction overview
+                response_text = f"🔮 **Financial Forecast - Next 3 Months:**\n\n"
+                total_predicted_income = sum(p['predicted_income'] for p in predictions)
+                total_predicted_expense = sum(p['predicted_expense'] for p in predictions)
+                total_predicted_profit = total_predicted_income - total_predicted_expense
+                avg_margin = (total_predicted_profit / total_predicted_income * 100) if total_predicted_income > 0 else 0
+                
+                response_text += f"📈 **Expected Revenue:** LKR {total_predicted_income:,.2f}\n"
+                response_text += f"📉 **Expected Expenses:** LKR {total_predicted_expense:,.2f}\n"
+                response_text += f"💰 **Expected Profit:** LKR {total_predicted_profit:,.2f} ({avg_margin:.1f}% margin)\n\n"
+                
+                response_text += "**Monthly Breakdown:**\n"
+                for pred in predictions:
+                    response_text += f"• {pred['month']}: Profit LKR {pred['predicted_profit']:,.2f}\n"
+                
+                response_text += f"\n💡 **AI Insights:**\n"
+                for insight in insights[:3]:  # Show top 3 insights
+                    response_text += f"• {insight}\n"
+        
+        # If no prediction-specific response, return None to let frontend handle it
+        if not response_text:
+            return jsonify({
+                'success': True,
+                'response': None,  # Let frontend handle non-prediction queries
+                'predictions': []
+            })
+        
+        return jsonify({
+            'success': True,
+            'response': response_text,
+            'predictions': predictions if include_predictions else []
+        })
+    
+    except Exception as e:
+        print(f"Chatbot error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'response': "I'm having trouble processing that request. Please try asking about future predictions, revenue forecasts, or expense projections."
+        })
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""

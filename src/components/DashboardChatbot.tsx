@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, MessageSquare, Minimize2 } from "lucide-react";
+import { X, Send, Bot, MessageSquare, Minimize2, Sparkles } from "lucide-react";
+import api from "@/components/services/api";
 
 interface Message {
   id: string;
   text: string;
   sender: "user" | "bot";
   timestamp: Date;
+  isAiResponse?: boolean;
 }
 
 interface DashboardChatbotProps {
@@ -66,12 +68,14 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hello! I'm your dashboard assistant. I can help you understand your business metrics. Try asking me about revenue, expenses, sales, inventory, or employees!",
+      text: "Hello! I'm your AI-powered dashboard assistant. I can help you understand your business metrics and provide future predictions! 🤖\n\nTry asking me:\n• 'Predict next month's revenue'\n• 'What will be our future expenses?'\n• 'Show me profit forecast'\n• Or ask about current metrics like revenue, expenses, sales, inventory, or employees!",
       sender: "bot",
       timestamp: new Date(),
+      isAiResponse: false,
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -201,14 +205,14 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
 
     // Help queries
     if (msg.includes("help") || msg.includes("what can you do") || msg.includes("assist")) {
-      return "I can help you with information about:\n\n• Revenue and income\n• Profit and margins\n• Expenses and costs\n• Sales and orders\n• Inventory and stock\n• Employees and payroll\n• Production and batches\n• Customer base\n• Financial health\n• Overall business summary\n\nJust ask me a question like 'What's my revenue?' or 'How are sales doing?'";
+      return "I can help you with:\n\n🔮 **AI-Powered Predictions:**\n• Future revenue forecasts\n• Expense predictions\n• Profit projections\n• Financial trends analysis\n\n📊 **Current Metrics:**\n• Revenue and income\n• Profit and margins\n• Expenses and costs\n• Sales and orders\n• Inventory and stock\n• Employees and payroll\n• Production and batches\n• Customer base\n• Financial health\n• Overall business summary\n\nTry asking: 'Predict next month's revenue' or 'What's my current profit?'";
     }
 
     // Default response
     return "I'm not sure I understood that. Try asking me about revenue, expenses, sales, inventory, employees, production, or customers. You can also ask for a 'summary' or type 'help' to see what I can do!";
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -219,18 +223,52 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue("");
+    setIsLoading(true);
 
-    // Simulate bot thinking and response
-    setTimeout(() => {
+    try {
+      // Try to get AI response first for prediction-related queries
+      const response = await api.post("/chatbot/chat", {
+        message: currentInput,
+        metrics: metrics
+      });
+
+      if (response.data.success && response.data.response) {
+        // AI service provided a response
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response.data.response,
+          sender: "bot",
+          timestamp: new Date(),
+          isAiResponse: true,
+        };
+        setMessages((prev) => [...prev, botResponse]);
+      } else {
+        // Fall back to built-in responses
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: generateResponse(currentInput),
+          sender: "bot",
+          timestamp: new Date(),
+          isAiResponse: false,
+        };
+        setMessages((prev) => [...prev, botResponse]);
+      }
+    } catch (error) {
+      console.error("Chatbot error:", error);
+      // Fall back to built-in responses on error
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: generateResponse(inputValue),
+        text: generateResponse(currentInput),
         sender: "bot",
         timestamp: new Date(),
+        isAiResponse: false,
       };
       setMessages((prev) => [...prev, botResponse]);
-    }, 500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -321,6 +359,12 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
                   : "bg-white border border-gray-200 text-gray-800"
               }`}
             >
+              {message.isAiResponse && message.sender === "bot" && (
+                <div className="flex items-center gap-1 mb-1 text-xs text-purple-600">
+                  <Sparkles size={12} />
+                  <span className="font-semibold">AI Response</span>
+                </div>
+              )}
               <p className="text-sm whitespace-pre-line">{message.text}</p>
               <p
                 className={`text-xs mt-1 ${
@@ -335,6 +379,16 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-600">AI is thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -351,7 +405,7 @@ export default function DashboardChatbot({ metrics, period }: DashboardChatbotPr
           />
           <button
             onClick={handleSend}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isLoading}
             className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             title="Send message"
           >
