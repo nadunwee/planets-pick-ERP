@@ -3,6 +3,7 @@ const LEVEL_PRIORITY = {
   L2: 2,
   L3: 3,
   L4: 4,
+  L5: 5,
 };
 
 const ensureUserLoaded = (req, res) => {
