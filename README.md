@@ -2,6 +2,42 @@
 
 A comprehensive ERP system built with React, TypeScript, and Node.js.
 
+## Features
+
+### 🤖 AI-Powered Chatbot
+- Intelligent dashboard assistant with future prediction capabilities
+- Revenue, expense, and profit forecasting
+- Natural language queries for business metrics
+- Real-time AI insights and recommendations
+- See [AI_CHATBOT_DOCUMENTATION.md](AI_CHATBOT_DOCUMENTATION.md) for details
+
+### 📊 Financial Management
+- Transaction tracking and reporting
+- Budget management
+- AI-powered financial predictions (3-month forecasts)
+- Balance sheet and P&L statements
+- See [AI_FINANCE_PREDICTION.md](AI_FINANCE_PREDICTION.md) for AI prediction details
+
+### 📦 Inventory Management
+- Stock tracking and monitoring
+- Low stock alerts
+- Item management
+
+### 👥 Employee Management
+- Employee records and profiles
+- Payroll tracking
+- Leave management
+
+### 🏭 Production Management
+- Batch tracking
+- Yield monitoring
+- Production efficiency metrics
+
+### 🛒 Sales & Orders
+- Order management
+- Customer tracking
+- Sales analytics
+
 ## Quick Start
 
 ### Prerequisites

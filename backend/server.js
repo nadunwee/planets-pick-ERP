@@ -36,6 +36,7 @@ app.use("/api/production", productionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/finance-ai", require("./routes/financeAi.js"));
+app.use("/api/chatbot", require("./routes/chatbot.js"));
 app.use("/api/invoices", require("./routes/invoice.js"));
 
 // Additional routes from ranudi branch
