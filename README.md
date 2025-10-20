@@ -2,6 +2,12 @@
 
 A comprehensive ERP system built with React, TypeScript, and Node.js.
 
+## 📚 Documentation
+
+- **[Testing Documentation](./TESTING_README.md)** - Quick reference to all test documentation
+- **[Comprehensive Test Cases](./TEST_CASES.md)** - Detailed test cases with acceptance criteria
+- **[Test Execution Guide](./TEST_EXECUTION_GUIDE.md)** - Practical guide for test execution
+
 ## Quick Start
 
 ### Prerequisites
